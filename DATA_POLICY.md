@@ -16,7 +16,9 @@ The hackathon [Official Rules](https://github.com/microsoft/insidethegamehackath
 
 5. **Models are trained on synthetic data.** The synthetic generator may be calibrated against real match distributions. Any model we submit (e.g. xG) is trained on synthetic data only. Real data is used only to validate results.
 
-6. **No secrets in the repo.** API keys and connection strings go in `.env`, which is git-ignored. Never share keys in chat groups.
+6. **Third-party assets need a compatible license and credit.** Sounds, images or fonts must be CC0, CC BY or similar (anyone may use them, commercially too). Record the source and license in a `CREDITS.md` next to the files, and credit them in the README and the video description. No music or recordings without a clear license.
+
+7. **No secrets in the repo.** API keys and connection strings go in `.env`, which is git-ignored. Never share keys in chat groups.
 
 ## Folder layout
 

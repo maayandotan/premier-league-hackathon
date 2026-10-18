@@ -38,6 +38,7 @@ Audio is written as WAV to `spikes/speech/out/` (git-ignored).
 
 ## Crowd sound
 
-- `crowd.py` generates a crowd murmur for the whole match and a roar for goals from shaped noise, so there's no licensing question.
-- It's a placeholder: a real royalty-free crowd recording will sound better.
+- `--crowd` mixes a crowd bed under the whole exchange and a roar that swells into "GOAL!".
+- It uses real recordings from `assets/audio/`: edited excerpts of "Free Crowd Cheering Sounds" by Gregor Quendel, **CC BY 4.0**. Credit is required wherever the audio is used, including the demo video description. See [`assets/audio/CREDITS.md`](../../assets/audio/CREDITS.md).
+- `--synthetic-crowd` uses the procedural fallback in `crowd.py` instead.
 - In the real app the mix happens in the browser (Web Audio): the ambience loops, the roar is triggered on goal events, and the commentary plays on top.

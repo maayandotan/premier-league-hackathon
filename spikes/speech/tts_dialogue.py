@@ -111,6 +111,12 @@ def synthesize(doc: str) -> tuple[np.ndarray, float, float]:
     return pcm.astype(np.float32) / 32768, first or 0.0, time.perf_counter() - start
 
 
+def at_level(samples: np.ndarray, rms_db: float) -> np.ndarray:
+    """Scale samples so their RMS loudness is rms_db dBFS."""
+    rms = np.sqrt(np.mean(samples**2)) + 1e-9
+    return samples * (10 ** (rms_db / 20) / rms)
+
+
 def write_wav(path: Path, samples: np.ndarray) -> None:
     with wave.open(str(path), "wb") as w:
         w.setnchannels(1)
@@ -126,6 +132,7 @@ def main() -> None:
     parser.add_argument("--name", help="output file name (without .wav)")
     parser.add_argument("--flat", action="store_true", help="ignore excitement, for comparison")
     parser.add_argument("--crowd", action="store_true", help="mix in crowd ambience and a goal roar")
+    parser.add_argument("--synthetic-crowd", action="store_true", help="use the procedural crowd, not the recordings")
     args = parser.parse_args()
 
     OUT_DIR.mkdir(exist_ok=True)
@@ -147,11 +154,18 @@ def main() -> None:
 
     mix = np.concatenate(speech + [np.zeros(int(2.5 * SAMPLE_RATE), dtype=np.float32)])
     if args.crowd:
-        mix += 0.08 * crowd.ambience(len(mix) / SAMPLE_RATE, SAMPLE_RATE)[: len(mix)]
+        seconds = len(mix) / SAMPLE_RATE
+        bed = None if args.synthetic_crowd else crowd.real_ambience(seconds, SAMPLE_RATE)
+        if bed is None:
+            bed = crowd.ambience(seconds, SAMPLE_RATE)
+        mix += at_level(bed[: len(mix)], -33)  # about 15 dB under the commentary
         if goal_at is not None:
-            # Start the roar just before "GOAL!" so it peaks under the shout
-            roar = 0.35 * crowd.roar(SAMPLE_RATE)
-            start = max(0, goal_at + int(0.6 * SAMPLE_RATE))
+            roar = None if args.synthetic_crowd else crowd.real_roar(SAMPLE_RATE)
+            if roar is None:
+                roar = crowd.roar(SAMPLE_RATE)
+            roar = at_level(roar, -21)
+            # Start the swell during "he shoots..." so it peaks under "GOAL!"
+            start = max(0, goal_at - int(1.0 * SAMPLE_RATE))
             end = min(len(mix), start + len(roar))
             mix[start:end] += roar[: end - start]
     mix = np.tanh(mix * 1.1)  # gentle limiter so the roar never clips

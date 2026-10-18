@@ -29,6 +29,8 @@ build/
 # --- Audio produced while testing ---
 *.wav
 *.mp3
+# ...except licensed sound assets we ship (credits in assets/audio/CREDITS.md)
+!assets/audio/*.wav
 
 # --- OS / editors ---
 .DS_Store

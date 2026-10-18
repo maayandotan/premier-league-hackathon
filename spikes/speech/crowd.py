@@ -1,9 +1,43 @@
-"""Procedural stadium sound for the speech spike: background crowd and a goal roar.
+"""Stadium sound for the speech spike: background crowd and a goal roar.
 
-Generated from shaped noise, so there's no licensing question. It's a placeholder
-to test the mix; a real crowd recording (royalty-free) will sound better.
+Uses the real recordings in assets/audio/ (CC BY 4.0, see assets/audio/CREDITS.md)
+when they exist, and falls back to procedural noise otherwise.
 """
+import wave
+from pathlib import Path
+
 import numpy as np
+
+ASSETS = Path(__file__).resolve().parents[2] / "assets" / "audio"
+AMBIENCE_FILE = ASSETS / "crowd_ambience_loop.wav"
+ROAR_FILE = ASSETS / "crowd_goal_roar.wav"
+LOOP_FADE_SECONDS = 1.0  # the ambience loop has 1 s fades at both ends
+
+
+def _load(path: Path, sr: int) -> np.ndarray:
+    with wave.open(str(path)) as w:
+        if w.getframerate() != sr or w.getnchannels() != 1:
+            raise ValueError(f"{path.name} must be mono {sr} Hz")
+        return np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16).astype(np.float32) / 32768
+
+
+def _looped(clip: np.ndarray, n: int, fade: int) -> np.ndarray:
+    """Repeat a clip with faded ends to length n, overlapping the fades so the seams are smooth."""
+    out = np.zeros(n + len(clip), dtype=np.float32)
+    step = len(clip) - fade
+    for start in range(0, n, step):
+        out[start:start + len(clip)] += clip
+    return out[:n]
+
+
+def real_ambience(seconds: float, sr: int) -> np.ndarray | None:
+    if not AMBIENCE_FILE.exists():
+        return None
+    return _looped(_load(AMBIENCE_FILE, sr), int(seconds * sr), int(LOOP_FADE_SECONDS * sr))
+
+
+def real_roar(sr: int) -> np.ndarray | None:
+    return _load(ROAR_FILE, sr) if ROAR_FILE.exists() else None
 
 
 def _shaped_noise(n: int, sr: int, rng: np.random.Generator, low: float, high: float, tilt: float) -> np.ndarray:
