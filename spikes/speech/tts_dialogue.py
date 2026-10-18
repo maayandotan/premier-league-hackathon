@@ -1,25 +1,35 @@
 """Spike for issue #3: two-voice commentary with Azure Speech (text-to-speech).
 
 Synthesizes a short caller/analyst exchange, one line at a time (the way the
-Producer's audio queue will work), and reports latency per line.
+Producer's audio queue will work), reports latency per line, and can mix in
+stadium crowd sound with a roar on the goal.
 
-Usage:  python spikes/speech/tts_dialogue.py [--lang en|he] [--voices caller,analyst] [--name file] [--flat]
-Output: spikes/speech/out/<lang>_dialogue.mp3  (git-ignored)
+Usage:  python spikes/speech/tts_dialogue.py [--lang en|he] [--voices caller,analyst]
+                                             [--name file] [--flat] [--crowd]
+Output: spikes/speech/out/<name>.wav  (git-ignored)
 """
 import argparse
+import io
+import json
 import os
 import time
+import wave
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+import numpy as np
 import requests
 from dotenv import load_dotenv
+
+import crowd
 
 load_dotenv()
 KEY = os.environ["AZURE_SPEECH_KEY"]
 REGION = os.environ["AZURE_SPEECH_REGION"]
 TTS_URL = f"https://{REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
+VOICES_URL = f"https://{REGION}.tts.speech.microsoft.com/cognitiveservices/voices/list"
 OUT_DIR = Path(__file__).parent / "out"
+SAMPLE_RATE = 24000
 
 # Each line: (speaker, excitement 0-2, text). Fictional teams and players only (DATA_POLICY.md).
 # The caller builds up over several short lines; that crescendo is what sells a goal.
@@ -42,45 +52,48 @@ SCRIPTS = {
 }
 
 DEFAULT_VOICES = {
-    "en": ("en-GB-RyanNeural", "en-GB-SoniaNeural"),
+    "en": ("en-US-GuyNeural", "en-GB-SoniaNeural"),
     "he": ("he-IL-AvriNeural", "he-IL-HilaNeural"),
 }
-LOCALES = {"en": "en-GB", "he": "he-IL"}
 
-# British voices have no "excited" style, so excitement comes from prosody,
-# plus the "cheerful" style on voices that support it (Ryan, Sonia).
-EXCITEMENT = {
-    0: None,
-    1: {"rate": "+8%", "pitch": "+6%", "volume": "+15%"},
-    2: {"rate": "+20%", "pitch": "+18%", "volume": "+50%"},
-}
-CHEERFUL_VOICES = {"en-GB-RyanNeural", "en-GB-SoniaNeural"}
+# Preferred built-in style per excitement level, best first. Voices without a
+# matching style fall back to a little extra volume, never speed.
+STYLES_BY_LEVEL = {1: ["excited", "cheerful"], 2: ["shouting", "excited", "cheerful"]}
 
 
-def ssml(voice: str, text: str, excitement: int, locale: str) -> str:
+def voice_catalog() -> dict[str, dict]:
+    cache = OUT_DIR / "voices.json"
+    if not cache.exists():
+        resp = requests.get(VOICES_URL, headers={"Ocp-Apim-Subscription-Key": KEY}, timeout=30)
+        resp.raise_for_status()
+        cache.write_text(resp.text)
+    return {v["ShortName"]: v for v in json.loads(cache.read_text())}
+
+
+def ssml(voice: dict, text: str, excitement: int) -> str:
     body = escape(text)
-    prosody = EXCITEMENT[excitement]
-    if prosody:
-        attrs = " ".join(f'{k}="{v}"' for k, v in prosody.items())
-        body = f"<prosody {attrs}>{body}</prosody>"
-        if voice in CHEERFUL_VOICES:
-            body = f'<mstts:express-as style="cheerful">{body}</mstts:express-as>'
+    styles = voice.get("StyleList") or []
+    style = next((s for s in STYLES_BY_LEVEL.get(excitement, []) if s in styles), None)
+    if style:
+        body = f'<mstts:express-as style="{style}">{body}</mstts:express-as>'
+    elif excitement == 2:
+        body = f'<prosody volume="+30%">{body}</prosody>'
     return (
         f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
-        f'xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="{locale}">'
-        f'<voice name="{voice}">{body}<break time="250ms"/></voice></speak>'
+        f'xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="{voice["Locale"]}">'
+        f'<voice name="{voice["ShortName"]}">{body}</voice></speak>'
     )
 
 
-def synthesize(doc: str) -> tuple[bytes, float, float]:
-    """Return (audio, seconds to first byte, total seconds)."""
+def synthesize(doc: str) -> tuple[np.ndarray, float, float]:
+    """Return (samples in [-1, 1], seconds to first byte, total seconds)."""
     start = time.perf_counter()
     resp = requests.post(
         TTS_URL,
         headers={
             "Ocp-Apim-Subscription-Key": KEY,
             "Content-Type": "application/ssml+xml",
-            "X-Microsoft-OutputFormat": "audio-24khz-48kbitrate-mono-mp3",
+            "X-Microsoft-OutputFormat": "riff-24khz-16bit-mono-pcm",
             "User-Agent": "pl-hackathon-speech-spike",
         },
         data=doc.encode("utf-8"),
@@ -93,31 +106,58 @@ def synthesize(doc: str) -> tuple[bytes, float, float]:
         if first is None:
             first = time.perf_counter() - start
         chunks.append(chunk)
-    return b"".join(chunks), first or 0.0, time.perf_counter() - start
+    with wave.open(io.BytesIO(b"".join(chunks))) as w:
+        pcm = np.frombuffer(w.readframes(w.getnframes()), dtype=np.int16)
+    return pcm.astype(np.float32) / 32768, first or 0.0, time.perf_counter() - start
+
+
+def write_wav(path: Path, samples: np.ndarray) -> None:
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(SAMPLE_RATE)
+        w.writeframes((np.clip(samples, -1, 1) * 32767).astype(np.int16).tobytes())
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", choices=SCRIPTS, default="en")
     parser.add_argument("--voices", help="caller,analyst voice names")
-    parser.add_argument("--name", help="output file name (without .mp3)")
+    parser.add_argument("--name", help="output file name (without .wav)")
     parser.add_argument("--flat", action="store_true", help="ignore excitement, for comparison")
+    parser.add_argument("--crowd", action="store_true", help="mix in crowd ambience and a goal roar")
     args = parser.parse_args()
 
-    caller, analyst = args.voices.split(",") if args.voices else DEFAULT_VOICES[args.lang]
-    voices = {"caller": caller, "analyst": analyst}
     OUT_DIR.mkdir(exist_ok=True)
+    catalog = voice_catalog()
+    caller, analyst = args.voices.split(",") if args.voices else DEFAULT_VOICES[args.lang]
+    voices = {"caller": catalog[caller], "analyst": catalog[analyst]}
 
-    audio = b""
+    gap = np.zeros(int(0.25 * SAMPLE_RATE), dtype=np.float32)
+    lead_in = np.zeros(int(1.5 * SAMPLE_RATE), dtype=np.float32)  # a moment of crowd before anyone speaks
+    speech, goal_at = [lead_in], None
     print(f"{'speaker':8} {'first byte':>10} {'total':>7}  text")
     for speaker, excitement, text in SCRIPTS[args.lang]:
         level = 0 if args.flat else excitement
-        clip, first, total = synthesize(ssml(voices[speaker], text, level, LOCALES[args.lang]))
-        audio += clip  # MP3 frames concatenate cleanly for a quick listen
+        clip, first, total = synthesize(ssml(voices[speaker], text, level))
+        if level == 2 and goal_at is None:
+            goal_at = sum(len(s) for s in speech)
+        speech += [clip, gap]
         print(f"{speaker:8} {first:9.2f}s {total:6.2f}s  {text[:60]}")
 
-    out = OUT_DIR / f"{args.name or args.lang + '_dialogue'}.mp3"
-    out.write_bytes(audio)
+    mix = np.concatenate(speech + [np.zeros(int(2.5 * SAMPLE_RATE), dtype=np.float32)])
+    if args.crowd:
+        mix += 0.08 * crowd.ambience(len(mix) / SAMPLE_RATE, SAMPLE_RATE)[: len(mix)]
+        if goal_at is not None:
+            # Start the roar just before "GOAL!" so it peaks under the shout
+            roar = 0.35 * crowd.roar(SAMPLE_RATE)
+            start = max(0, goal_at + int(0.6 * SAMPLE_RATE))
+            end = min(len(mix), start + len(roar))
+            mix[start:end] += roar[: end - start]
+    mix = np.tanh(mix * 1.1)  # gentle limiter so the roar never clips
+
+    out = OUT_DIR / f"{args.name or args.lang + '_dialogue'}.wav"
+    write_wav(out, mix)
     print(f"\nSaved {out}")
 
 
