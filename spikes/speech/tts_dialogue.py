@@ -3,7 +3,7 @@
 Synthesizes a short caller/analyst exchange, one line at a time (the way the
 Producer's audio queue will work), and reports latency per line.
 
-Usage:  python spikes/speech/tts_dialogue.py [--lang en|he] [--voices caller,analyst]
+Usage:  python spikes/speech/tts_dialogue.py [--lang en|he] [--voices caller,analyst] [--name file]
 Output: spikes/speech/out/<lang>_dialogue.mp3  (git-ignored)
 """
 import argparse
@@ -84,6 +84,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--lang", choices=SCRIPTS, default="en")
     parser.add_argument("--voices", help="caller,analyst voice names")
+    parser.add_argument("--name", help="output file name (without .mp3)")
     args = parser.parse_args()
 
     caller, analyst = args.voices.split(",") if args.voices else DEFAULT_VOICES[args.lang]
@@ -97,7 +98,7 @@ def main() -> None:
         audio += clip  # MP3 frames concatenate cleanly for a quick listen
         print(f"{speaker:8} {first:9.2f}s {total:6.2f}s  {text[:60]}")
 
-    out = OUT_DIR / f"{args.lang}_dialogue.mp3"
+    out = OUT_DIR / f"{args.name or args.lang + '_dialogue'}.mp3"
     out.write_bytes(audio)
     print(f"\nSaved {out}")
 
