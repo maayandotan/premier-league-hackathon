@@ -26,6 +26,9 @@ dist/
 build/
 .next/
 
+# --- Spike output ---
+spikes/**/out/
+
 # --- Audio produced while testing ---
 *.wav
 *.mp3
