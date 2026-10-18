@@ -14,7 +14,8 @@ cp .env.example .env   # then paste the key from the Azure portal:
 ## Run
 
 ```bash
-.venv/bin/python spikes/speech/tts_dialogue.py --lang en     # caller + analyst exchange
+.venv/bin/python spikes/speech/tts_dialogue.py --lang en     # caller (Ryan) + analyst (Sonia), British
+.venv/bin/python spikes/speech/tts_dialogue.py --flat --name flat   # same lines without excitement, to compare
 .venv/bin/python spikes/speech/tts_dialogue.py --lang he     # Hebrew version
 .venv/bin/python spikes/speech/tts_dialogue.py --voices "en-US-Andrew:DragonHDLatestNeural,en-US-Ava:DragonHDLatestNeural"
 .venv/bin/python spikes/speech/stt_question.py               # spoken question → text
@@ -26,3 +27,9 @@ Audio is written to `spikes/speech/out/` (git-ignored).
 
 - `speech-pl-hackathon`, free tier (F0), **France Central**
 - Our Azure for Students subscription only allows: francecentral, italynorth, austriaeast, switzerlandnorth, israelcentral
+
+## Voices and excitement
+
+- **Default voices:** caller `en-GB-RyanNeural`, analyst `en-GB-SoniaNeural` (British). Hebrew: Avri / Hila.
+- **Excitement levels 0–2 per line.** British voices have no "excited" style, so excitement is SSML prosody (faster, higher, louder) plus the "cheerful" style where supported.
+- **Build a crescendo:** split a big moment into short caller lines that rise in level ("through ball... in behind..." at 1, then "GOAL!" at 2). The agents should write goal moments this way.

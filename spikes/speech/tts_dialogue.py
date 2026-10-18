@@ -3,7 +3,7 @@
 Synthesizes a short caller/analyst exchange, one line at a time (the way the
 Producer's audio queue will work), and reports latency per line.
 
-Usage:  python spikes/speech/tts_dialogue.py [--lang en|he] [--voices caller,analyst] [--name file]
+Usage:  python spikes/speech/tts_dialogue.py [--lang en|he] [--voices caller,analyst] [--name file] [--flat]
 Output: spikes/speech/out/<lang>_dialogue.mp3  (git-ignored)
 """
 import argparse
@@ -21,34 +21,50 @@ REGION = os.environ["AZURE_SPEECH_REGION"]
 TTS_URL = f"https://{REGION}.tts.speech.microsoft.com/cognitiveservices/v1"
 OUT_DIR = Path(__file__).parent / "out"
 
-# Each line: (speaker, style or None, text). Fictional teams and players only (DATA_POLICY.md).
+# Each line: (speaker, excitement 0-2, text). Fictional teams and players only (DATA_POLICY.md).
+# The caller builds up over several short lines; that crescendo is what sells a goal.
 SCRIPTS = {
     "en": [
-        ("caller", "excited", "Arlo, through ball, Ferro is in behind... he shoots... GOAL! Northbridge lead!"),
-        ("analyst", None, "And that one came against the run of play. Westvale had sixty-eight percent of the ball in the last fifteen minutes."),
-        ("caller", None, "So was that a moment of brilliance, or a defensive mistake?"),
-        ("analyst", None, "Bit of both. The pass broke two lines, which only happens about four percent of the time. But the shot itself was worth just nine percent."),
-        ("caller", "cheerful", "A finish to remember, then. Northbridge one, Westvale nil."),
+        ("caller", 1, "Arlo, through ball, Ferro is in behind..."),
+        ("caller", 2, "he shoots... GOAL! Northbridge lead!"),
+        ("analyst", 0, "And that one came against the run of play. Westvale had sixty-eight percent of the ball in the last fifteen minutes."),
+        ("caller", 0, "So was that a moment of brilliance, or a defensive mistake?"),
+        ("analyst", 0, "Bit of both. The pass broke two lines, which only happens about four percent of the time. But the shot itself was worth just nine percent."),
+        ("caller", 1, "A finish to remember, then. Northbridge one, Westvale nil."),
     ],
     "he": [
-        ("caller", None, "ארלו, כדור עומק, פרו פורץ... בועט... גול! נורת'ברידג' ביתרון!"),
-        ("analyst", None, "והגול הזה הגיע נגד מהלך המשחק. לווסטוויל היו שישים ושמונה אחוז החזקה ברבע השעה האחרונה."),
-        ("caller", None, "אז זה היה רגע של גאונות, או טעות בהגנה?"),
-        ("analyst", None, "קצת משניהם. המסירה שברה שני קווים, וזה קורה רק בכארבעה אחוז מהמקרים."),
+        ("caller", 1, "ארלו, כדור עומק, פרו פורץ..."),
+        ("caller", 2, "בועט... גול! נורת'ברידג' ביתרון!"),
+        ("analyst", 0, "והגול הזה הגיע נגד מהלך המשחק. לווסטוויל היו שישים ושמונה אחוז החזקה ברבע השעה האחרונה."),
+        ("caller", 0, "אז זה היה רגע של גאונות, או טעות בהגנה?"),
+        ("analyst", 0, "קצת משניהם. המסירה שברה שני קווים, וזה קורה רק בכארבעה אחוז מהמקרים."),
     ],
 }
 
 DEFAULT_VOICES = {
-    "en": ("en-US-GuyNeural", "en-GB-RyanNeural"),
+    "en": ("en-GB-RyanNeural", "en-GB-SoniaNeural"),
     "he": ("he-IL-AvriNeural", "he-IL-HilaNeural"),
 }
-LOCALES = {"en": "en-US", "he": "he-IL"}
+LOCALES = {"en": "en-GB", "he": "he-IL"}
+
+# British voices have no "excited" style, so excitement comes from prosody,
+# plus the "cheerful" style on voices that support it (Ryan, Sonia).
+EXCITEMENT = {
+    0: None,
+    1: {"rate": "+8%", "pitch": "+6%", "volume": "+15%"},
+    2: {"rate": "+20%", "pitch": "+18%", "volume": "+50%"},
+}
+CHEERFUL_VOICES = {"en-GB-RyanNeural", "en-GB-SoniaNeural"}
 
 
-def ssml(voice: str, text: str, style: str | None, locale: str) -> str:
+def ssml(voice: str, text: str, excitement: int, locale: str) -> str:
     body = escape(text)
-    if style:
-        body = f'<mstts:express-as style="{style}">{body}</mstts:express-as>'
+    prosody = EXCITEMENT[excitement]
+    if prosody:
+        attrs = " ".join(f'{k}="{v}"' for k, v in prosody.items())
+        body = f"<prosody {attrs}>{body}</prosody>"
+        if voice in CHEERFUL_VOICES:
+            body = f'<mstts:express-as style="cheerful">{body}</mstts:express-as>'
     return (
         f'<speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" '
         f'xmlns:mstts="https://www.w3.org/2001/mstts" xml:lang="{locale}">'
@@ -85,6 +101,7 @@ def main() -> None:
     parser.add_argument("--lang", choices=SCRIPTS, default="en")
     parser.add_argument("--voices", help="caller,analyst voice names")
     parser.add_argument("--name", help="output file name (without .mp3)")
+    parser.add_argument("--flat", action="store_true", help="ignore excitement, for comparison")
     args = parser.parse_args()
 
     caller, analyst = args.voices.split(",") if args.voices else DEFAULT_VOICES[args.lang]
@@ -93,8 +110,9 @@ def main() -> None:
 
     audio = b""
     print(f"{'speaker':8} {'first byte':>10} {'total':>7}  text")
-    for speaker, style, text in SCRIPTS[args.lang]:
-        clip, first, total = synthesize(ssml(voices[speaker], text, style, LOCALES[args.lang]))
+    for speaker, excitement, text in SCRIPTS[args.lang]:
+        level = 0 if args.flat else excitement
+        clip, first, total = synthesize(ssml(voices[speaker], text, level, LOCALES[args.lang]))
         audio += clip  # MP3 frames concatenate cleanly for a quick listen
         print(f"{speaker:8} {first:9.2f}s {total:6.2f}s  {text[:60]}")
 
