@@ -1,0 +1,37 @@
+# --- Data policy (see DATA_POLICY.md) ---
+# Real third-party data: local only, never committed
+data/real/
+**/statsbomb*/
+open-data/
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# --- Node ---
+node_modules/
+dist/
+build/
+.next/
+
+# --- Audio produced while testing ---
+*.wav
+*.mp3
+
+# --- OS / editors ---
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/

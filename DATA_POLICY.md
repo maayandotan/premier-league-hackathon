@@ -1,0 +1,29 @@
+# Data policy
+
+Rules for how this project uses data. Everyone working on the repo follows them.
+
+The hackathon [Official Rules](https://github.com/microsoft/insidethegamehackathon/blob/main/OFFICIAL%20RULES.md) require synthetic data, and everything we submit is licensed to Microsoft and the Premier League. This repo will be public. Real data has its own license terms.
+
+## The rules
+
+1. **Event format.** Our event schema mirrors [StatsBomb's open event format](https://github.com/statsbomb/open-data) (JSON, 120×80 pitch). Every data source goes through an adapter into our internal event model.
+
+2. **Real data is for local development only.** StatsBomb Open Data may be used to develop, test and validate the system on your own machine. Read the [StatsBomb Public Data User Agreement](https://github.com/statsbomb/open-data/blob/master/LICENSE.pdf) before using it.
+
+3. **Real data never enters the repo.** Fetch it at runtime with `statsbombpy`, or store it under `data/real/`, which is git-ignored. Don't paste real events into code, tests, fixtures or docs.
+
+4. **Nothing real in the submission or the demo.** No real player names, club names, logos or real match data in the code, README, screenshots or demo video. All teams and players are fictional.
+
+5. **Models are trained on synthetic data.** The synthetic generator may be calibrated against real match distributions. Any model we submit (e.g. xG) is trained on synthetic data only. Real data is used only to validate results.
+
+6. **No secrets in the repo.** API keys and connection strings go in `.env`, which is git-ignored. Never share keys in chat groups.
+
+## Folder layout
+
+| Path | What goes there | In git? |
+|---|---|---|
+| `data/real/` | Real open data for local testing | No |
+| `data/synthetic/` | Generated matches | Yes |
+| `.env` | Keys and secrets | No |
+
+When in doubt, leave it out and ask the team.
