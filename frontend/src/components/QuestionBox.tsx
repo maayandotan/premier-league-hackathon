@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react'
+import { type FormEvent, useRef, useState } from 'react'
 import { MicIcon } from './Icons'
 
 const SUGGESTIONS = ['Why was that a foul?', 'Who has been better?', 'What is offside?']
@@ -7,6 +7,8 @@ type MicState = 'idle' | 'listening' | 'error'
 
 /**
  * Ask the analyst a question mid-match (#18), by typing or with the microphone (#21).
+ * The mic is a toggle: press to talk, press again to stop and send. Typing always works,
+ * even while listening, so the viewer can never be locked out of asking.
  * The match keeps going; Sonia answers in a few seconds.
  */
 export function QuestionBox({ live, waiting, onAsk, onListening }: {
@@ -18,16 +20,23 @@ export function QuestionBox({ live, waiting, onAsk, onListening }: {
   const [text, setText] = useState('')
   const [mic, setMic] = useState<MicState>('idle')
   const [micError, setMicError] = useState('')
+  const stopListening = useRef<AbortController | null>(null)
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!text.trim()) return
+    stopListening.current?.abort() // typed while listening: stop the mic, the typed text wins
     onAsk(text.trim())
     setText('')
   }
 
-  const speak = async () => {
-    if (mic === 'listening') return
+  const toggleMic = async () => {
+    if (mic === 'listening') {
+      stopListening.current?.abort() // second press: stop and send what was heard
+      return
+    }
+    const controller = new AbortController()
+    stopListening.current = controller
     setMic('listening')
     setMicError('')
     setText('')
@@ -35,9 +44,9 @@ export function QuestionBox({ live, waiting, onAsk, onListening }: {
     try {
       // The Speech SDK is large: load it only when someone actually presses the mic.
       const { listenOnce } = await import('../audio/speechInput')
-      const heard = await listenOnce(setText) // words appear as you speak
+      const heard = await listenOnce(setText, controller.signal) // words appear as you speak
       if (heard.trim()) onAsk(heard.trim())
-      else setMicError("Didn't catch that. Try again?")
+      else if (!controller.signal.aborted) setMicError("Didn't catch that. Try again?")
       setText('')
       setMic('idle')
     } catch (error) {
@@ -46,6 +55,7 @@ export function QuestionBox({ live, waiting, onAsk, onListening }: {
         ? 'Microphone blocked. Allow it in the browser to ask by voice.'
         : error instanceof Error ? error.message : 'The microphone did not work.')
     } finally {
+      stopListening.current = null
       onListening(false)
     }
   }
@@ -54,21 +64,24 @@ export function QuestionBox({ live, waiting, onAsk, onListening }: {
   return (
     <form className="ask" onSubmit={submit} aria-label="Ask the analyst">
       <div className="ask-row">
-        <button type="button" className={`mic ${listening ? 'on' : ''}`} onClick={speak} disabled={!live || listening}
-          aria-label={listening ? 'Listening' : 'Ask by voice'} title="Ask by voice">
+        <button type="button" className={`mic ${listening ? 'on' : ''}`} onClick={toggleMic} disabled={!live}
+          aria-pressed={listening} aria-label={listening ? 'Stop and send' : 'Ask by voice'}
+          title={listening ? 'Stop and send' : 'Ask by voice'}>
           {listening ? <span className="mic-dot" /> : <MicIcon />}
         </button>
-        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} disabled={!live || listening}
-          placeholder={listening ? 'Listening… ask your question' : live ? 'Ask Sonia about the match…' : 'Kick off to ask questions'}
+        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} disabled={!live}
+          placeholder={listening ? 'Listening… press the mic again to send' : live ? 'Ask Sonia about the match…' : 'Kick off to ask questions'}
           aria-label="Your question" />
-        <button type="submit" disabled={!live || listening || !text.trim()}>Ask</button>
+        <button type="submit" disabled={!live || !text.trim()}>Ask</button>
       </div>
       {live && (
         <div className="ask-hints">
           {micError ? (
             <span className="mic-error" role="status">{micError}</span>
+          ) : listening ? (
+            <span className="thinking">Listening… press the mic again when you're done</span>
           ) : waiting ? (
-            <span className="thinking">🧠 Sonia is thinking… the match goes on</span>
+            <span className="thinking">Sonia is thinking… the match goes on</span>
           ) : (
             SUGGESTIONS.map((s) => (
               <button key={s} type="button" className="chip" onClick={() => onAsk(s)}>{s}</button>
