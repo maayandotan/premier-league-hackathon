@@ -4,7 +4,8 @@ import base64
 import logging
 from collections.abc import Awaitable, Callable
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+import httpx
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -18,6 +19,7 @@ from app.config import REPO_ROOT, settings
 from app.events.models import MatchEvent
 from app.match.replay import replay
 from app.match.sources import UnknownSource, load_source
+from app.speech.token import speech_token
 from app.speech.tts import Speech, speech_enabled
 from app.stats.engine import StatsEngine
 
@@ -32,6 +34,18 @@ app.mount("/static/audio", StaticFiles(directory=REPO_ROOT / "assets" / "audio")
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/api/speech-token")
+async def get_speech_token() -> dict:
+    """A 10-minute token so the browser's microphone can talk to Azure Speech without our key."""
+    if not speech_enabled():
+        raise HTTPException(503, "speech is not configured")
+    try:
+        return {"token": await speech_token(), "region": settings.azure_speech_region}
+    except httpx.HTTPError as error:
+        log.warning("speech token failed: %s", error)
+        raise HTTPException(502, "speech service unavailable") from error
 
 
 @app.websocket("/ws/match")

@@ -281,3 +281,11 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
 .chip { border: 1px solid var(--line); background: #0a1426; color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: 0.8rem; }
 .chip:hover { color: var(--text); border-color: #14b8a6; }
 .thinking { color: #5eead4; font-size: 0.85rem; animation: pulse 1.2s ease-in-out infinite; }
+.ask .mic {
+  flex: none; width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); background: #0a1426;
+  color: var(--text); font-size: 1.1rem; display: grid; place-items: center;
+}
+.ask .mic:hover:not(:disabled) { border-color: #14b8a6; }
+.ask .mic.on { border-color: var(--away); background: rgba(244, 63, 94, 0.15); }
+.mic-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--away); animation: pulse 0.9s ease-in-out infinite; }
+.mic-error { color: #fda4af; font-size: 0.85rem; }
