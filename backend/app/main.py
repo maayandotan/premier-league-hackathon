@@ -2,21 +2,22 @@
 import asyncio
 import base64
 import logging
+from collections.abc import Awaitable, Callable
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.agents.analyst import Analyst
 from app.agents.caller import Caller
 from app.agents.client import agents_enabled
-from app.agents.pipeline import CommentaryPipeline
+from app.agents.pipeline import CommentaryLine, CommentaryPipeline
 from app.config import REPO_ROOT, settings
 from app.events.models import MatchEvent
 from app.match.replay import replay
 from app.match.sources import UnknownSource, load_source
 from app.speech.tts import Speech, speech_enabled
 from app.stats.engine import StatsEngine
-from app.stats.ranker import Moment
 
 log = logging.getLogger(__name__)
 
@@ -50,7 +51,8 @@ async def match_feed(ws: WebSocket) -> None:
 
     stats = StatsEngine(home=match.info.home.name, away=match.info.away.name)
     caller = Caller(use_model=agents_enabled())
-    pipeline = CommentaryPipeline(stats, caller)
+    analyst = Analyst(stats, {e.id: e for e in match.events}, use_model=agents_enabled())
+    pipeline = CommentaryPipeline(stats, caller, analyst)
     speech = Speech() if speech_enabled() else None
     speed = float(params.get("speed", settings.replay_speed))
     start = int(params.get("start", 0))
@@ -65,9 +67,12 @@ async def match_feed(ws: WebSocket) -> None:
         async with send_lock:
             await ws.send_json(message)
 
-    async def commentate(event: MatchEvent, moment: Moment) -> None:
+    async def deliver(make_line: Callable[[], Awaitable[CommentaryLine | None]], event: MatchEvent) -> None:
+        """Wait for an agent's line, then send its text and, when ready, its audio."""
         try:
-            line = await pipeline.call(event, moment)
+            line = await make_line()
+            if line is None:  # e.g. the Analyst chose silence
+                return
             await send({"type": "commentary", "line": line.model_dump()})
             if speech and (audio := await speech.synthesize(line.speaker, line.text, line.excitement)):
                 await send({"type": "audio", "line_id": line.id, "excitement": line.excitement,
@@ -85,8 +90,13 @@ async def match_feed(ws: WebSocket) -> None:
             moment = pipeline.rank(event)
             await send({"type": "event", "event": event.model_dump(by_alias=True, exclude_none=True),
                         "moment": moment.model_dump()})
+            jobs = []
             if pipeline.should_call(moment):
-                task = asyncio.create_task(commentate(event, moment))
+                jobs.append(lambda e=event, m=moment: pipeline.call(e, m))
+            if pipeline.should_analyse(event, moment):
+                jobs.append(lambda e=event, m=moment: pipeline.analyse(e, m))
+            for job in jobs:
+                task = asyncio.create_task(deliver(job, event))
                 tasks.add(task)
                 task.add_done_callback(tasks.discard)
             await send({"type": "stats", "stats": stats.snapshot()})

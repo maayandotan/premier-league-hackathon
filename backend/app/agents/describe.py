@@ -25,11 +25,13 @@ def plain(term: str | None) -> str | None:
     return PLAIN.get(term, term.lower()) if term else None
 
 
-def zone(event: MatchEvent) -> str | None:
-    """Where on the pitch, in words, from the acting team's point of view."""
+def zone(event: MatchEvent, flip: bool = False) -> str | None:
+    """Where on the pitch, in words, from the acting team's point of view (or the other team's)."""
     if not event.location:
         return None
     x, y = event.location[:2]
+    if flip:
+        x, y = 120 - x, 80 - y
     if in_box(x, y):
         return "in the box"
     return "final third" if x >= 80 else "midfield" if x >= 40 else "own half"
@@ -57,8 +59,17 @@ def event_fields(event: MatchEvent, moment: Moment, stats: StatsEngine) -> dict:
     if event.shot:
         fields |= {"shot_type": plain(event.shot.type), "body_part": plain(event.shot.body_part),
                    "outcome": plain(event.shot.outcome)}
+    if event.type == "Foul Committed":
+        # The event belongs to the team that FOULED. Say who benefits, from their point of view;
+        # "team: X, moment: penalty awarded" made the model think X got the penalty.
+        other = stats.away if event.team == stats.home else stats.home
+        fields.pop("team")
+        fields |= {"fouling_team": event.team, "awarded_to": other, "where": zone(event, flip=True)}
+        if event.player:
+            fields["fouling_player"] = fields.pop("player")
     if card := event.card or (event.foul.card if event.foul else None):
         fields["card"] = card.lower()
+        fields["booked_team"] = event.team
     fields["moment"] = moment.reason
     return {key: value for key, value in fields.items() if value is not None}
 
