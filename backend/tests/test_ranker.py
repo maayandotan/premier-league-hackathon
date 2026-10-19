@@ -64,6 +64,15 @@ def test_routine_passes_are_quiet_and_box_entries_are_not():
     assert into_box.score == 4 and into_box.reason == "ball into the box"
 
 
+def test_goalkeeper_long_balls_are_routine():
+    stats = StatsEngine(HOME, AWAY)
+    long_ball = PassDetails(end_location=(100.0, 40.0))
+    keeper = ranked(stats, ev("Pass", location=(10.0, 40.0), position="Goalkeeper", **{"pass": long_ball}))
+    goal_kick = ranked(stats, ev("Pass", location=(6.0, 40.0), **{"pass": PassDetails(
+        end_location=(70.0, 40.0), type="Goal Kick")}))
+    assert keeper.score == 0 and goal_kick.score == 0
+
+
 def test_half_markers_once_and_tension_boost_late_in_close_games():
     stats = StatsEngine(HOME, AWAY)
     assert ranked(stats, ev("Half End", team=HOME)).score == 6
