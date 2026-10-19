@@ -60,6 +60,8 @@ RULES = {
 
 INSTRUCTIONS = """You answer a viewer's question during a live football broadcast, in the analyst's voice.
 
+- If ASKED_AT says full time, the match is over: questions are about the whole match. For "the key
+  moment", "the turning point" or "the best chance", call get_key_moments.
 - The question was asked at ASKED_AT (match clock). If it refers to "that", "this" or "just now",
   call get_events_before to see what happened right before, and pick the moment that fits.
 - For a question about a rule or a football term, call get_rule and explain it in your own words,
@@ -99,6 +101,19 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
             result.append({"clock": f"{event.minute}:{event.second:02d}", "event_id": event.id, **fields})
         return result
 
+    def get_key_moments(
+        count: Annotated[int, "How many moments to return"] = 3,
+    ) -> list[dict]:
+        """The biggest moments of the match so far (goals, big chances, cards), biggest first, in plain words."""
+        biggest = sorted(((e, m) for e, m in timeline if m.score >= 1), key=lambda em: -em[1].score)
+        result = []
+        for event, moment in biggest[:max(1, min(count, 5))]:
+            fields = event_fields(event, moment, stats)
+            fields.pop("score", None)
+            fields.pop("minute", None)
+            result.append({"clock": f"{event.minute}:{event.second:02d}", "event_id": event.id, **fields})
+        return result
+
     def get_rule(topic: Annotated[str, "A rule or football term, e.g. offside, penalty"]) -> dict:
         """A plain explanation of a football rule or term."""
         key = topic.lower().strip()
@@ -114,7 +129,7 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
                 "possession_last_10_min": stats.possession(recent=True),
                 "shots": stats.shots, "xg": stats.xg}
 
-    return [get_events_before, get_rule, get_match_picture,
+    return [get_events_before, get_key_moments, get_rule, get_match_picture,
             momentum["get_shot_quality"], momentum["get_pass_rarity"]]
 
 
@@ -129,11 +144,13 @@ class QuestionAnswerer:
             default_options={"temperature": 0.3, "max_tokens": 200},
         ) if use_model else None
 
-    async def answer(self, question: str, minute: int, second: int, viewer: ViewerProfile) -> str:
+    async def answer(self, question: str, minute: int, second: int, viewer: ViewerProfile,
+                     full_time: bool = False) -> str:
         """A spoken answer. Never None: the viewer asked, so they always hear something."""
         if not self.agent:
             return UNAVAILABLE
-        prompt = (f"QUESTION: {question[:MAX_QUESTION_CHARS]}\nASKED_AT: {minute}:{second:02d}\n"
+        asked_at = "full time (the match is over)" if full_time else f"{minute}:{second:02d}"
+        prompt = (f"QUESTION: {question[:MAX_QUESTION_CHARS]}\nASKED_AT: {asked_at}\n"
                   f"VIEWER_LEVEL: {viewer.level}")
         try:
             response = await asyncio.wait_for(self.agent.run(prompt), DEADLINE_SECONDS)

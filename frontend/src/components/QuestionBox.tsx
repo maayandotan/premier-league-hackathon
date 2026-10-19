@@ -2,6 +2,7 @@ import { type FormEvent, useRef, useState } from 'react'
 import { MicIcon } from './Icons'
 
 const SUGGESTIONS = ['Why was that a foul?', 'Who has been better?', 'What is offside?']
+const FULL_TIME_SUGGESTIONS = ['Who was the better team?', 'What was the key moment?', 'Was the result deserved?']
 
 type MicState = 'idle' | 'listening' | 'error'
 
@@ -11,8 +12,9 @@ type MicState = 'idle' | 'listening' | 'error'
  * even while listening, so the viewer can never be locked out of asking.
  * The match keeps going; Sonia answers in a few seconds.
  */
-export function QuestionBox({ live, waiting, onAsk, onListening }: {
-  live: boolean
+export function QuestionBox({ open, fullTime, waiting, onAsk, onListening }: {
+  open: boolean // during the match and after full time
+  fullTime: boolean
   waiting: boolean
   onAsk: (q: string) => void
   onListening: (on: boolean) => void // the commentators go quiet while the viewer speaks
@@ -64,17 +66,19 @@ export function QuestionBox({ live, waiting, onAsk, onListening }: {
   return (
     <form className="ask" onSubmit={submit} aria-label="Ask the analyst">
       <div className="ask-row">
-        <button type="button" className={`mic ${listening ? 'on' : ''}`} onClick={toggleMic} disabled={!live}
+        <button type="button" className={`mic ${listening ? 'on' : ''}`} onClick={toggleMic} disabled={!open}
           aria-pressed={listening} aria-label={listening ? 'Stop and send' : 'Ask by voice'}
           title={listening ? 'Stop and send' : 'Ask by voice'}>
           {listening ? <span className="mic-dot" /> : <MicIcon />}
         </button>
-        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} disabled={!live}
-          placeholder={listening ? 'Listening… press the mic again to send' : live ? 'Ask Sonia about the match…' : 'Kick off to ask questions'}
+        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} disabled={!open}
+          placeholder={listening ? 'Listening… press the mic again to send'
+            : fullTime ? 'Full time: ask Sonia about the match…'
+            : open ? 'Ask Sonia about the match…' : 'Kick off to ask questions'}
           aria-label="Your question" />
-        <button type="submit" disabled={!live || !text.trim()}>Ask</button>
+        <button type="submit" disabled={!open || !text.trim()}>Ask</button>
       </div>
-      {live && (
+      {open && (
         <div className="ask-hints">
           {micError ? (
             <span className="mic-error" role="status">{micError}</span>
@@ -83,7 +87,7 @@ export function QuestionBox({ live, waiting, onAsk, onListening }: {
           ) : waiting ? (
             <span className="thinking">Sonia is thinking… the match goes on</span>
           ) : (
-            SUGGESTIONS.map((s) => (
+            (fullTime ? FULL_TIME_SUGGESTIONS : SUGGESTIONS).map((s) => (
               <button key={s} type="button" className="chip" onClick={() => onAsk(s)}>{s}</button>
             ))
           )}

@@ -25,6 +25,8 @@ from app.stats.engine import StatsEngine
 
 log = logging.getLogger(__name__)
 
+POST_MATCH_SECONDS = 10 * 60  # after full time, questions stay open this long
+
 app = FastAPI(title="Match Intelligence")
 app.add_middleware(CORSMiddleware, allow_origins=[settings.frontend_origin], allow_methods=["*"])
 # Crowd ambience and goal roar (CC BY 4.0, see assets/audio/CREDITS.md)
@@ -61,6 +63,7 @@ async def match_feed(ws: WebSocket) -> None:
     {"type": "level", "level": ...} and the next line follows the new level.
     It can also send {"type": "question", "text": ...}: the server echoes {"type": "question"} and
     the answer arrives later as a commentary line with reply_to, while the match keeps going.
+    Questions stay open after full time ("end") until the viewer leaves or POST_MATCH_SECONDS.
     """
     await ws.accept()
     params = ws.query_params
@@ -157,7 +160,13 @@ async def match_feed(ws: WebSocket) -> None:
             await send({"type": "stats", "stats": stats.snapshot()})
         if tasks:  # let the last lines finish
             await asyncio.wait(tasks, timeout=10)
+        pipeline.full_time = True
         await send({"type": "end", "stats": stats.snapshot()})
+        # Full time isn't the end of the conversation: viewers can still ask about the match.
+        # Keep listening until they leave, or for POST_MATCH_SECONDS.
+        await asyncio.wait({listener}, timeout=POST_MATCH_SECONDS)
+        if tasks:
+            await asyncio.wait(tasks, timeout=15)  # an answer still on its way
         await ws.close()
     except WebSocketDisconnect:
         pass
