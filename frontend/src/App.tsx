@@ -25,6 +25,7 @@ export default function App() {
   const answered = new Set(lines.map((l) => l.reply_to))
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
+  const canAsk = live || status === 'ended' // questions stay open after full time
   const period = events[0]?.event.period ?? null
   const scoreText = info && stats ? `${stats.score[info.home.name]}–${stats.score[info.away.name]}` : ''
 
@@ -83,7 +84,8 @@ export default function App() {
 
         <aside className="side">
           <CommentaryFeed lines={lines} questions={questions} speakingId={speakingId} />
-          <QuestionBox live={live} waiting={waiting} onAsk={ask} onListening={setListening} />
+          <QuestionBox open={canAsk} fullTime={status === 'ended'} waiting={waiting} onAsk={ask}
+            onListening={setListening} />
         </aside>
 
         {info && stats && (

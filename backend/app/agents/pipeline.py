@@ -47,6 +47,7 @@ class CommentaryPipeline:
         self.viewer = viewer or ViewerProfile()
         self.qa: QuestionAnswerer | None = None
         self.timeline: list[tuple[MatchEvent, Moment]] = []  # what Q&A searches to resolve "that"
+        self.full_time = False  # set when the final whistle goes; questions are then about the whole match
         self._last_analysis_at: int | None = None
 
     def rank(self, event: MatchEvent) -> Moment:
@@ -91,7 +92,7 @@ class CommentaryPipeline:
         minute, second = divmod(self.stats.clock, 60)  # the match clock when they asked
         level = self.viewer.level
         if self.qa:
-            text = await self.qa.answer(question, minute, second, self.viewer)
+            text = await self.qa.answer(question, minute, second, self.viewer, self.full_time)
             source = "model" if self.qa.agent else "template"
         else:
             text, source = "Sorry, I can't take questions right now. Keep watching!", "template"

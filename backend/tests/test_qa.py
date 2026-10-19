@@ -49,6 +49,14 @@ def test_events_before_finds_that_moment_and_skips_routine_play():
     assert found[-1]["awarded_to"] == HOME and found[-1]["moment"] == "penalty awarded"
 
 
+def test_key_moments_are_the_biggest_of_the_whole_match():
+    events = [foul(10, 0, "small"), foul(30, 0, "pen", penalty=True), routine_pass(31, 0, "p1"),
+              foul(85, 0, "late")]
+    found = tools_for(events)["get_key_moments"](count=2)
+    assert found[0]["event_id"] == "pen"  # biggest first, not newest first
+    assert "p1" not in [e["event_id"] for e in found]
+
+
 def test_rules_come_from_our_glossary():
     get_rule = tools_for([routine_pass(1, 0, "p")])["get_rule"]
     assert "second-last defender" in get_rule(topic="Offside")["explanation"]
@@ -96,3 +104,15 @@ def test_question_over_the_websocket_is_echoed_and_answered():
     answer = next(m["line"] for m in seen if m["type"] == "commentary" and m["line"].get("reply_to"))
     assert echo["text"] == "Why was that a foul?" and echo["id"] == "q1"
     assert answer["reply_to"] == "q1" and answer["speaker"] == "analyst" and answer["text"] == UNAVAILABLE
+
+
+def test_questions_stay_open_after_full_time():
+    with TestClient(app).websocket_connect("/ws/match?speed=10000") as ws:
+        while ws.receive_json()["type"] != "end":
+            pass
+        ws.send_json({"type": "question", "text": "Who was the better team?"})
+        seen = []
+        while not any(m.get("type") == "commentary" for m in seen):
+            seen.append(ws.receive_json())
+    assert seen[0]["type"] == "question"
+    assert next(m for m in seen if m["type"] == "commentary")["line"]["reply_to"] == "q1"
