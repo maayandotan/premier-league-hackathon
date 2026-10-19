@@ -85,7 +85,7 @@ Settings in `.env` or the environment: `USE_AGENTS=false` (template commentary, 
 
 ```bash
 cd backend && .venv/bin/ruff check . && .venv/bin/pytest -q
-cd frontend && npm run lint && npm run build
+cd frontend && npm run lint && npm test && npm run build
 ```
 
 CI (`.github/workflows/ci.yml`) runs the same on every PR. Add a test for every bug fixed and every new tool or rule.

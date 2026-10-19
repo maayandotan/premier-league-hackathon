@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BroadcastAudio } from '../audio/broadcastAudio'
+import { parseClock } from '../audio/clipQueue'
 import type { CommentaryLine, FeedMessage, MatchInfo, MatchStats, RankedEvent, ViewerQuestion } from './types'
 
 export type FeedStatus = 'idle' | 'live' | 'ended' | 'error'
@@ -27,10 +28,15 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
   const [audio] = useState(() => new BroadcastAudio(setSpeakingId))
   const [muted, setMuted] = useState(false)
   const [level, setLevelState] = useState(initialLevel)
+  const askedAt = useRef(new Map<string, number>()) // question id -> match clock (s) when asked
+  const answerOf = useRef(new Map<string, string>()) // answer line id -> question id
 
   const begin = useCallback(() => {
     socket.current?.close()
     void audio.start() // inside the click: browsers only allow sound after a user gesture
+    askedAt.current.clear()
+    answerOf.current.clear()
+    audio.setMatchClock(0)
     setEvents([])
     setLines([])
     setQuestions([])
@@ -52,16 +58,24 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
           setLevelState(data.level) // the server confirmed the change
           break
         case 'question':
+          askedAt.current.set(data.id, parseClock(data.clock))
           setQuestions((prev) => [...prev, { id: data.id, text: data.text, clock: data.clock }])
           break
         case 'event':
           if (data.moment.kind === 'goal') audio.roar() // the crowd reacts before the caller does
+          audio.setMatchClock(data.event.minute * 60 + data.event.second)
           setEvents((prev) => [{ event: data.event, moment: data.moment }, ...prev].slice(0, MAX_EVENTS))
           break
         case 'audio':
-          void audio.enqueue(data.line_id, data.mp3, data.excitement)
+        {
+          // The text arrives before its audio, so an answer is already known here.
+          const questionId = answerOf.current.get(data.line_id)
+          const asked = questionId ? askedAt.current.get(questionId) : undefined
+          void audio.enqueue(data.line_id, data.mp3, data.excitement, asked)
           break
+        }
         case 'commentary':
+          if (data.line.reply_to) answerOf.current.set(data.line.id, data.line.reply_to)
           setLines((prev) => [data.line, ...prev])
           break
         case 'stats':
