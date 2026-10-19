@@ -37,6 +37,7 @@ export interface MatchInfo {
 }
 
 export interface CommentaryLine {
+  id: string
   speaker: 'caller' | 'analyst'
   excitement: 0 | 1 | 2
   text: string
@@ -60,9 +61,10 @@ export interface MatchStats {
 }
 
 export type FeedMessage =
-  | { type: 'match'; info: MatchInfo }
+  | { type: 'match'; info: MatchInfo; audio: boolean }
   | { type: 'event'; event: MatchEvent; moment: Moment }
   | { type: 'commentary'; line: CommentaryLine }
+  | { type: 'audio'; line_id: string; excitement: number; mp3: string }
   | { type: 'stats'; stats: MatchStats }
   | { type: 'end'; stats: MatchStats }
   | { type: 'error'; message: string }
