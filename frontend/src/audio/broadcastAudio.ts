@@ -36,6 +36,13 @@ export class BroadcastAudio {
   played = 0 // for debugging: clips actually played
   dropped = 0 // clips skipped because they arrived too late
 
+  /** onSpeaking is told which line is being spoken, or null when nobody is speaking. */
+  private readonly onSpeaking: (lineId: string | null) => void
+
+  constructor(onSpeaking: (lineId: string | null) => void = () => {}) {
+    this.onSpeaking = onSpeaking
+  }
+
   /** Must be called from a click: browsers only allow sound after a user gesture. */
   async start(): Promise<void> {
     this.stop()
@@ -63,6 +70,7 @@ export class BroadcastAudio {
   stop(): void {
     this.queue = []
     this.current = null
+    this.onSpeaking(null)
     void this.ctx?.close()
     this.ctx = null
   }
@@ -109,6 +117,7 @@ export class BroadcastAudio {
     }
     if (!clip) {
       this.duckCrowd(false)
+      this.onSpeaking(null)
       return
     }
     const source = ctx.createBufferSource()
@@ -122,6 +131,7 @@ export class BroadcastAudio {
     }
     this.current = source
     this.duckCrowd(true)
+    this.onSpeaking(clip.lineId)
     source.start()
     this.played++
   }

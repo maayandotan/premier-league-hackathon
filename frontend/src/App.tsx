@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { CommentaryFeed } from './components/CommentaryFeed'
+import { EventTicker } from './components/EventTicker'
+import { type Level, LevelPicker } from './components/LevelPicker'
+import { Scorebug } from './components/Scorebug'
+import { MomentumBar, StatBars } from './components/StatBars'
 import { Pitch } from './match/Pitch'
-import { StatsPanel } from './match/StatsPanel'
 import { useMatchFeed } from './match/useMatchFeed'
-
-const LEVELS = ['Beginner', 'Fan', 'Analyst']
 
 // Pick the match from the URL, e.g. ?source=synthetic:sample_match&speed=20&start=60
 const params = new URLSearchParams(location.search)
@@ -14,61 +16,71 @@ const feedOptions = {
 }
 
 export default function App() {
-  const [level, setLevel] = useState(1)
-  const { status, error, info, events, lines, stats, muted, toggleMute, start } = useMatchFeed(feedOptions)
+  const [level, setLevel] = useState<Level>('fan')
+  const { status, error, info, events, lines, stats, muted, speakingId, toggleMute, start } = useMatchFeed(feedOptions)
+  const live = status === 'live'
 
   return (
-    <main>
-      <header>
-        <h1>Match Intelligence</h1>
-        <p className="status" data-status={status}>{status}</p>
+    <div className="app">
+      <header className="topbar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">⚽</span>
+          <div>
+            <h1>Match Intelligence</h1>
+            <p>AI commentary at your level</p>
+          </div>
+        </div>
+        <div className="controls">
+          <LevelPicker value={level} onChange={setLevel} />
+          <button className="icon-button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}
+            title={muted ? 'Sound off' : 'Sound on'}>
+            {muted ? '🔇' : '🔊'}
+          </button>
+          <button className="kickoff" onClick={start}>{live ? '↻ Restart' : '▶ Kick off'}</button>
+        </div>
       </header>
 
-      <section className="controls">
-        <button onClick={start}>{status === 'live' ? 'Restart' : 'Start match'}</button>
-        <button className="secondary" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
-          {muted ? '🔇 Sound off' : '🔊 Sound on'}
-        </button>
-        <label>
-          Level: <strong>{LEVELS[level]}</strong>
-          {/* Not wired to the backend yet: personalization comes with the agents (#15). */}
-          <input type="range" min={0} max={2} value={level} onChange={(e) => setLevel(Number(e.target.value))} />
-        </label>
-        <span className="source">{feedOptions.source} · ×{feedOptions.speed}</span>
-      </section>
+      {error && <p className="error" role="alert">{error}</p>}
 
-      {error && <p className="error">{error}</p>}
-      {info && stats && <StatsPanel info={info} stats={stats} />}
-      {info && <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} />}
+      <main className="broadcast">
+        <div className="stage">
+          {info ? (
+            <>
+              <Scorebug info={info} stats={stats} status={status} />
+              <section className="card pitch-card">
+                <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} />
+                {stats && <MomentumBar stats={stats} />}
+              </section>
+            </>
+          ) : (
+            <section className="card hero">
+              <div className="hero-text">
+                <span className="eyebrow">Live · AI broadcast</span>
+                <h2>Two AI commentators.<br />Your level.</h2>
+                <p>A caller for the action, an analyst for the why, and a crowd that roars on every goal.</p>
+                <button className="kickoff big" onClick={start}>▶ Kick off</button>
+                <p className="hint">🔊 Turn your sound on</p>
+              </div>
+            </section>
+          )}
+        </div>
 
-      <div className="panels">
-        <section>
-          <h2>Commentary</h2>
-          <ul>
-            {lines.map((line, i) => (
-              <li key={i} className={`line ${line.speaker}`} data-excitement={line.excitement}>
-                <span className="speaker">{line.speaker}</span> {line.text}
-                <span className="source" data-source={line.source}>{line.source === 'model' ? 'AI' : 'template'}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-        <section>
-          <h2>Events</h2>
-          <ul>
-            {events.map(({ event: e, moment }) => (
-              <li key={e.id} className="event" data-routine={moment.score < 3}>
-                <span className="clock">{e.minute}'{String(e.second).padStart(2, '0')}</span> {e.type} · {e.player ?? e.team}
-                {moment.score >= 3 && (
-                  <span className="moment" data-score={moment.score >= 9 ? 'high' : moment.score >= 6 ? 'mid' : 'low'}>
-                    {moment.score} · {moment.reason}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </div>
-    </main>
+        <aside className="side">
+          <CommentaryFeed lines={lines} speakingId={speakingId} />
+        </aside>
+
+        {info && stats && (
+          <div className="lower">
+            <StatBars info={info} stats={stats} />
+            <EventTicker events={events} homeTeam={info.home.name} />
+          </div>
+        )}
+      </main>
+
+      <footer className="footer">
+        <span>{feedOptions.source} · ×{feedOptions.speed}</span>
+        <span>Crowd audio: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0</span>
+      </footer>
+    </div>
   )
 }

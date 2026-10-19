@@ -21,7 +21,8 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
   const [lines, setLines] = useState<CommentaryLine[]>([])
   const [stats, setStats] = useState<MatchStats | null>(null)
   const socket = useRef<WebSocket | null>(null)
-  const [audio] = useState(() => new BroadcastAudio())
+  const [speakingId, setSpeakingId] = useState<string | null>(null)
+  const [audio] = useState(() => new BroadcastAudio(setSpeakingId))
   const [muted, setMuted] = useState(false)
 
   const begin = useCallback(() => {
@@ -82,5 +83,5 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
     if (import.meta.env.DEV) Object.assign(window, { broadcastAudio: audio })
   }, [audio])
 
-  return { status, error, info, events, lines, stats, muted, toggleMute, start: begin }
+  return { status, error, info, events, lines, stats, muted, speakingId, toggleMute, start: begin }
 }
