@@ -1,4 +1,5 @@
 import { type FormEvent, useState } from 'react'
+import { MicIcon } from './Icons'
 
 const SUGGESTIONS = ['Why was that a foul?', 'Who has been better?', 'What is offside?']
 
@@ -55,7 +56,7 @@ export function QuestionBox({ live, waiting, onAsk, onListening }: {
       <div className="ask-row">
         <button type="button" className={`mic ${listening ? 'on' : ''}`} onClick={speak} disabled={!live || listening}
           aria-label={listening ? 'Listening' : 'Ask by voice'} title="Ask by voice">
-          {listening ? <span className="mic-dot" /> : '🎤'}
+          {listening ? <span className="mic-dot" /> : <MicIcon />}
         </button>
         <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} disabled={!live || listening}
           placeholder={listening ? 'Listening… ask your question' : live ? 'Ask Sonia about the match…' : 'Kick off to ask questions'}

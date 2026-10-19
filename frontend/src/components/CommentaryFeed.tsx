@@ -1,8 +1,8 @@
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 
 const VOICES = {
-  caller: { initial: '🎙️', name: 'Guy', role: 'Play-by-play' },
-  analyst: { initial: '🧠', name: 'Sonia', role: 'Analyst' },
+  caller: { initial: 'G', name: 'Guy', role: 'Play-by-play' },
+  analyst: { initial: 'S', name: 'Sonia', role: 'Analyst' },
 } as const
 
 /**
@@ -34,7 +34,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
         <ol>
           {pending.map((q) => (
             <li key={q.id} className="line viewer">
-              <span className="avatar" aria-hidden="true">🙋</span>
+              <span className="avatar" aria-hidden="true">You</span>
               <div className="bubble">
                 <div className="who">You <span className="role">· asked at {q.clock}</span></div>
                 <p>{q.text}</p>
