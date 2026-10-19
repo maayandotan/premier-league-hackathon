@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     foundry_model_deployment: str = ""
     use_agents: bool = True  # False = template commentary only (tests, CI, no Azure access)
     use_speech: bool = True  # False = text only, no audio
+    allow_real_data: bool = True  # False in production: StatsBomb data is for local testing only
 
     frontend_origin: str = "http://localhost:5173"
     replay_speed: float = 1.0  # 1.0 = real time; higher replays the match faster

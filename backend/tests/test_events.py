@@ -52,3 +52,14 @@ def test_sources():
     for bad in ("../secret", "synthetic:../../etc", "statsbomb:does-not-exist", "nope:1"):
         with pytest.raises(UnknownSource):
             load_source(bad)
+
+
+def test_real_data_is_blocked_in_production(monkeypatch, tmp_path):
+    from app.config import settings
+    from app.match import sources
+
+    (tmp_path / "events_123.json").write_text("[]")
+    monkeypatch.setattr(sources, "REAL_DIR", tmp_path)
+    monkeypatch.setattr(settings, "allow_real_data", False)
+    with pytest.raises(UnknownSource):
+        load_source("statsbomb:123")
