@@ -17,8 +17,8 @@ const feedOptions = {
 }
 
 export default function App() {
-  const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask, toggleMute,
-    start } = useMatchFeed(feedOptions)
+  const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask,
+    setListening, toggleMute, start } = useMatchFeed(feedOptions)
   const answered = new Set(lines.map((l) => l.reply_to))
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
@@ -70,7 +70,7 @@ export default function App() {
 
         <aside className="side">
           <CommentaryFeed lines={lines} questions={questions} speakingId={speakingId} />
-          <QuestionBox live={live} waiting={waiting} onAsk={ask} />
+          <QuestionBox live={live} waiting={waiting} onAsk={ask} onListening={setListening} />
         </aside>
 
         {info && stats && (

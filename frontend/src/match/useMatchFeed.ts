@@ -97,6 +97,9 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
     if (text.trim() && ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'question', text }))
   }, [])
 
+  /** While the viewer asks by voice, the commentators stay quiet. */
+  const setListening = useCallback((on: boolean) => audio.setListening(on), [audio])
+
   const toggleMute = useCallback(() => {
     audio.setMuted(!muted)
     setMuted(!muted)
@@ -108,7 +111,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
   }, [audio])
 
   return {
-    status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask, toggleMute,
-    start: begin,
+    status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask, setListening,
+    toggleMute, start: begin,
   }
 }
