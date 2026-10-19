@@ -37,7 +37,8 @@ Breaking one of these can disqualify the entry. If a task seems to need breaking
 | `backend/app/speech/` | Azure Speech: TTS with SSML styles, browser STT token |
 | `backend/tests/` | pytest; runs with no Azure access (`conftest.py` turns agents and speech off) |
 | `frontend/src/` | React + Vite + TypeScript: scorebug, SVG pitch, commentary feed, question box, audio engine |
-| `data/synthetic/` | Generated matches (in git) |
+| `backend/app/synthetic/` | Synthetic match generator: possession-chain simulator, scripted scenarios, fictional squads |
+| `data/synthetic/` | Generated matches (in git): `comeback`, `red_card`, `late_equaliser`, `open` |
 | `spikes/` | Throwaway experiments, step by step versions of the agents. Not production code |
 | `scripts/deploy.sh` | Build and deploy to Azure |
 
@@ -76,7 +77,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and press **Kick off** (sound on). URL options: `?source=synthetic:sample_match&speed=20&start=80` (match, replay speed, start minute). A fast way to reach full time: `?speed=400`.
+Open http://localhost:5173 and press **Kick off** (sound on). URL options: `?source=synthetic:comeback&speed=20&start=80` (match, replay speed, start minute). A fast way to reach full time: `?speed=400`.
 
 Settings in `.env` or the environment: `USE_AGENTS=false` (template commentary, no Azure), `USE_SPEECH=false` (text only), `ALLOW_REAL_DATA` (false in production).
 
@@ -131,7 +132,8 @@ These came from real failures. Follow them when changing or adding an agent.
 
 Open issues: `gh issue list`. Current owners and priorities:
 
-- **Dean: synthetic match generator v1 (#9). This is the critical path**: the demo and the video depend on it. Output must match [docs/event-schema.md](docs/event-schema.md) (see `data/synthetic/sample_match.json`) and follow rule 1 above. Then the demo match scenario (#25).
+- **Synthetic generator v1 (#9) is done**: see [docs/event-schema.md](docs/event-schema.md#the-synthetic-generator-9). Regenerate with `.venv/bin/python -m scripts.generate_match` after changing it.
+- **Dean: the demo match scenario (#25).** Pick or tune the scenario the video tells (`backend/app/synthetic/scenarios.py`): which moments, at what minutes, so 2 minutes of video show goals, Sonia explaining, and a viewer question.
 - Demo video under 2 minutes (#26), submission package with the repo made public (#27).
 - Before 2026-10-27: set the live app to `--min-replicas 1` so judges never hit a cold start.
 - Optional if time allows: Fact-Checker (#17), Storyteller (#30), Hebrew commentary (#23), xG trained on synthetic data with SHAP (#11), a fuller Producer (#16), tracing agent runs to Application Insights.

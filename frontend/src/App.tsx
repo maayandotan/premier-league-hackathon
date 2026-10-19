@@ -10,10 +10,10 @@ import { MomentumBar, StatBars } from './components/StatBars'
 import { Pitch } from './match/Pitch'
 import { useMatchFeed } from './match/useMatchFeed'
 
-// Pick the match from the URL, e.g. ?source=synthetic:sample_match&speed=20&start=60
+// Pick the match from the URL, e.g. ?source=synthetic:red_card&speed=20&start=60 (default: the comeback)
 const params = new URLSearchParams(location.search)
 const feedOptions = {
-  source: params.get('source') ?? 'demo',
+  source: params.get('source') ?? 'synthetic:comeback',
   speed: Number(params.get('speed') ?? 4),
   start: Number(params.get('start') ?? 0),
   level: params.get('level') ?? 'fan',

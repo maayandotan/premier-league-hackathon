@@ -104,3 +104,15 @@ def test_foul_fields_say_who_benefits():
     assert fields["fouling_team"] == AWAY and fields["awarded_to"] == HOME
     assert fields["fouling_player"] == "K. Osei" and "team" not in fields and "player" not in fields
     assert fields["where"] == "in the box"  # seen from the team that gets the penalty
+
+
+def test_substitution_fields_say_who_comes_on():
+    from app.events.models import SubstitutionDetails
+
+    stats = StatsEngine(HOME, AWAY)
+    sub = MatchEvent(id="s1", index=4, period=2, minute=86, second=0, type="Substitution", team=AWAY,
+                     player="V. Darrow", substitution=SubstitutionDetails(replacement="M. Ojukwu"))
+    moment = Moment(score=3, reason="substitution", kind="stoppage", quiet=True)
+    fields = event_fields(sub, moment, stats)
+    assert fields["player_off"] == "V. Darrow" and fields["player_on"] == "M. Ojukwu"
+    assert "player" not in fields

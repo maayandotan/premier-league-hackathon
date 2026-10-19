@@ -62,9 +62,20 @@ cd backend && .venv/bin/python -m scripts.export_schema
 
 **Event types:** Pass, Carry, Shot, Dribble, Duel, Interception, Ball Recovery, Clearance, Block, Pressure, Foul Committed, Foul Won, Offside, Card, Substitution, Goal Keeper, Miscontrol, Dispossessed, Injury Stoppage, Half Start, Half End.
 
-## Notes for the synthetic generator (#9)
+## The synthetic generator (#9)
 
-- Write files with `save_match_file()` from `app/events/io.py`, into `data/synthetic/<name>.json`. Then replay with `?source=synthetic:<name>`.
-- A goal is a Shot with `shot.outcome == "Goal"`; there's no separate goal event.
-- Fictional teams and players only, and tune numbers with general football knowledge, not StatsBomb data (DATA_POLICY.md).
-- Minimum useful match: Pass, Carry, Shot, Foul Committed, Card, Substitution, Offside, Half Start/End, with `possession` ids and locations.
+[`backend/app/synthetic/`](../backend/app/synthetic/) generates full 90-minute matches in this format: about 1,200 events each.
+
+- **How it works** (`simulator.py`): a possession-chain simulator. Each possession starts from a restart or a turnover and moves one action at a time (pass, carry, dribble, cross, shot) until the ball is lost, goes out, a foul stops play, or someone shoots. The odds depend on where the ball is. The same scenario and seed always give the same match.
+- **Tuned with general football knowledge**, never real data (DATA_POLICY.md rule 5): about 25 shots, 2.5 goals, 22 fouls, 3.5 yellow cards and 10 corners a match. `tests/test_synthetic.py` checks these averages.
+- **Scenarios** (`scenarios.py`) script the big moments (goals with their style, red cards, big misses, missed penalties) and the simulator plays the rest of the match around them. In a scripted match only the script scores goals or sends players off. `open` has no script.
+- **Squads** (`squads.py`): two fictional clubs in a 4-3-3, 18 players each.
+
+Generate the files, then replay one with `?source=synthetic:<name>`:
+
+```bash
+cd backend && .venv/bin/python -m scripts.generate_match                    # every scenario, seed 1
+cd backend && .venv/bin/python -m scripts.generate_match comeback --seed 7  # one scenario
+```
+
+Format details the generator follows: a goal is a Shot with `shot.outcome == "Goal"` (there's no separate goal event); a card is on its foul (`foul.card`), not a separate Card event; a Substitution's `player` is the one going off and `substitution.replacement` the one coming on; `Half Start` and `Half End` come once per team.
