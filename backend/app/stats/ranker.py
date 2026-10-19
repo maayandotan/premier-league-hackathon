@@ -104,6 +104,9 @@ def _base(event: MatchEvent, stats: StatsEngine, momentum_before: float | None) 
             return Moment(score=5, reason="sets up a shot", kind="attack", quiet=False)
         if event.pass_.type == "Corner":
             return Moment(score=4, reason="corner", kind="set_piece", quiet=False)
+        # A keeper's long ball travels far but is rarely a moment worth calling.
+        if event.pass_.type == "Goal Kick" or event.position == "Goalkeeper":
+            return Moment(score=0, reason="goalkeeper distribution", kind="routine", quiet=False)
         prog = pass_progression(event)
         if prog and prog["into_box"]:
             return Moment(score=4, reason="ball into the box", kind="attack", quiet=False)

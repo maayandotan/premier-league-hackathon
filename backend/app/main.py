@@ -2,6 +2,8 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.agents.caller import Caller
+from app.agents.client import agents_enabled
 from app.agents.pipeline import CommentaryPipeline
 from app.config import settings
 from app.match.replay import replay
@@ -33,7 +35,8 @@ async def match_feed(ws: WebSocket) -> None:
         return
 
     stats = StatsEngine(home=match.info.home.name, away=match.info.away.name)
-    pipeline = CommentaryPipeline(stats)
+    caller = Caller(use_model=agents_enabled())
+    pipeline = CommentaryPipeline(stats, caller)
     speed = float(params.get("speed", settings.replay_speed))
     start = int(params.get("start", 0))
     for event in match.events:  # fast-forward: earlier events still count for score and stats
@@ -41,6 +44,7 @@ async def match_feed(ws: WebSocket) -> None:
             stats.update(event)
     try:
         await ws.send_json({"type": "match", "info": match.info.model_dump(exclude_none=True)})
+        await caller.warm_up()
         async for event in replay(match.events, speed=speed, start_minute=start):
             moment, lines = await pipeline.on_event(event)
             await ws.send_json({

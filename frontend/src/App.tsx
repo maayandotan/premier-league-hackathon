@@ -43,6 +43,7 @@ export default function App() {
             {lines.map((line, i) => (
               <li key={i} className={`line ${line.speaker}`} data-excitement={line.excitement}>
                 <span className="speaker">{line.speaker}</span> {line.text}
+                <span className="source" data-source={line.source}>{line.source === 'model' ? 'AI' : 'template'}</span>
               </li>
             ))}
           </ul>

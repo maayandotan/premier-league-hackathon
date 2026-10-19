@@ -53,3 +53,6 @@ ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
   .moment[data-score='mid'] { background: #3a2f12; color: #f2c46d; }
   .moment[data-score='high'] { background: #3d1a1c; color: #ff8a8a; }
 }
+.line .source { margin-left: 6px; font-size: 0.65rem; font-weight: 700; padding: 0 6px; border-radius: 8px; vertical-align: middle; }
+.line .source[data-source='model'] { background: #dbeafe; color: #1d4ed8; }
+.line .source[data-source='template'] { background: var(--bg); color: var(--muted); }
