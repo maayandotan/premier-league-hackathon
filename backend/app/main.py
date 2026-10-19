@@ -12,6 +12,7 @@ from app.agents.analyst import Analyst
 from app.agents.caller import Caller
 from app.agents.client import agents_enabled
 from app.agents.pipeline import CommentaryLine, CommentaryPipeline
+from app.agents.viewer import ViewerProfile
 from app.config import REPO_ROOT, settings
 from app.events.models import MatchEvent
 from app.match.replay import replay
@@ -38,7 +39,11 @@ async def match_feed(ws: WebSocket) -> None:
 
     match (info) -> per event: event (+ ranked moment), stats -> commentary (text) -> audio (MP3)
     -> end. Commentary and audio come from background tasks, so the match never waits for them.
-    Query params: source (see app.match.sources), speed (1 = real time), start (minute).
+    Query params: source (see app.match.sources), speed (1 = real time), start (minute),
+    level (beginner | fan | analyst).
+
+    The browser can send {"type": "set_level", "level": ...} at any time; the server answers
+    {"type": "level", "level": ...} and the next line follows the new level.
     """
     await ws.accept()
     params = ws.query_params
@@ -52,7 +57,9 @@ async def match_feed(ws: WebSocket) -> None:
     stats = StatsEngine(home=match.info.home.name, away=match.info.away.name)
     caller = Caller(use_model=agents_enabled())
     analyst = Analyst(stats, {e.id: e for e in match.events}, use_model=agents_enabled())
-    pipeline = CommentaryPipeline(stats, caller, analyst)
+    viewer = ViewerProfile()
+    viewer.set_level(params.get("level", "fan"))
+    pipeline = CommentaryPipeline(stats, caller, analyst, viewer)
     speech = Speech() if speech_enabled() else None
     speed = float(params.get("speed", settings.replay_speed))
     start = int(params.get("start", 0))
@@ -82,9 +89,22 @@ async def match_feed(ws: WebSocket) -> None:
         except Exception:  # one bad line must never stop the match
             log.exception("commentary failed for event %s", event.id)
 
+    async def listen() -> None:
+        """Messages from the browser, for the whole match: today, level changes."""
+        try:
+            while True:
+                message = await ws.receive_json()
+                if message.get("type") == "set_level" and viewer.set_level(str(message.get("level"))):
+                    await send({"type": "level", "level": viewer.level})
+        except (WebSocketDisconnect, RuntimeError):
+            pass  # the match ended or the viewer left
+        except ValueError:
+            log.warning("ignored a malformed message from the browser")
+
+    listener = asyncio.create_task(listen())
     try:
         await send({"type": "match", "info": match.info.model_dump(exclude_none=True),
-                    "audio": speech is not None})
+                    "audio": speech is not None, "level": viewer.level})
         await caller.warm_up()
         async for event in replay(match.events, speed=speed, start_minute=start):
             moment = pipeline.rank(event)
@@ -107,6 +127,7 @@ async def match_feed(ws: WebSocket) -> None:
     except WebSocketDisconnect:
         pass
     finally:
+        listener.cancel()
         for task in tasks:
             task.cancel()
         if speech:

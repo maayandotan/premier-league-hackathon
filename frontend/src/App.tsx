@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
 import { type Level, LevelPicker } from './components/LevelPicker'
@@ -13,11 +12,12 @@ const feedOptions = {
   source: params.get('source') ?? 'demo',
   speed: Number(params.get('speed') ?? 4),
   start: Number(params.get('start') ?? 0),
+  level: params.get('level') ?? 'fan',
 }
 
 export default function App() {
-  const [level, setLevel] = useState<Level>('fan')
-  const { status, error, info, events, lines, stats, muted, speakingId, toggleMute, start } = useMatchFeed(feedOptions)
+  const { status, error, info, events, lines, stats, muted, speakingId, level, setLevel, toggleMute, start } =
+    useMatchFeed(feedOptions)
   const live = status === 'live'
 
   return (
@@ -31,7 +31,7 @@ export default function App() {
           </div>
         </div>
         <div className="controls">
-          <LevelPicker value={level} onChange={setLevel} />
+          <LevelPicker value={level as Level} onChange={setLevel} />
           <button className="icon-button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}
             title={muted ? 'Sound off' : 'Sound on'}>
             {muted ? '🔇' : '🔊'}

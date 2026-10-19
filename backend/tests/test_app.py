@@ -59,3 +59,18 @@ def test_replay_waits_match_time_divided_by_speed():
 
     assert asyncio.run(run()) == ["demo-1", "demo-2", "demo-3", "demo-4"]
     assert waits == [1.5, 1.5, 17.0]  # gaps of 3s, 3s, 34s at double speed
+
+
+def test_level_from_the_url_and_changed_mid_match():
+    with client.websocket_connect("/ws/match?speed=1&level=beginner") as ws:
+        first = ws.receive_json()
+        assert first["type"] == "match" and first["level"] == "beginner"
+        ws.send_json({"type": "set_level", "level": "analyst"})
+        ws.send_json({"type": "set_level", "level": "expert"})  # ignored: not a level
+        seen = []
+        while True:
+            msg = ws.receive_json()
+            seen.append(msg)
+            if msg["type"] == "level" or msg["type"] == "end":
+                break
+    assert seen[-1] == {"type": "level", "level": "analyst"}

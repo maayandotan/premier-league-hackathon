@@ -8,12 +8,13 @@ export interface FeedOptions {
   source: string // "demo" | "synthetic:<name>" | "statsbomb:<id>" (local only)
   speed: number
   start: number // minute
+  level: string // beginner | fan | analyst, at kick-off
 }
 
 const MAX_EVENTS = 200 // a full match has thousands; keep the list light
 
 /** Connects to the backend's live match WebSocket and collects events, commentary and stats. */
-export function useMatchFeed({ source, speed, start }: FeedOptions) {
+export function useMatchFeed({ source, speed, start, level: initialLevel }: FeedOptions) {
   const [status, setStatus] = useState<FeedStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<MatchInfo | null>(null)
@@ -24,6 +25,7 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
   const [speakingId, setSpeakingId] = useState<string | null>(null)
   const [audio] = useState(() => new BroadcastAudio(setSpeakingId))
   const [muted, setMuted] = useState(false)
+  const [level, setLevelState] = useState(initialLevel)
 
   const begin = useCallback(() => {
     socket.current?.close()
@@ -33,7 +35,7 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
     setStats(null)
     setError(null)
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws'
-    const query = new URLSearchParams({ source, speed: String(speed), start: String(start) })
+    const query = new URLSearchParams({ source, speed: String(speed), start: String(start), level })
     const ws = new WebSocket(`${protocol}://${location.host}/ws/match?${query}`)
     ws.onopen = () => setStatus('live')
     ws.onerror = () => setStatus('error')
@@ -42,6 +44,10 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
       switch (data.type) {
         case 'match':
           setInfo(data.info)
+          setLevelState(data.level)
+          break
+        case 'level':
+          setLevelState(data.level) // the server confirmed the change
           break
         case 'event':
           if (data.moment.kind === 'goal') audio.roar() // the crowd reacts before the caller does
@@ -66,12 +72,19 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
       }
     }
     socket.current = ws
-  }, [source, speed, start, audio])
+  }, [source, speed, start, level, audio])
 
   useEffect(() => () => {
     socket.current?.close()
     audio.stop()
   }, [audio])
+
+  /** Change the level; mid-match it's sent to the server and the next line follows it. */
+  const setLevel = useCallback((next: string) => {
+    setLevelState(next)
+    const ws = socket.current
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_level', level: next }))
+  }, [])
 
   const toggleMute = useCallback(() => {
     audio.setMuted(!muted)
@@ -83,5 +96,5 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
     if (import.meta.env.DEV) Object.assign(window, { broadcastAudio: audio })
   }, [audio])
 
-  return { status, error, info, events, lines, stats, muted, speakingId, toggleMute, start: begin }
+  return { status, error, info, events, lines, stats, muted, speakingId, level, setLevel, toggleMute, start: begin }
 }

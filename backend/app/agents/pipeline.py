@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.agents.analyst import Analyst
 from app.agents.caller import Caller
+from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment, rank
@@ -32,13 +33,16 @@ class CommentaryLine(BaseModel):
     text: str
     event_id: str
     source: str = "template"  # "model" (an agent wrote it) or "template" (code fallback)
+    level: str = "fan"  # the viewer level it was written for
 
 
 class CommentaryPipeline:
-    def __init__(self, stats: StatsEngine, caller: Caller, analyst: Analyst | None = None) -> None:
+    def __init__(self, stats: StatsEngine, caller: Caller, analyst: Analyst | None = None,
+                 viewer: ViewerProfile | None = None) -> None:
         self.stats = stats
         self.caller = caller
         self.analyst = analyst
+        self.viewer = viewer or ViewerProfile()
         self._last_analysis_at: int | None = None
 
     def rank(self, event: MatchEvent) -> Moment:
@@ -63,13 +67,15 @@ class CommentaryPipeline:
         return True
 
     async def call(self, event: MatchEvent, moment: Moment) -> CommentaryLine:
-        text, excitement, source = await self.caller.call(event, moment, self.stats)
+        level = self.viewer.level  # the level when the moment happened
+        text, excitement, source = await self.caller.call(event, moment, self.stats, self.viewer)
         return CommentaryLine(id=f"{event.id}-caller", speaker="caller", excitement=excitement, text=text,
-                              event_id=event.id, source=source)
+                              event_id=event.id, source=source, level=level)
 
     async def analyse(self, event: MatchEvent, moment: Moment) -> CommentaryLine | None:
-        text = await self.analyst.analyse(event, moment) if self.analyst else None
+        level = self.viewer.level
+        text = await self.analyst.analyse(event, moment, self.viewer) if self.analyst else None
         if not text:
             return None
         return CommentaryLine(id=f"{event.id}-analyst", speaker="analyst", excitement=0, text=text,
-                              event_id=event.id, source="model")
+                              event_id=event.id, source="model", level=level)
