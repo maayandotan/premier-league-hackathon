@@ -14,7 +14,7 @@ const feedOptions = {
 
 export default function App() {
   const [level, setLevel] = useState(1)
-  const { status, error, info, events, lines, stats, start } = useMatchFeed(feedOptions)
+  const { status, error, info, events, lines, stats, muted, toggleMute, start } = useMatchFeed(feedOptions)
 
   return (
     <main>
@@ -25,6 +25,9 @@ export default function App() {
 
       <section className="controls">
         <button onClick={start}>{status === 'live' ? 'Restart' : 'Start match'}</button>
+        <button className="secondary" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}>
+          {muted ? '🔇 Sound off' : '🔊 Sound on'}
+        </button>
         <label>
           Level: <strong>{LEVELS[level]}</strong>
           {/* Not wired to the backend yet: personalization comes with the agents (#15). */}

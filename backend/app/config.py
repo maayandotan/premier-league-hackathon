@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     foundry_project_endpoint: str = ""
     foundry_model_deployment: str = ""
     use_agents: bool = True  # False = template commentary only (tests, CI, no Azure access)
+    use_speech: bool = True  # False = text only, no audio
 
     frontend_origin: str = "http://localhost:5173"
     replay_speed: float = 1.0  # 1.0 = real time; higher replays the match faster

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { BroadcastAudio } from '../audio/broadcastAudio'
 import type { CommentaryLine, FeedMessage, MatchInfo, MatchStats, RankedEvent } from './types'
 
 export type FeedStatus = 'idle' | 'live' | 'ended' | 'error'
@@ -20,9 +21,12 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
   const [lines, setLines] = useState<CommentaryLine[]>([])
   const [stats, setStats] = useState<MatchStats | null>(null)
   const socket = useRef<WebSocket | null>(null)
+  const [audio] = useState(() => new BroadcastAudio())
+  const [muted, setMuted] = useState(false)
 
   const begin = useCallback(() => {
     socket.current?.close()
+    void audio.start() // inside the click: browsers only allow sound after a user gesture
     setEvents([])
     setLines([])
     setStats(null)
@@ -39,7 +43,11 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
           setInfo(data.info)
           break
         case 'event':
+          if (data.moment.kind === 'goal') audio.roar() // the crowd reacts before the caller does
           setEvents((prev) => [{ event: data.event, moment: data.moment }, ...prev].slice(0, MAX_EVENTS))
+          break
+        case 'audio':
+          void audio.enqueue(data.line_id, data.mp3, data.excitement)
           break
         case 'commentary':
           setLines((prev) => [data.line, ...prev])
@@ -57,9 +65,22 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
       }
     }
     socket.current = ws
-  }, [source, speed, start])
+  }, [source, speed, start, audio])
 
-  useEffect(() => () => socket.current?.close(), [])
+  useEffect(() => () => {
+    socket.current?.close()
+    audio.stop()
+  }, [audio])
 
-  return { status, error, info, events, lines, stats, start: begin }
+  const toggleMute = useCallback(() => {
+    audio.setMuted(!muted)
+    setMuted(!muted)
+  }, [audio, muted])
+
+  useEffect(() => {
+    // Debugging aid in development: inspect played/dropped clips from the browser console.
+    if (import.meta.env.DEV) Object.assign(window, { broadcastAudio: audio })
+  }, [audio])
+
+  return { status, error, info, events, lines, stats, muted, toggleMute, start: begin }
 }

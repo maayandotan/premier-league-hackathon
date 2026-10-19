@@ -4,6 +4,9 @@ stats engine -> moment ranker -> producer -> caller / analyst / Q&A -> fact-chec
 
 Today: stats engine -> moment ranker -> Caller. The Producer (#16) is still a simple rule:
 call every moment the ranker scores at or above CALL_THRESHOLD.
+
+Ranking is instant and runs inline; the Caller is slow (~1 s), so the server runs it in the
+background and the match never waits for it.
 """
 from pydantic import BaseModel
 
@@ -16,6 +19,7 @@ CALL_THRESHOLD = 3
 
 
 class CommentaryLine(BaseModel):
+    id: str
     speaker: str  # "caller" | "analyst"
     excitement: int  # 0 calm, 1 build-up, 2 big moment (drives the voice style)
     text: str
@@ -28,13 +32,17 @@ class CommentaryPipeline:
         self.stats = stats
         self.caller = caller
 
-    async def on_event(self, event: MatchEvent) -> tuple[Moment, list[CommentaryLine]]:
+    def rank(self, event: MatchEvent) -> Moment:
+        """Update the stats with the event and score it. Instant: no model involved."""
         momentum_before = self.stats.momentum()["value"]
         self.stats.update(event)
-        moment = rank(event, self.stats, momentum_before)
-        if moment.score < CALL_THRESHOLD:
-            return moment, []
+        return rank(event, self.stats, momentum_before)
+
+    @staticmethod
+    def should_call(moment: Moment) -> bool:
+        return moment.score >= CALL_THRESHOLD
+
+    async def call(self, event: MatchEvent, moment: Moment) -> CommentaryLine:
         text, excitement, source = await self.caller.call(event, moment, self.stats)
-        line = CommentaryLine(speaker="caller", excitement=excitement, text=text, event_id=event.id,
-                              source=source)
-        return moment, [line]
+        return CommentaryLine(id=f"{event.id}-caller", speaker="caller", excitement=excitement, text=text,
+                              event_id=event.id, source=source)
