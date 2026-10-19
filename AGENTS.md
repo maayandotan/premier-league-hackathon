@@ -126,7 +126,8 @@ These came from real failures. Follow them when changing or adding an agent.
 7. **Every model call has a deadline and a fallback.** Live commentary can't wait: Guy falls back to a template after ~2 s, with retries on connection errors. A viewer who asked a question always hears an answer.
 8. **Questions carry their match time** so the agent can resolve "that" and "just now". After full time, questions are about the whole match.
 9. **Every number comes from a tool** and is checked by a test. The model never computes or recalls a stat.
-10. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. The step by step versions in `spikes/agents/` show how each agent was built.
+10. **Don't hand the model a conclusion to support.** "Show who had been dominating" assumed the team on top also had the ball. When Northbridge had 65% of the ball but Westvale had the chances, Sonia gave Westvale the 65% to fit the story (3 out of 3 times). The code now checks the data first and picks an angle that is true (`angle_for` in `analyst.py`, `SPLIT` vs `CONTRAST`).
+11. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
 
 ## Open work
 

@@ -7,7 +7,7 @@ from app.agents.analyst import Analyst, angle_for, build_tools
 from app.agents.caller import Caller
 from app.agents.pipeline import ANALYSIS_COOLDOWN, CommentaryPipeline
 from app.agents.viewer import ViewerProfile
-from app.events.models import MatchEvent, ShotDetails
+from app.events.models import MatchEvent, PassDetails, ShotDetails
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment
 
@@ -43,10 +43,39 @@ def analyst_with(agent, stats=None) -> Analyst:
 
 
 def test_angle_comes_from_what_the_ranker_knows():
-    assert angle_for(GOAL).startswith("CONTRAST")
-    assert angle_for(Moment(score=10, reason="go-ahead goal", kind="goal", quiet=True)).startswith("CONTEXT")
-    assert angle_for(BOOKING).startswith("PRESSURE")
-    assert angle_for(CHANCE).startswith("QUALITY")
+    stats = StatsEngine(HOME, AWAY)
+    assert angle_for(GOAL, stats).startswith("CONTRAST")
+    go_ahead = Moment(score=10, reason="go-ahead goal", kind="goal", quiet=True)
+    assert angle_for(go_ahead, stats).startswith("CONTEXT")
+    assert angle_for(BOOKING, stats).startswith("PRESSURE")
+    assert angle_for(CHANCE, stats).startswith("QUALITY")
+
+
+def last_ten_minutes(ball: str, danger: str) -> StatsEngine:
+    """`ball` keeps passing at the back, `danger` takes the shots."""
+    stats = StatsEngine(HOME, AWAY)
+    for i in range(12):
+        stats.update(MatchEvent(id=f"p{i}", index=i, period=2, minute=80, second=i * 4, type="Pass",
+                                team=ball, location=(30.0, 40.0),
+                                **{"pass": PassDetails(end_location=(35.0, 40.0))}))
+    for i in range(3):
+        stats.update(MatchEvent(id=f"s{i}", index=20 + i, period=2, minute=82, second=i * 10, type="Shot",
+                                team=danger, location=(108.0, 40.0), shot=ShotDetails(outcome="Saved")))
+    return stats
+
+
+def test_angle_tells_the_truth_when_ball_and_danger_split():
+    """Northbridge had the ball, Westvale the chances: the angle must not say Westvale dominated."""
+    stats = last_ten_minutes(ball=HOME, danger=AWAY)
+    angle = angle_for(GOAL, stats)
+    assert angle.startswith(f"SPLIT: {HOME} had more of the ball, but {AWAY} had been more dangerous")
+    tools = {t.__name__: t for t in build_tools(stats, {})}
+    assert tools["get_run_of_play"]() == {"more_of_the_ball": HOME, "their_share_of_the_ball": "100%",
+                                          "more_dangerous": AWAY}
+
+
+def test_angle_contrast_when_one_team_had_everything():
+    assert angle_for(GOAL, last_ten_minutes(ball=AWAY, danger=AWAY)).startswith("CONTRAST")
 
 
 def test_analysis_gets_the_moment_angle_and_event_id():
