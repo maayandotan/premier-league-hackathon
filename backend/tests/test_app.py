@@ -27,6 +27,8 @@ def test_match_feed_streams_info_events_commentary_stats_and_end():
     messages = collect("/ws/match?speed=10000")
     assert messages[0]["type"] == "match" and messages[0]["info"]["home"]["name"] == "Northbridge FC"
     events = [m["event"] for m in messages if m["type"] == "event"]
+    moments = [m["moment"] for m in messages if m["type"] == "event"]
+    assert max(m["score"] for m in moments) == 10  # the demo goal
     lines = [m["line"] for m in messages if m["type"] == "commentary"]
     assert len(events) == len(DEMO_MATCH.events)
     assert "pass" in events[0]  # StatsBomb field name on the wire

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { CommentaryLine, FeedMessage, MatchEvent, MatchInfo, MatchStats } from './types'
+import type { CommentaryLine, FeedMessage, MatchInfo, MatchStats, RankedEvent } from './types'
 
 export type FeedStatus = 'idle' | 'live' | 'ended' | 'error'
 
@@ -16,7 +16,7 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
   const [status, setStatus] = useState<FeedStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<MatchInfo | null>(null)
-  const [events, setEvents] = useState<MatchEvent[]>([])
+  const [events, setEvents] = useState<RankedEvent[]>([])
   const [lines, setLines] = useState<CommentaryLine[]>([])
   const [stats, setStats] = useState<MatchStats | null>(null)
   const socket = useRef<WebSocket | null>(null)
@@ -39,7 +39,7 @@ export function useMatchFeed({ source, speed, start }: FeedOptions) {
           setInfo(data.info)
           break
         case 'event':
-          setEvents((prev) => [data.event, ...prev].slice(0, MAX_EVENTS))
+          setEvents((prev) => [{ event: data.event, moment: data.moment }, ...prev].slice(0, MAX_EVENTS))
           break
         case 'commentary':
           setLines((prev) => [data.line, ...prev])

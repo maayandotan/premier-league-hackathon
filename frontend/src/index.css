@@ -45,3 +45,11 @@ ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .numbers { display: grid; grid-template-columns: auto auto; gap: 4px 16px; margin: 12px 0 0; font-variant-numeric: tabular-nums; }
 .numbers dt { color: var(--muted); }
 .numbers dd { margin: 0; }
+.event[data-routine='true'] { opacity: 0.45; }
+.moment { margin-left: 8px; padding: 1px 8px; border-radius: 10px; font-size: 0.75rem; font-weight: 600; background: var(--bg); color: var(--muted); }
+.moment[data-score='mid'] { background: #fff4d6; color: #8a5a00; }
+.moment[data-score='high'] { background: #ffe1e1; color: var(--goal); }
+@media (prefers-color-scheme: dark) {
+  .moment[data-score='mid'] { background: #3a2f12; color: #f2c46d; }
+  .moment[data-score='high'] { background: #3d1a1c; color: #ff8a8a; }
+}

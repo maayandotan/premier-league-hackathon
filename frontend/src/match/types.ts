@@ -16,6 +16,18 @@ export interface MatchEvent {
   foul?: { card?: string }
 }
 
+export interface Moment {
+  score: number // 0 routine ... 10 goal
+  reason: string
+  kind: string
+  quiet: boolean
+}
+
+export interface RankedEvent {
+  event: MatchEvent
+  moment: Moment
+}
+
 export interface MatchInfo {
   id: string
   source: string
@@ -48,7 +60,7 @@ export interface MatchStats {
 
 export type FeedMessage =
   | { type: 'match'; info: MatchInfo }
-  | { type: 'event'; event: MatchEvent }
+  | { type: 'event'; event: MatchEvent; moment: Moment }
   | { type: 'commentary'; line: CommentaryLine }
   | { type: 'stats'; stats: MatchStats }
   | { type: 'end'; stats: MatchStats }

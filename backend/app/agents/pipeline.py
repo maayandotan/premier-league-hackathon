@@ -1,15 +1,16 @@
-"""The commentary pipeline. Planned agents (see docs/architecture.md):
+"""The commentary pipeline. See docs/agents.md for the full design:
 
-ranking -> producer -> caller / analyst -> fact checker -> viewer level, plus a Q&A agent
-for viewer questions. They run in Microsoft Foundry (issue #2) and call the stats
-engine as tools.
+stats engine -> moment ranker -> producer -> caller / analyst / Q&A -> fact-checker -> voice
 
-PLACEHOLDER: a rule-based caller so the skeleton produces commentary end to end.
+PLACEHOLDER: until the Caller agent (#13) exists, a template turns ranked moments into lines.
 """
 from pydantic import BaseModel
 
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine
+from app.stats.ranker import Moment, rank
+
+CALL_THRESHOLD = 5  # the template only speaks for moments scored this high
 
 
 class CommentaryLine(BaseModel):
@@ -19,16 +20,25 @@ class CommentaryLine(BaseModel):
     event_id: str
 
 
+def excitement_for(moment: Moment) -> int:
+    return 2 if moment.score >= 9 else 1 if moment.score >= 6 else 0
+
+
 class CommentaryPipeline:
     def __init__(self, stats: StatsEngine) -> None:
         self.stats = stats
 
-    async def on_event(self, event: MatchEvent) -> list[CommentaryLine]:
+    async def on_event(self, event: MatchEvent) -> tuple[Moment, list[CommentaryLine]]:
+        momentum_before = self.stats.momentum()["value"]
         self.stats.update(event)
-        if event.is_goal:
-            return [CommentaryLine(speaker="caller", excitement=2, event_id=event.id,
-                                   text=f"GOAL! {event.player} scores for {event.team}!")]
-        if event.type == "Shot":
-            return [CommentaryLine(speaker="caller", excitement=1, event_id=event.id,
-                                   text=f"{event.player} shoots!")]
-        return []
+        moment = rank(event, self.stats, momentum_before)
+        if moment.score < CALL_THRESHOLD:
+            return moment, []
+        who = event.player or event.team
+        if moment.kind == "goal":
+            text = f"GOAL! {who} scores for {event.team}!"
+        else:
+            text = f"{who}: {moment.reason}."
+        line = CommentaryLine(speaker="caller", excitement=excitement_for(moment), text=text,
+                              event_id=event.id)
+        return moment, [line]

@@ -50,9 +50,14 @@ export default function App() {
         <section>
           <h2>Events</h2>
           <ul>
-            {events.map((e) => (
-              <li key={e.id}>
+            {events.map(({ event: e, moment }) => (
+              <li key={e.id} className="event" data-routine={moment.score < 3}>
                 <span className="clock">{e.minute}'{String(e.second).padStart(2, '0')}</span> {e.type} · {e.player ?? e.team}
+                {moment.score >= 3 && (
+                  <span className="moment" data-score={moment.score >= 9 ? 'high' : moment.score >= 6 ? 'mid' : 'low'}>
+                    {moment.score} · {moment.reason}
+                  </span>
+                )}
               </li>
             ))}
           </ul>

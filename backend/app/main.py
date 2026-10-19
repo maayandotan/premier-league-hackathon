@@ -19,7 +19,7 @@ def health() -> dict:
 
 @app.websocket("/ws/match")
 async def match_feed(ws: WebSocket) -> None:
-    """Stream a match: its info, then each event, its commentary lines and live stats.
+    """Stream a match: its info, then each event with its ranked moment, commentary lines and live stats.
 
     Query params: source (see app.match.sources), speed (1 = real time), start (minute).
     """
@@ -42,8 +42,13 @@ async def match_feed(ws: WebSocket) -> None:
     try:
         await ws.send_json({"type": "match", "info": match.info.model_dump(exclude_none=True)})
         async for event in replay(match.events, speed=speed, start_minute=start):
-            await ws.send_json({"type": "event", "event": event.model_dump(by_alias=True, exclude_none=True)})
-            for line in await pipeline.on_event(event):
+            moment, lines = await pipeline.on_event(event)
+            await ws.send_json({
+                "type": "event",
+                "event": event.model_dump(by_alias=True, exclude_none=True),
+                "moment": moment.model_dump(),
+            })
+            for line in lines:
                 await ws.send_json({"type": "commentary", "line": line.model_dump()})
             await ws.send_json({"type": "stats", "stats": stats.snapshot()})
         await ws.send_json({"type": "end", "stats": stats.snapshot()})
