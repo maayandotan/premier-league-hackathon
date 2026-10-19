@@ -41,6 +41,7 @@ export interface CommentaryLine {
   excitement: 0 | 1 | 2
   text: string
   event_id: string
+  source: 'model' | 'template'
 }
 
 export type ByTeam<T> = Record<string, T>

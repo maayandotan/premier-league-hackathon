@@ -2,15 +2,17 @@
 
 stats engine -> moment ranker -> producer -> caller / analyst / Q&A -> fact-checker -> voice
 
-PLACEHOLDER: until the Caller agent (#13) exists, a template turns ranked moments into lines.
+Today: stats engine -> moment ranker -> Caller. The Producer (#16) is still a simple rule:
+call every moment the ranker scores at or above CALL_THRESHOLD.
 """
 from pydantic import BaseModel
 
+from app.agents.caller import Caller
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment, rank
 
-CALL_THRESHOLD = 5  # the template only speaks for moments scored this high
+CALL_THRESHOLD = 3
 
 
 class CommentaryLine(BaseModel):
@@ -18,15 +20,13 @@ class CommentaryLine(BaseModel):
     excitement: int  # 0 calm, 1 build-up, 2 big moment (drives the voice style)
     text: str
     event_id: str
-
-
-def excitement_for(moment: Moment) -> int:
-    return 2 if moment.score >= 9 else 1 if moment.score >= 6 else 0
+    source: str = "template"  # "model" (an agent wrote it) or "template" (code fallback)
 
 
 class CommentaryPipeline:
-    def __init__(self, stats: StatsEngine) -> None:
+    def __init__(self, stats: StatsEngine, caller: Caller) -> None:
         self.stats = stats
+        self.caller = caller
 
     async def on_event(self, event: MatchEvent) -> tuple[Moment, list[CommentaryLine]]:
         momentum_before = self.stats.momentum()["value"]
@@ -34,11 +34,7 @@ class CommentaryPipeline:
         moment = rank(event, self.stats, momentum_before)
         if moment.score < CALL_THRESHOLD:
             return moment, []
-        who = event.player or event.team
-        if moment.kind == "goal":
-            text = f"GOAL! {who} scores for {event.team}!"
-        else:
-            text = f"{who}: {moment.reason}."
-        line = CommentaryLine(speaker="caller", excitement=excitement_for(moment), text=text,
-                              event_id=event.id)
+        text, excitement, source = await self.caller.call(event, moment, self.stats)
+        line = CommentaryLine(speaker="caller", excitement=excitement, text=text, event_id=event.id,
+                              source=source)
         return moment, [line]
