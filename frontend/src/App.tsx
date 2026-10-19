@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Pitch } from './match/Pitch'
 import { StatsPanel } from './match/StatsPanel'
 import { useMatchFeed } from './match/useMatchFeed'
 
@@ -38,6 +39,7 @@ export default function App() {
 
       {error && <p className="error">{error}</p>}
       {info && stats && <StatsPanel info={info} stats={stats} />}
+      {info && <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} />}
 
       <div className="panels">
         <section>

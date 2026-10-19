@@ -57,3 +57,35 @@ ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
 .line .source[data-source='model'] { background: #dbeafe; color: #1d4ed8; }
 .line .source[data-source='template'] { background: var(--bg); color: var(--muted); }
 button.secondary { background: var(--panel); color: var(--text); border: 1px solid var(--muted); }
+
+/* ---------- Live pitch ---------- */
+.pitch-card { background: var(--panel); border-radius: 8px; padding: 12px 16px 16px; margin-bottom: 16px; }
+.pitch-legend { max-width: 760px; margin-left: auto; margin-right: auto; display: flex; justify-content: space-between; font-size: 0.85rem; font-weight: 600; margin-bottom: 6px; }
+.pitch-legend .home { color: var(--team-home); }
+.pitch-legend .away { color: var(--team-away); }
+.pitch { width: 100%; max-width: 760px; margin: 0 auto; display: block; border-radius: 6px; overflow: visible; }
+:root { --team-home: #2563eb; --team-away: #e11d48; }
+.pitch .stripe-light { fill: #3f8f4a; }
+.pitch .stripe-dark { fill: #38824a; }
+.pitch .line { fill: none; stroke: rgba(255, 255, 255, 0.75); stroke-width: 0.4; }
+.pitch .spot { fill: rgba(255, 255, 255, 0.75); }
+.pitch .goal { fill: rgba(255, 255, 255, 0.9); }
+.pitch .trail { stroke-width: 0.7; stroke-linecap: round; }
+.pitch .trail.home { stroke: #bfdbfe; }
+.pitch .trail.away { stroke: #fecdd3; }
+.pitch .trail.carry { stroke-dasharray: 1 1.2; }
+.pitch .trail.failed { stroke-dasharray: 2 1.5; stroke: #fde68a; }
+.pitch .trail.shot { stroke-width: 1; stroke: #fef08a; }
+.pitch .player circle { stroke: #fff; stroke-width: 0.5; }
+.pitch .player.home circle { fill: var(--team-home); }
+.pitch .player.away circle { fill: var(--team-away); }
+.pitch .player text { font-size: 3.2px; font-weight: 700; fill: #fff; text-anchor: middle; paint-order: stroke; stroke: rgba(0, 0, 0, 0.55); stroke-width: 0.6px; }
+.pitch .player text.recipient { font-weight: 500; opacity: 0.9; }
+.pitch .ball { transition: transform 0.55s ease-out; }
+.pitch .ball circle { fill: #fff; stroke: #111; stroke-width: 0.35; }
+.pitch .goal-flash { fill: #fde047; animation: goal-flash 0.4s ease-in-out 6 alternate; }
+@keyframes goal-flash { from { opacity: 0.15; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .pitch .ball { transition: none; }
+  .pitch .goal-flash { animation: none; }
+}
