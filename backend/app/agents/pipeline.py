@@ -25,7 +25,7 @@ class CommentaryPipeline:
 
     async def on_event(self, event: MatchEvent) -> list[CommentaryLine]:
         self.stats.update(event)
-        if event.type == "Shot" and event.details.get("outcome") == "Goal":
+        if event.is_goal:
             return [CommentaryLine(speaker="caller", excitement=2, event_id=event.id,
                                    text=f"GOAL! {event.player} scores for {event.team}!")]
         if event.type == "Shot":

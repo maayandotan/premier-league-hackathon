@@ -40,3 +40,6 @@ spikes/**/out/
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Local Claude Code settings
+.claude/

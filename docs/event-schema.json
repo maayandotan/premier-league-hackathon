@@ -1,0 +1,682 @@
+{
+  "$defs": {
+    "CarryDetails": {
+      "properties": {
+        "end_location": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Location"
+        }
+      },
+      "title": "CarryDetails",
+      "type": "object"
+    },
+    "FoulDetails": {
+      "properties": {
+        "card": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Card"
+        },
+        "penalty": {
+          "default": false,
+          "title": "Penalty",
+          "type": "boolean"
+        },
+        "advantage": {
+          "default": false,
+          "title": "Advantage",
+          "type": "boolean"
+        }
+      },
+      "title": "FoulDetails",
+      "type": "object"
+    },
+    "MatchEvent": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "index": {
+          "title": "Index",
+          "type": "integer"
+        },
+        "period": {
+          "title": "Period",
+          "type": "integer"
+        },
+        "minute": {
+          "title": "Minute",
+          "type": "integer"
+        },
+        "second": {
+          "title": "Second",
+          "type": "integer"
+        },
+        "type": {
+          "enum": [
+            "Pass",
+            "Carry",
+            "Shot",
+            "Dribble",
+            "Duel",
+            "Interception",
+            "Ball Recovery",
+            "Clearance",
+            "Block",
+            "Pressure",
+            "Foul Committed",
+            "Foul Won",
+            "Offside",
+            "Card",
+            "Substitution",
+            "Goal Keeper",
+            "Miscontrol",
+            "Dispossessed",
+            "Injury Stoppage",
+            "Half Start",
+            "Half End"
+          ],
+          "title": "Type",
+          "type": "string"
+        },
+        "team": {
+          "title": "Team",
+          "type": "string"
+        },
+        "player": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Player"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Position"
+        },
+        "location": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Location"
+        },
+        "play_pattern": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Play Pattern"
+        },
+        "under_pressure": {
+          "default": false,
+          "title": "Under Pressure",
+          "type": "boolean"
+        },
+        "possession": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Possession"
+        },
+        "possession_team": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Possession Team"
+        },
+        "duration": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Duration"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcome"
+        },
+        "pass": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PassDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "shot": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ShotDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "carry": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CarryDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "foul": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FoulDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "substitution": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SubstitutionDetails"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "card": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Card"
+        }
+      },
+      "required": [
+        "id",
+        "index",
+        "period",
+        "minute",
+        "second",
+        "type",
+        "team"
+      ],
+      "title": "MatchEvent",
+      "type": "object"
+    },
+    "MatchInfo": {
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "home": {
+          "$ref": "#/$defs/Team"
+        },
+        "away": {
+          "$ref": "#/$defs/Team"
+        },
+        "competition": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Competition"
+        },
+        "date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Date"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        },
+        "extra": {
+          "additionalProperties": true,
+          "title": "Extra",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "home",
+        "away",
+        "source"
+      ],
+      "title": "MatchInfo",
+      "type": "object"
+    },
+    "PassDetails": {
+      "properties": {
+        "recipient": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Recipient"
+        },
+        "end_location": {
+          "anyOf": [
+            {
+              "maxItems": 2,
+              "minItems": 2,
+              "prefixItems": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Location"
+        },
+        "length": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Length"
+        },
+        "angle": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Angle"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
+        },
+        "body_part": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body Part"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "technique": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Technique"
+        },
+        "cross": {
+          "default": false,
+          "title": "Cross",
+          "type": "boolean"
+        },
+        "outcome": {
+          "default": "Complete",
+          "title": "Outcome",
+          "type": "string"
+        },
+        "shot_assist": {
+          "default": false,
+          "title": "Shot Assist",
+          "type": "boolean"
+        },
+        "goal_assist": {
+          "default": false,
+          "title": "Goal Assist",
+          "type": "boolean"
+        }
+      },
+      "title": "PassDetails",
+      "type": "object"
+    },
+    "Player": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "jersey_number": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Jersey Number"
+        },
+        "position": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Position"
+        },
+        "starter": {
+          "default": true,
+          "title": "Starter",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Player",
+      "type": "object"
+    },
+    "ShotDetails": {
+      "properties": {
+        "outcome": {
+          "title": "Outcome",
+          "type": "string"
+        },
+        "end_location": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "number"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "End Location"
+        },
+        "body_part": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Body Part"
+        },
+        "technique": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Technique"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "first_time": {
+          "default": false,
+          "title": "First Time",
+          "type": "boolean"
+        },
+        "provider_xg": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Provider Xg"
+        }
+      },
+      "required": [
+        "outcome"
+      ],
+      "title": "ShotDetails",
+      "type": "object"
+    },
+    "SubstitutionDetails": {
+      "properties": {
+        "replacement": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Replacement"
+        },
+        "outcome": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcome"
+        }
+      },
+      "title": "SubstitutionDetails",
+      "type": "object"
+    },
+    "Team": {
+      "properties": {
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "players": {
+          "items": {
+            "$ref": "#/$defs/Player"
+          },
+          "title": "Players",
+          "type": "array"
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "title": "Team",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "info": {
+      "$ref": "#/$defs/MatchInfo"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/MatchEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    }
+  },
+  "required": [
+    "info",
+    "events"
+  ],
+  "title": "Match",
+  "type": "object"
+}
