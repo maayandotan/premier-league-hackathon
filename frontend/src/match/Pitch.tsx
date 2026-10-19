@@ -99,7 +99,7 @@ export function Pitch({ events, homeTeam, awayTeam }: { events: RankedEvent[]; h
   const ball = ballInNet ? goal.to! : latest ? latest.to ?? latest.from : ([60, 40] as Point)
 
   return (
-    <section className="pitch-card">
+    <div className="pitch-wrap">
       <div className="pitch-legend">
         <span className="team home">{homeTeam} →</span>
         <span className="team away">← {awayTeam}</span>
@@ -135,6 +135,6 @@ export function Pitch({ events, homeTeam, awayTeam }: { events: RankedEvent[]; h
           <circle r={1.3} />
         </g>
       </svg>
-    </section>
+    </div>
   )
 }
