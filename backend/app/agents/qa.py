@@ -104,7 +104,8 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
     def get_key_moments(
         count: Annotated[int, "How many moments to return"] = 3,
     ) -> list[dict]:
-        """The biggest moments of the match so far (goals, big chances, cards), biggest first, in plain words."""
+        """The biggest moments of the match so far (goals, big chances, cards), biggest first,
+        in plain words."""
         biggest = sorted(((e, m) for e, m in timeline if m.score >= 1), key=lambda em: -em[1].score)
         result = []
         for event, moment in biggest[:max(1, min(count, 5))]:
