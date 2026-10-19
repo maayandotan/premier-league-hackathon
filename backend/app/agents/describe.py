@@ -67,6 +67,10 @@ def event_fields(event: MatchEvent, moment: Moment, stats: StatsEngine) -> dict:
         fields |= {"fouling_team": event.team, "awarded_to": other, "where": zone(event, flip=True)}
         if event.player:
             fields["fouling_player"] = fields.pop("player")
+    if event.substitution:
+        # "player" on a substitution is the one going OFF; with only that, the Caller said he came on.
+        fields.pop("player", None)
+        fields |= {"player_off": event.player, "player_on": event.substitution.replacement}
     if card := event.card or (event.foul.card if event.foul else None):
         fields["card"] = card.lower()
         fields["booked_team"] = event.team

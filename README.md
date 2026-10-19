@@ -45,7 +45,8 @@ cd frontend && npm run lint && npm run build
 | `backend/` | FastAPI app: events, stats engine, agents, speech |
 | `frontend/` | React + TypeScript UI |
 | `docs/` | Architecture and schema docs |
-| `data/synthetic/` | Generated matches |
+| `backend/app/synthetic/` | Synthetic match generator |
+| `data/synthetic/` | Generated matches (`?source=synthetic:comeback`) |
 | `assets/audio/` | Crowd sound (licensed, see credits) |
 | `spikes/` | Throwaway experiments |
 
