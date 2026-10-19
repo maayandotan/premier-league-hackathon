@@ -10,8 +10,9 @@ export interface MatchEvent {
   team: string
   player?: string
   location?: [number, number]
-  pass?: { recipient?: string; outcome: string }
-  shot?: { outcome: string; type?: string }
+  pass?: { recipient?: string; outcome: string; end_location?: [number, number]; cross?: boolean }
+  carry?: { end_location?: [number, number] }
+  shot?: { outcome: string; type?: string; end_location?: number[] }
   card?: string
   foul?: { card?: string }
 }
