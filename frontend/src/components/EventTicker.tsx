@@ -1,17 +1,17 @@
+import type { ReactNode } from 'react'
 import type { MatchEvent, Moment, RankedEvent } from '../match/types'
+import { BallIcon, CardIcon, ClockIcon, FlagIcon, SwapIcon, TargetIcon, WhistleIcon } from './Icons'
 
-function icon(e: MatchEvent, m: Moment): string {
-  if (m.kind === 'goal') return '⚽'
+function icon(e: MatchEvent, m: Moment): ReactNode {
+  if (m.kind === 'goal') return <BallIcon />
   const card = e.card ?? e.foul?.card
-  if (card) return /red|second/i.test(card) ? '🟥' : '🟨'
-  if (e.type === 'Shot') return '🎯'
-  if (e.type === 'Offside') return '🚩'
-  if (e.type === 'Substitution') return '🔁'
-  if (m.reason.includes('penalty')) return '❗'
-  if (e.type === 'Foul Committed') return '✋'
-  if (m.reason.includes('corner')) return '⛳'
-  if (e.type === 'Half Start' || e.type === 'Half End') return '⏱️'
-  return '•'
+  if (card) return <CardIcon color={/red|second/i.test(card) ? 'red' : 'yellow'} />
+  if (e.type === 'Shot') return <TargetIcon />
+  if (e.type === 'Offside' || m.reason.includes('corner')) return <FlagIcon />
+  if (e.type === 'Substitution') return <SwapIcon />
+  if (e.type === 'Foul Committed') return <WhistleIcon />
+  if (e.type === 'Half Start' || e.type === 'Half End') return <ClockIcon />
+  return <span className="dot" />
 }
 
 /** Key moments only (what the Moment Ranker scored 3+), with the reason it mattered. */
