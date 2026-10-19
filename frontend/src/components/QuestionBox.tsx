@@ -8,7 +8,12 @@ type MicState = 'idle' | 'listening' | 'error'
  * Ask the analyst a question mid-match (#18), by typing or with the microphone (#21).
  * The match keeps going; Sonia answers in a few seconds.
  */
-export function QuestionBox({ live, waiting, onAsk }: { live: boolean; waiting: boolean; onAsk: (q: string) => void }) {
+export function QuestionBox({ live, waiting, onAsk, onListening }: {
+  live: boolean
+  waiting: boolean
+  onAsk: (q: string) => void
+  onListening: (on: boolean) => void // the commentators go quiet while the viewer speaks
+}) {
   const [text, setText] = useState('')
   const [mic, setMic] = useState<MicState>('idle')
   const [micError, setMicError] = useState('')
@@ -25,6 +30,7 @@ export function QuestionBox({ live, waiting, onAsk }: { live: boolean; waiting: 
     setMic('listening')
     setMicError('')
     setText('')
+    onListening(true)
     try {
       // The Speech SDK is large: load it only when someone actually presses the mic.
       const { listenOnce } = await import('../audio/speechInput')
@@ -38,6 +44,8 @@ export function QuestionBox({ live, waiting, onAsk }: { live: boolean; waiting: 
       setMicError(error instanceof Error && /permission|denied|NotAllowed/i.test(error.message)
         ? 'Microphone blocked. Allow it in the browser to ask by voice.'
         : error instanceof Error ? error.message : 'The microphone did not work.')
+    } finally {
+      onListening(false)
     }
   }
 

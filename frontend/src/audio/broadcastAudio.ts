@@ -4,11 +4,14 @@
  * - a goal roar, started the moment the goal event arrives (before the commentary)
  * - a queue of commentary clips: played in order, big moments (excitement 2) cut in,
  *   and clips that waited too long are dropped rather than played late
+ * - while the viewer is asking a question by voice, the commentators fall silent and the crowd
+ *   drops right down (so they can be heard, and the mic doesn't pick up the commentary)
  * Crowd audio: "Free Crowd Cheering Sounds" by Gregor Quendel, CC BY 4.0 (assets/audio/CREDITS.md).
  */
 
 const CROWD_LEVEL = 0.35
 const CROWD_UNDER_VOICE = 0.18
+const CROWD_WHILE_LISTENING = 0.05
 const ROAR_LEVEL = 0.9
 const MAX_WAIT_MS = 10_000
 
@@ -32,6 +35,7 @@ export class BroadcastAudio {
   private crowdSource: AudioBufferSourceNode | null = null
   private current: AudioBufferSourceNode | null = null
   private queue: QueuedClip[] = []
+  private listening = false
   muted = false
   played = 0 // for debugging: clips actually played
   dropped = 0 // clips skipped because they arrived too late
@@ -80,6 +84,19 @@ export class BroadcastAudio {
     this.applyMute()
   }
 
+  /** The viewer is asking by voice: silence the commentators until they're done. */
+  setListening(on: boolean): void {
+    this.listening = on
+    if (on) {
+      this.cutCurrent() // stop mid-sentence; lines that arrive meanwhile wait in the queue
+      this.onSpeaking(null)
+      this.duckCrowd(false)
+    } else {
+      this.duckCrowd(false)
+      if (!this.current) this.playNext() // anything that waited over 10 s is dropped there
+    }
+  }
+
   /** The stadium reacts to the goal itself, a second before the caller does. */
   roar(): void {
     if (!this.ctx || !this.roarBuffer) return
@@ -104,12 +121,12 @@ export class BroadcastAudio {
     } else {
       this.queue.push(clip)
     }
-    if (!this.current) this.playNext()
+    if (!this.current && !this.listening) this.playNext()
   }
 
   private playNext(): void {
     const ctx = this.ctx
-    if (!ctx) return
+    if (!ctx || this.listening) return
     let clip = this.queue.shift()
     while (clip && performance.now() - clip.receivedAt > MAX_WAIT_MS) {
       this.dropped++ // too late to be relevant
@@ -144,7 +161,7 @@ export class BroadcastAudio {
 
   private duckCrowd(speaking: boolean): void {
     if (!this.ctx || !this.crowdGain) return
-    const target = speaking ? CROWD_UNDER_VOICE : CROWD_LEVEL
+    const target = this.listening ? CROWD_WHILE_LISTENING : speaking ? CROWD_UNDER_VOICE : CROWD_LEVEL
     this.crowdGain.gain.setTargetAtTime(target, this.ctx.currentTime, 0.25)
   }
 
