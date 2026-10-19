@@ -6,6 +6,7 @@ from app.agents import analyst as analyst_module
 from app.agents.analyst import Analyst, angle_for, build_tools
 from app.agents.caller import Caller
 from app.agents.pipeline import ANALYSIS_COOLDOWN, CommentaryPipeline
+from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent, ShotDetails
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment
@@ -50,16 +51,19 @@ def test_angle_comes_from_what_the_ranker_knows():
 
 def test_analysis_gets_the_moment_angle_and_event_id():
     agent = FakeAgent()
-    text = asyncio.run(analyst_with(agent).analyse(shot(), GOAL))
+    text = asyncio.run(analyst_with(agent).analyse(shot(), GOAL, ViewerProfile(level="beginner")))
     assert text == "That came against the run of play."
     sent = agent.inputs[0]
     assert "ANGLE: CONTRAST" in sent and "event_id: s1" in sent and "player: M. Ferro" in sent
+    assert "VIEWER_LEVEL: beginner" in sent
 
 
 def test_late_or_missing_analyst_stays_quiet(monkeypatch):
     monkeypatch.setattr(analyst_module, "DEADLINE_SECONDS", 0.05)
-    assert asyncio.run(analyst_with(FakeAgent(delay=1)).analyse(shot(), GOAL)) is None
-    assert asyncio.run(Analyst(StatsEngine(HOME, AWAY), {}, use_model=False).analyse(shot(), GOAL)) is None
+    viewer = ViewerProfile()
+    assert asyncio.run(analyst_with(FakeAgent(delay=1)).analyse(shot(), GOAL, viewer)) is None
+    no_model = Analyst(StatsEngine(HOME, AWAY), {}, use_model=False)
+    assert asyncio.run(no_model.analyse(shot(), GOAL, viewer)) is None
 
 
 def test_tools_return_live_numbers():
@@ -89,3 +93,46 @@ def test_pipeline_wraps_the_analysis_as_an_analyst_line():
     pipeline = CommentaryPipeline(stats, Caller(use_model=False), analyst_with(FakeAgent(), stats))
     line = asyncio.run(pipeline.analyse(shot(), GOAL))
     assert (line.speaker, line.excitement, line.source, line.id) == ("analyst", 0, "model", "s1-analyst")
+
+
+class ShorteningAgent(FakeAgent):
+    """Answers too long the first time, then follows the request to shorten."""
+
+    async def run(self, prompt):
+        self.inputs.append(prompt)
+        if prompt.startswith("Rewrite in at most"):
+            return SimpleNamespace(text="Short and sharp: a 9 percent chance.")
+        return SimpleNamespace(text=" ".join(["word"] * 50) + ".")
+
+
+def test_too_long_analysis_is_shortened_by_the_model_not_cut():
+    agent = ShorteningAgent()
+    text = asyncio.run(analyst_with(agent).analyse(shot(), GOAL, ViewerProfile(level="fan")))
+    assert text == "Short and sharp: a 9 percent chance."
+    assert agent.inputs[1].startswith("Rewrite in at most 30 words for a fan viewer")
+
+
+def test_fit_to_words_keeps_whole_sentences():
+    assert analyst_module.fit_to_words("One two. Three four five. Six.", 4) == "One two."
+    one_long_sentence = "A very long first sentence here."
+    assert analyst_module.fit_to_words(one_long_sentence, 2) == one_long_sentence
+
+
+def test_momentum_tool_speaks_in_words_not_scales():
+    stats = StatsEngine(HOME, AWAY)
+    for i in range(5):
+        stats.update(shot(minute=30, second=i, outcome="Saved", event_id=f"x{i}"))
+    momentum = {t.__name__: t for t in build_tools(stats, {})}["get_momentum"]()
+    assert momentum == {"on_top": HOME, "how_clearly": "dominating"}
+
+
+def test_level_switch_applies_to_the_next_line():
+    stats = StatsEngine(HOME, AWAY)
+    agent = FakeAgent()
+    pipeline = CommentaryPipeline(stats, Caller(use_model=False), analyst_with(agent, stats))
+    first = asyncio.run(pipeline.analyse(shot(event_id="a"), GOAL))
+    pipeline.viewer.set_level("analyst")
+    second = asyncio.run(pipeline.analyse(shot(event_id="b"), GOAL))
+    assert (first.level, second.level) == ("fan", "analyst")
+    assert "VIEWER_LEVEL: analyst" in agent.inputs[1]
+    assert not pipeline.viewer.set_level("expert")  # unknown levels are ignored

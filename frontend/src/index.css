@@ -211,7 +211,8 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
 .bubble p { margin: 2px 0 0; line-height: 1.35; }
 .who { font-family: var(--font-display); font-weight: 700; font-size: 0.95rem; letter-spacing: 0.03em; display: flex; align-items: center; gap: 6px; }
 .who .role { color: var(--muted); font-weight: 600; }
-.who .source { margin-left: auto; font-size: 0.7rem; padding: 1px 7px; border-radius: 6px; letter-spacing: 0.06em; }
+.who .level-tag { margin-left: auto; font-size: 0.65rem; padding: 1px 7px; border-radius: 6px; letter-spacing: 0.06em; text-transform: uppercase; background: rgba(250, 204, 21, 0.14); color: var(--gold); }
+.who .source { font-size: 0.7rem; padding: 1px 7px; border-radius: 6px; letter-spacing: 0.06em; }
 .who .source[data-source='model'] { background: rgba(59, 130, 246, 0.2); color: #93c5fd; }
 .who .source[data-source='template'] { background: var(--panel-2); color: var(--muted); }
 .line[data-excitement='1'] .bubble p { font-weight: 600; }

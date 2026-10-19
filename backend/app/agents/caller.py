@@ -16,6 +16,7 @@ from pydantic import BaseModel
 
 from app.agents.client import chat_client
 from app.agents.describe import as_text, event_fields
+from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment
@@ -40,7 +41,13 @@ The input gives an EXCITEMENT level. Match it:
 2 = big moment: exclamations, the key word in capitals (e.g. GOAL)
 
 You also get your own recent lines. Keep continuity with them (e.g. "Ferro again..."),
-and never repeat a phrase you just used."""
+and never repeat a phrase you just used.
+
+Adapt to VIEWER_LEVEL:
+- beginner: everyday words. For a football term, add two or three plain words the first time
+  ("a penalty, a free shot at goal!"). Max 14 words.
+- fan: normal commentary.
+- analyst: precise football terms are welcome (through ball, cut-back, line-breaking pass)."""
 
 
 class CallerLine(BaseModel):
@@ -85,13 +92,15 @@ class Caller:
             except Exception as error:  # warm-up is best effort
                 log.warning("caller warm-up failed: %s", error)
 
-    async def call(self, event: MatchEvent, moment: Moment, stats: StatsEngine) -> tuple[str, int, str]:
+    async def call(self, event: MatchEvent, moment: Moment, stats: StatsEngine,
+                   viewer: ViewerProfile | None = None) -> tuple[str, int, str]:
         """Return (text, excitement, source) where source is "model" or "template"."""
         excitement = excitement_for(moment)
         text, source = None, "template"
         if self.agent:
             fields = event_fields(event, moment, stats) | {
                 "EXCITEMENT": excitement,
+                "VIEWER_LEVEL": (viewer or ViewerProfile()).level,
                 "your recent lines": " | ".join(self.recent) or "none",
             }
             try:

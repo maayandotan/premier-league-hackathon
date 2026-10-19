@@ -30,6 +30,7 @@ export function CommentaryFeed({ lines, speakingId }: { lines: CommentaryLine[];
                 <div className="bubble">
                   <div className="who">
                     {voice.name} <span className="role">· {voice.role}</span>
+                    <span className="level-tag">{line.level}</span>
                     <span className="source" data-source={line.source}>{line.source === 'model' ? 'AI' : 'Auto'}</span>
                   </div>
                   <p>{line.text}</p>
