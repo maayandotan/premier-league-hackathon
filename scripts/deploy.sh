@@ -8,10 +8,10 @@
 set -euo pipefail
 
 REGISTRY=acrplhackathon
-APP=match-intelligence
+APP=match-intelligence-live
 GROUP=rg-pl-hackathon
 TAG="v$(date +%Y%m%d-%H%M%S)"
-IMAGE="$REGISTRY.azurecr.io/$APP:$TAG"
+IMAGE="$REGISTRY.azurecr.io/match-intelligence:$TAG"
 
 cd "$(dirname "$0")/.."
 
