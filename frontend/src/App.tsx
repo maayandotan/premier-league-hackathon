@@ -2,6 +2,7 @@ import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
 import { type Level, LevelPicker } from './components/LevelPicker'
 import { Scorebug } from './components/Scorebug'
+import { QuestionBox } from './components/QuestionBox'
 import { MomentumBar, StatBars } from './components/StatBars'
 import { Pitch } from './match/Pitch'
 import { useMatchFeed } from './match/useMatchFeed'
@@ -16,8 +17,10 @@ const feedOptions = {
 }
 
 export default function App() {
-  const { status, error, info, events, lines, stats, muted, speakingId, level, setLevel, toggleMute, start } =
-    useMatchFeed(feedOptions)
+  const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask, toggleMute,
+    start } = useMatchFeed(feedOptions)
+  const answered = new Set(lines.map((l) => l.reply_to))
+  const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
 
   return (
@@ -66,7 +69,8 @@ export default function App() {
         </div>
 
         <aside className="side">
-          <CommentaryFeed lines={lines} speakingId={speakingId} />
+          <CommentaryFeed lines={lines} questions={questions} speakingId={speakingId} />
+          <QuestionBox live={live} waiting={waiting} onAsk={ask} />
         </aside>
 
         {info && stats && (

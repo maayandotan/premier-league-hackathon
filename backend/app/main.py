@@ -12,6 +12,7 @@ from app.agents.analyst import Analyst
 from app.agents.caller import Caller
 from app.agents.client import agents_enabled
 from app.agents.pipeline import CommentaryLine, CommentaryPipeline
+from app.agents.qa import MAX_QUESTION_CHARS, QuestionAnswerer
 from app.agents.viewer import ViewerProfile
 from app.config import REPO_ROOT, settings
 from app.events.models import MatchEvent
@@ -44,6 +45,8 @@ async def match_feed(ws: WebSocket) -> None:
 
     The browser can send {"type": "set_level", "level": ...} at any time; the server answers
     {"type": "level", "level": ...} and the next line follows the new level.
+    It can also send {"type": "question", "text": ...}: the server echoes {"type": "question"} and
+    the answer arrives later as a commentary line with reply_to, while the match keeps going.
     """
     await ws.accept()
     params = ws.query_params
@@ -60,6 +63,8 @@ async def match_feed(ws: WebSocket) -> None:
     viewer = ViewerProfile()
     viewer.set_level(params.get("level", "fan"))
     pipeline = CommentaryPipeline(stats, caller, analyst, viewer)
+    pipeline.qa = QuestionAnswerer(stats, pipeline.timeline, {e.id: e for e in match.events},
+                                   use_model=agents_enabled())
     speech = Speech() if speech_enabled() else None
     speed = float(params.get("speed", settings.replay_speed))
     start = int(params.get("start", 0))
@@ -74,7 +79,8 @@ async def match_feed(ws: WebSocket) -> None:
         async with send_lock:
             await ws.send_json(message)
 
-    async def deliver(make_line: Callable[[], Awaitable[CommentaryLine | None]], event: MatchEvent) -> None:
+    async def deliver(make_line: Callable[[], Awaitable[CommentaryLine | None]],
+                      event: MatchEvent | None) -> None:
         """Wait for an agent's line, then send its text and, when ready, its audio."""
         try:
             line = await make_line()
@@ -87,15 +93,30 @@ async def match_feed(ws: WebSocket) -> None:
         except WebSocketDisconnect:
             pass
         except Exception:  # one bad line must never stop the match
-            log.exception("commentary failed for event %s", event.id)
+            log.exception("commentary failed for %s", event.id if event else "a question")
+
+    questions_asked = 0
 
     async def listen() -> None:
-        """Messages from the browser, for the whole match: today, level changes."""
+        """Messages from the browser, for the whole match: level changes and viewer questions."""
+        nonlocal questions_asked
         try:
             while True:
                 message = await ws.receive_json()
-                if message.get("type") == "set_level" and viewer.set_level(str(message.get("level"))):
+                kind = message.get("type")
+                if kind == "set_level" and viewer.set_level(str(message.get("level"))):
                     await send({"type": "level", "level": viewer.level})
+                elif kind == "question" and (text := str(message.get("text", "")).strip()):
+                    # The match keeps going: the answer is a background task like any other line.
+                    questions_asked += 1
+                    question_id = f"q{questions_asked}"
+                    minute, second = divmod(stats.clock, 60)
+                    await send({"type": "question", "id": question_id, "text": text[:MAX_QUESTION_CHARS],
+                                "clock": f"{minute}:{second:02d}"})
+                    task = asyncio.create_task(
+                        deliver(lambda q=question_id, t=text: pipeline.answer(q, t), None))
+                    tasks.add(task)
+                    task.add_done_callback(tasks.discard)
         except (WebSocketDisconnect, RuntimeError):
             pass  # the match ended or the viewer left
         except ValueError:

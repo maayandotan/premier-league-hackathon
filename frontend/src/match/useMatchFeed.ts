@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BroadcastAudio } from '../audio/broadcastAudio'
-import type { CommentaryLine, FeedMessage, MatchInfo, MatchStats, RankedEvent } from './types'
+import type { CommentaryLine, FeedMessage, MatchInfo, MatchStats, RankedEvent, ViewerQuestion } from './types'
 
 export type FeedStatus = 'idle' | 'live' | 'ended' | 'error'
 
@@ -20,6 +20,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
   const [info, setInfo] = useState<MatchInfo | null>(null)
   const [events, setEvents] = useState<RankedEvent[]>([])
   const [lines, setLines] = useState<CommentaryLine[]>([])
+  const [questions, setQuestions] = useState<ViewerQuestion[]>([])
   const [stats, setStats] = useState<MatchStats | null>(null)
   const socket = useRef<WebSocket | null>(null)
   const [speakingId, setSpeakingId] = useState<string | null>(null)
@@ -32,6 +33,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
     void audio.start() // inside the click: browsers only allow sound after a user gesture
     setEvents([])
     setLines([])
+    setQuestions([])
     setStats(null)
     setError(null)
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws'
@@ -48,6 +50,9 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
           break
         case 'level':
           setLevelState(data.level) // the server confirmed the change
+          break
+        case 'question':
+          setQuestions((prev) => [...prev, { id: data.id, text: data.text, clock: data.clock }])
           break
         case 'event':
           if (data.moment.kind === 'goal') audio.roar() // the crowd reacts before the caller does
@@ -86,6 +91,12 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_level', level: next }))
   }, [])
 
+  /** Ask the analyst a question; the match keeps going and the answer arrives as a line. */
+  const ask = useCallback((text: string) => {
+    const ws = socket.current
+    if (text.trim() && ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'question', text }))
+  }, [])
+
   const toggleMute = useCallback(() => {
     audio.setMuted(!muted)
     setMuted(!muted)
@@ -96,5 +107,8 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
     if (import.meta.env.DEV) Object.assign(window, { broadcastAudio: audio })
   }, [audio])
 
-  return { status, error, info, events, lines, stats, muted, speakingId, level, setLevel, toggleMute, start: begin }
+  return {
+    status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask, toggleMute,
+    start: begin,
+  }
 }

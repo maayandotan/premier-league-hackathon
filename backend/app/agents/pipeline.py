@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.agents.analyst import Analyst
 from app.agents.caller import Caller
+from app.agents.qa import QuestionAnswerer
 from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine
@@ -34,6 +35,7 @@ class CommentaryLine(BaseModel):
     event_id: str
     source: str = "template"  # "model" (an agent wrote it) or "template" (code fallback)
     level: str = "fan"  # the viewer level it was written for
+    reply_to: str | None = None  # the viewer's question this line answers (Q&A)
 
 
 class CommentaryPipeline:
@@ -43,13 +45,17 @@ class CommentaryPipeline:
         self.caller = caller
         self.analyst = analyst
         self.viewer = viewer or ViewerProfile()
+        self.qa: QuestionAnswerer | None = None
+        self.timeline: list[tuple[MatchEvent, Moment]] = []  # what Q&A searches to resolve "that"
         self._last_analysis_at: int | None = None
 
     def rank(self, event: MatchEvent) -> Moment:
         """Update the stats with the event and score it. Instant: no model involved."""
         momentum_before = self.stats.momentum()["value"]
         self.stats.update(event)
-        return rank(event, self.stats, momentum_before)
+        moment = rank(event, self.stats, momentum_before)
+        self.timeline.append((event, moment))
+        return moment
 
     @staticmethod
     def should_call(moment: Moment) -> bool:
@@ -79,3 +85,15 @@ class CommentaryPipeline:
             return None
         return CommentaryLine(id=f"{event.id}-analyst", speaker="analyst", excitement=0, text=text,
                               event_id=event.id, source="model", level=level)
+
+    async def answer(self, question_id: str, question: str) -> CommentaryLine:
+        """Answer a viewer's question about the match so far, in the analyst's voice."""
+        minute, second = divmod(self.stats.clock, 60)  # the match clock when they asked
+        level = self.viewer.level
+        if self.qa:
+            text = await self.qa.answer(question, minute, second, self.viewer)
+            source = "model" if self.qa.agent else "template"
+        else:
+            text, source = "Sorry, I can't take questions right now. Keep watching!", "template"
+        return CommentaryLine(id=f"{question_id}-answer", speaker="analyst", excitement=0, text=text,
+                              event_id="", source=source, level=level, reply_to=question_id)
