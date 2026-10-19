@@ -45,6 +45,13 @@ export interface CommentaryLine {
   event_id: string
   source: 'model' | 'template'
   level: string // the viewer level it was written for
+  reply_to?: string | null // the viewer question it answers
+}
+
+export interface ViewerQuestion {
+  id: string
+  text: string
+  clock: string
 }
 
 export type ByTeam<T> = Record<string, T>
@@ -65,6 +72,7 @@ export interface MatchStats {
 export type FeedMessage =
   | { type: 'match'; info: MatchInfo; audio: boolean; level: string }
   | { type: 'level'; level: string }
+  | { type: 'question'; id: string; text: string; clock: string }
   | { type: 'event'; event: MatchEvent; moment: Moment }
   | { type: 'commentary'; line: CommentaryLine }
   | { type: 'audio'; line_id: string; excitement: number; mp3: string }
