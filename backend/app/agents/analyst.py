@@ -74,12 +74,34 @@ def fit_to_words(text: str, limit: int) -> str:
     return " ".join(kept)
 
 
-def angle_for(moment: Moment) -> str:
-    """Code picks the angle from what the ranker already knows; the model fills in the numbers."""
+def run_of_play(stats: StatsEngine) -> dict:
+    """Who had the ball and who was dangerous in the last 10 minutes. They can be different teams:
+    having the ball isn't the same as being on top."""
+    possession = stats.possession(recent=True)
+    ball = max(possession, key=possession.get)
+    even = abs(possession[stats.home] - possession[stats.away]) < 10
+    leader = stats.momentum()["leader"]
+    return {
+        "more_of_the_ball": "neither team, about even" if even else ball,
+        "their_share_of_the_ball": None if even else f"{round(possession[ball])}%",
+        "more_dangerous": leader or "neither team",
+    }
+
+
+def angle_for(moment: Moment, stats: StatsEngine) -> str:
+    """Code picks the angle from what the ranker and the stats say; the model fills in the words.
+    The angle must be true for this match: a model told "show who dominated" when the ball and the
+    danger were with different teams gave one team's possession to the other to fit the story."""
     if moment.kind == "goal":
         if "against the run of play" in moment.reason:
-            return ("CONTRAST: the scoring team had NOT been on top. Show who had been dominating "
-                    "(get_momentum, get_possession recent) and how good the chance was (get_shot_quality).")
+            picture = run_of_play(stats)
+            ball, danger = picture["more_of_the_ball"], picture["more_dangerous"]
+            if ball not in (danger, "neither team, about even"):
+                return (f"SPLIT: {ball} had more of the ball, but {danger} had been more dangerous "
+                        "(get_run_of_play). Keep each fact with its team, and say how good the chance "
+                        "was (get_shot_quality).")
+            return ("CONTRAST: the scoring team had NOT been on top: the other side had been the more "
+                    "dangerous team (get_run_of_play). Say how good the chance was (get_shot_quality).")
         return ("CONTEXT + QUALITY: was this goal coming (get_momentum) and how good was the chance "
                 "(get_shot_quality)?")
     if moment.kind == "chance":
@@ -105,6 +127,11 @@ def build_tools(stats: StatsEngine, events_by_id: dict[str, MatchEvent]) -> list
     def get_possession(recent: Annotated[bool, "True for the last 10 minutes only"] = False) -> dict:
         """Share of possession per team (%), for the whole match or the last 10 minutes."""
         return stats.possession(recent=recent)
+
+    def get_run_of_play() -> dict:
+        """The last 10 minutes in one call: which team had more of the ball (and its share) and which
+        team was more dangerous. They can be different teams."""
+        return {key: value for key, value in run_of_play(stats).items() if value is not None}
 
     # These two speak in words, not internal scales: a model handed "value -0.3" tends to say it,
     # whatever the instructions say. Don't give the model numbers you don't want spoken.
@@ -135,8 +162,8 @@ def build_tools(stats: StatsEngine, events_by_id: dict[str, MatchEvent]) -> list
         event = events_by_id.get(event_id)
         return (stats.pass_rarity(event) if event else None) or {"error": "not a pass"}
 
-    return [get_score, get_possession, get_momentum, get_tempo, get_shots_and_xg, get_shot_quality,
-            get_pass_rarity]
+    return [get_score, get_possession, get_run_of_play, get_momentum, get_tempo, get_shots_and_xg,
+            get_shot_quality, get_pass_rarity]
 
 
 class Analyst:
@@ -155,7 +182,7 @@ class Analyst:
         if not self.agent:
             return None
         fields = event_fields(event, moment, self.stats) | {
-            "event_id": event.id, "ANGLE": angle_for(moment), "VIEWER_LEVEL": viewer.level}
+            "event_id": event.id, "ANGLE": angle_for(moment, self.stats), "VIEWER_LEVEL": viewer.level}
         try:
             return await asyncio.wait_for(self._write(as_text(fields), viewer.level), DEADLINE_SECONDS)
         except Exception as error:  # late or failed: silence beats a generic line
