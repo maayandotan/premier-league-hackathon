@@ -90,3 +90,17 @@ def test_pass_fields_name_passer_and_receiver():
     fields = event_fields(event, moment, stats)
     assert fields["passer"] == "D. Arlo" and fields["receiver"] == "M. Ferro"
     assert fields["pass_type"] == "through ball" and "player" not in fields
+
+
+def test_foul_fields_say_who_benefits():
+    """A Foul Committed event belongs to the fouling team; the fields must not imply they got the penalty."""
+    from app.events.models import FoulDetails
+
+    stats = StatsEngine(HOME, AWAY)
+    foul = MatchEvent(id="f2", index=9, period=2, minute=78, second=13, type="Foul Committed", team=AWAY,
+                      player="K. Osei", location=(4.0, 40.0), foul=FoulDetails(penalty=True))
+    moment = Moment(score=9, reason="penalty awarded", kind="set_piece", quiet=True)
+    fields = event_fields(foul, moment, stats)
+    assert fields["fouling_team"] == AWAY and fields["awarded_to"] == HOME
+    assert fields["fouling_player"] == "K. Osei" and "team" not in fields and "player" not in fields
+    assert fields["where"] == "in the box"  # seen from the team that gets the penalty
