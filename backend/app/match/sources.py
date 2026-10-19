@@ -6,7 +6,7 @@
 """
 import re
 
-from app.config import REPO_ROOT
+from app.config import REPO_ROOT, settings
 from app.events.adapters import statsbomb
 from app.events.io import load_match_file
 from app.events.models import Match
@@ -32,6 +32,7 @@ def load_source(source: str) -> Match:
         if path.exists():
             return load_match_file(path)
     elif kind == "statsbomb":
-        if (REAL_DIR / f"events_{name}.json").exists():
+        # Never on the deployed site (DATA_POLICY.md): real data is for local testing only.
+        if settings.allow_real_data and (REAL_DIR / f"events_{name}.json").exists():
             return statsbomb.load_match(REAL_DIR, name)
     raise UnknownSource(f"no such match: {source!r}")

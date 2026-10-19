@@ -132,3 +132,10 @@ async def match_feed(ws: WebSocket) -> None:
             task.cancel()
         if speech:
             await speech.close()
+
+
+# The built website (frontend/dist), served by this same app in production: one container,
+# one link. Mounted last so the API, WebSocket and audio routes above take precedence.
+SITE = REPO_ROOT / "frontend" / "dist"
+if SITE.is_dir():
+    app.mount("/", StaticFiles(directory=SITE, html=True), name="site")

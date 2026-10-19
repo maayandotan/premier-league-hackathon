@@ -1,0 +1,14 @@
+# Never in the image: real third-party data, secrets, local tooling (DATA_POLICY.md)
+data/real
+.env
+.env.*
+**/.venv
+**/node_modules
+**/__pycache__
+frontend/dist
+spikes
+audio-samples
+*.png
+.claude
+.git
+.github
