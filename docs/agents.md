@@ -135,7 +135,7 @@ Steps 1–2 are the basic tier: with them alone we have a submission. Steps 3–
 
 **Working in parallel:** the Caller only needs the Ranker, so it can start as soon as #2 settles the framework. The Analyst needs the stats tools, which are ready in #28.
 
-## Open decisions
+## Decisions
 
-- [ ] Agent framework: Foundry Agent Service or Microsoft Agent Framework (#2)
-- [ ] Caller on routine events: a template ("Arlo to Ferro") is instant and free; the model is livelier
+- [x] Agent framework: **Microsoft Agent Framework** on Foundry (#2): agents are created in code, tools are Python functions, structured output with Pydantic.
+- [x] Caller: the model for every moment worth a line (score ≥ 3), with a 2 s deadline and an instant template as the fallback, so the broadcast never waits.

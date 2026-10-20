@@ -21,11 +21,11 @@ const feedOptions = {
 
 export default function App() {
   const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask,
-    setListening, toggleMute, start } = useMatchFeed(feedOptions)
+    setListening, toggleMute, start, connected } = useMatchFeed(feedOptions)
   const answered = new Set(lines.map((l) => l.reply_to))
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
-  const canAsk = live || status === 'ended' // questions stay open after full time
+  const canAsk = connected && (live || status === 'ended') // questions stay open after full time
   const period = events[0]?.event.period ?? null
   const scoreText = info && stats ? `${stats.score[info.home.name]}–${stats.score[info.away.name]}` : ''
 
