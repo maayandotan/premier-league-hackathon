@@ -46,7 +46,7 @@ export function MomentumBar({ stats }: { stats: MatchStats }) {
     <div className="momentum" aria-label={`Momentum: ${leader ?? 'even'}`}>
       <div className="momentum-head">
         <span>Momentum</span>
-        <span className="momentum-label">{leader ? `${leader} on top` : 'Evenly matched'} · {stats.tempo.label}</span>
+        <span className="momentum-label">{leader ? `${leader} on top` : 'Evenly matched'}</span>
       </div>
       <div className="momentum-track">
         <span className="midline" />
