@@ -49,7 +49,8 @@ Breaking one of these can disqualify the entry. If a task seems to need breaking
 | `pipeline.py` | The producer: ranks every event, decides when Guy calls, when Sonia analyses (45 s cooldown), answers questions, falls back to templates |
 | `caller.py` | Guy. No tools, must answer within ~2 s, otherwise a template line is used |
 | `analyst.py` | Sonia. 7 stats tools, picks an analysis angle in code, word limits per level |
-| `qa.py` | Answers viewer questions with `get_events_before`, `get_key_moments`, `get_rule`, `get_match_picture` and shot and pass tools |
+| `qa.py` | Answers viewer questions with `get_events_before`, `get_key_moments`, `get_rule`, `get_tactic`, `get_match_picture` and shot and pass tools |
+| `tactics.py` | Loads the tactics playbook ([docs/football_tactics.md](docs/football_tactics.md)) into concepts; code picks the one a moment or question needs |
 | `viewer.py` | Viewer profile (level) |
 | `describe.py` | Turns an event into unambiguous fields for the models (e.g. `fouling_team`, `awarded_to`) |
 | `client.py` | The Foundry chat client (Entra ID auth) |
@@ -127,7 +128,8 @@ These came from real failures. Follow them when changing or adding an agent.
 8. **Questions carry their match time** so the agent can resolve "that" and "just now". After full time, questions are about the whole match.
 9. **Every number comes from a tool** and is checked by a test. The model never computes or recalls a stat.
 10. **Don't hand the model a conclusion to support.** "Show who had been dominating" assumed the team on top also had the ball. When Northbridge had 65% of the ball but Westvale had the chances, Sonia gave Westvale the 65% to fit the story (3 out of 3 times). The code now checks the data first and picks an angle that is true (`angle_for` in `analyst.py`, `SPLIT` vs `CONTRAST`).
-11. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
+11. **Knowledge needs its limits.** Given the playbook's idea of pressing but nothing measuring it, Q&A answered "yes, Northbridge are pressing high" and used possession as proof. Every concept now tells the agent what we can measure in this match, or plainly "nothing yet" (`app/agents/tactics.py`).
+12. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
 
 ## Open work
 

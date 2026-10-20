@@ -7,7 +7,8 @@ Built step by step in spikes/agents/qa_step_a.py. What we learned:
   clear" was an invention). "Did they deserve it?" is answered with data.
 - The model takes the shortest path, so make that path complete: one get_match_picture tool
   with who's on top, possession, shots and xG together, instead of five small tools.
-- Rules come from our own glossary (get_rule), not from the model's memory.
+- Rules come from our own glossary (get_rule), not from the model's memory; tactics come from
+  our playbook, docs/football_tactics.md (get_tactic).
 """
 import asyncio
 import logging
@@ -19,6 +20,7 @@ from agent_framework import Agent
 from app.agents.analyst import build_tools as stats_tools
 from app.agents.client import chat_client
 from app.agents.describe import event_fields
+from app.agents.tactics import CONCEPTS, LEVELS, PLAYBOOK_RULES, find_concept
 from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine
@@ -57,6 +59,8 @@ RULES = {
                       "the other team can get back into position.",
     "possession": "Possession is the share of the passes each team made: who has had the ball more.",
 }
+# The playbook's fuller versions win (e.g. offside: level is onside, and only if involved in play).
+RULES |= {name: text for name, text in PLAYBOOK_RULES.items() if name != "yellow and red cards"}
 
 INSTRUCTIONS = """You answer a viewer's question during a live football broadcast, in the analyst's voice.
 
@@ -66,6 +70,13 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   call get_events_before to see what happened right before, and pick the moment that fits.
 - For a question about a rule or a football term, call get_rule and explain it in your own words,
   applied to this moment if there is one.
+- For a question about tactics or how a team is playing (counter-attacks, pressing, possession,
+  crosses, set pieces, sitting deep, playing with ten men...), call get_tactic with the
+  VIEWER_LEVEL and explain the idea in your own words. Apply it to this match ONLY through what
+  its what_we_measure_in_this_match says, with numbers from the other tools. If that says we
+  don't measure it, explain the idea and say our match data can't show whether a team is doing
+  it: never use other stats (like possession) as proof. Its example line shows tone only: never
+  repeat its numbers or names. Never claim anything in its do_not_claim.
 - For anything about how the match is going, call get_match_picture: it has who's on top,
   possession, shots and xG together. No claims beyond what it returns: no "likely", no guessing.
 - Every number comes from a tool. Don't invent details that the events don't show.
@@ -123,6 +134,17 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
                 return {"topic": name, "explanation": text}
         return {"error": f"no explanation for {topic!r}", "known_topics": list(RULES)}
 
+    def get_tactic(
+        topic: Annotated[str, "The tactic or pattern asked about, e.g. counter-attack, pressing"],
+        level: Annotated[str, "VIEWER_LEVEL: beginner, fan or analyst"] = "fan",
+    ) -> dict:
+        """Our playbook's explanation of a tactical idea: the idea, an example line for tone, and what
+        event data can't show (so don't claim it)."""
+        concept = find_concept(topic)
+        if concept is None:
+            return {"error": f"no playbook entry for {topic!r}", "known_topics": list(CONCEPTS)}
+        return concept.brief(level if level in LEVELS else "fan")
+
     def get_match_picture() -> dict:
         """How the match is going: who is on top recently (in words), possession overall and in the
         last 10 minutes (%), shots and expected goals (xG) per team so far."""
@@ -130,7 +152,7 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
                 "possession_last_10_min": stats.possession(recent=True),
                 "shots": stats.shots, "xg": stats.xg}
 
-    return [get_events_before, get_key_moments, get_rule, get_match_picture,
+    return [get_events_before, get_key_moments, get_rule, get_tactic, get_match_picture,
             momentum["get_shot_quality"], momentum["get_pass_rarity"]]
 
 

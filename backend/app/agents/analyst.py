@@ -22,6 +22,7 @@ from agent_framework import Agent
 
 from app.agents.client import chat_client
 from app.agents.describe import as_text, event_fields
+from app.agents.tactics import CONCEPTS, Concept
 from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine
@@ -48,6 +49,9 @@ Rules for every level:
 - Never say internal scales or tool names: no "momentum value", "threat", "possession changes per
   minute", no negative numbers. Turn them into words ("France had been on top").
 - Don't repeat information already in the input (like the score).
+- If a TACTICS note is given, you may use its idea to explain the moment, in your own words.
+  Its example line shows tone only: never repeat its numbers, names or wording. Never claim
+  anything listed under TACTICS_DO_NOT_CLAIM.
 - One or two short sentences. LEAD WITH THE INSIGHT (the surprising part), then the context.
 
 Adapt to VIEWER_LEVEL:
@@ -114,6 +118,32 @@ def angle_for(moment: Moment, stats: StatsEngine) -> str:
     if moment.kind == "phase":
         return "SUMMARY: who has been the better side so far (get_shots_and_xg, get_possession)?"
     return "CONTEXT: what is the shape of the game right now (get_momentum, get_tempo)?"
+
+
+def concept_for(event: MatchEvent, moment: Moment, stats: StatsEngine) -> Concept | None:
+    """The playbook concept that explains this moment, picked by code from what we know for sure."""
+    card = event.foul.card if event.foul else event.card
+    shot_type = event.shot.type if event.shot else None
+    if card in ("Red Card", "Second Yellow"):
+        return CONCEPTS["Playing with ten men"]
+    if moment.kind in ("goal", "chance"):
+        if event.play_pattern == "From Counter":
+            return CONCEPTS["Counter-attack and transitions"]
+        if event.play_pattern in ("From Corner", "From Free Kick") or shot_type in ("Penalty", "Free Kick"):
+            return CONCEPTS["Set pieces"]
+        if moment.kind == "goal":
+            picture = run_of_play(stats)
+            if picture["more_of_the_ball"] not in (picture["more_dangerous"], "neither team, about even"):
+                return CONCEPTS["Possession versus danger"]
+            if event.minute >= 80:
+                return CONCEPTS["Game state and the late game"]
+            return None
+        return CONCEPTS["Chance quality and expected goals"]
+    if moment.kind == "attack" and event.pass_:
+        if event.pass_.cross:
+            return CONCEPTS["Crosses and cut-backs"]
+        return CONCEPTS["Progressive and line-breaking passes"]
+    return None
 
 
 def build_tools(stats: StatsEngine, events_by_id: dict[str, MatchEvent]) -> list:
@@ -183,6 +213,11 @@ class Analyst:
             return None
         fields = event_fields(event, moment, self.stats) | {
             "event_id": event.id, "ANGLE": angle_for(moment, self.stats), "VIEWER_LEVEL": viewer.level}
+        if concept := concept_for(event, moment, self.stats):
+            brief = concept.brief(viewer.level)
+            fields |= {"TACTICS": f"{brief['concept']}: {brief['idea']}",
+                       "TACTICS_EXAMPLE": brief["example_line_for_tone_only"],
+                       "TACTICS_DO_NOT_CLAIM": brief["do_not_claim"]}
         try:
             return await asyncio.wait_for(self._write(as_text(fields), viewer.level), DEADLINE_SECONDS)
         except Exception as error:  # late or failed: silence beats a generic line

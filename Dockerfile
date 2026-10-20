@@ -19,6 +19,7 @@ RUN pip install --no-cache-dir -r backend/requirements.txt
 COPY backend/app backend/app
 COPY assets/audio assets/audio
 COPY data/synthetic data/synthetic
+COPY docs/football_tactics.md docs/football_tactics.md
 COPY --from=site /srv/frontend/dist frontend/dist
 
 RUN useradd --create-home app
