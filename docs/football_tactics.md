@@ -5,7 +5,7 @@ The football knowledge our analyst (Sonia) and the Q&A agent explain from. Writt
 **How the agents use it.** Each concept has the same parts, so code can load just the section a moment needs into an agent's context:
 
 - **What it is**: the idea in plain words.
-- **In our data**: what the event feed can actually show, and which stat or detector measures it. "Today" means the stats engine has it now; "#48" means a planned detector ([Tactical Intelligence Engine](https://github.com/maayandotan/premier-league-hackathon/issues/48)).
+- **In our data**: what the event feed can actually show, and which stat or detector measures it. "Today" means the stats engine has it now; "#48" means a planned detector ([Tactical Intelligence Engine](https://github.com/maayandotan/premier-league-hackathon/issues/48)). The agents are told only the "Today" part: for a concept with none, they explain the idea but can't say whether a team is doing it.
 - **Say it**: one line per viewer level, as a model of tone and depth (not a script).
 - **Don't claim**: what event data can't support. The agents can't see the video.
 
@@ -28,7 +28,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** The moment the ball changes hands, both teams are briefly out of shape. A counter-attack uses that moment: win the ball and go forward fast, before the opponents can get back behind the ball. Teams that defend deep and break quickly rely on it.
 
-**In our data.** Today: `play_pattern: From Counter` on the events of a fast break. #48: "transitions" detector (ball won, then a shot or box entry within about 12 seconds), counted per team over a rolling window.
+**In our data.** Today: recent and key events show which attacks came `From Counter` (a fast break); no counts of counters yet. #48: "transitions" detector (ball won, then a shot or box entry within about 12 seconds), counted per team over a rolling window.
 
 **Say it.**
 - Beginner: "They won the ball and ran at goal before the other team could get back."
@@ -80,7 +80,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** Some teams build attacks patiently with short passes from the goalkeeper and defenders, drawing opponents forward to create space behind them. Others go direct: long balls forward to a target or into space, skipping midfield. Neither is better; it depends on the players and the score.
 
-**In our data.** Today: pass length and height on every pass, goal-kick length, progressive passes. #48: "directness" detector: forward progress per possession and passes per possession.
+**In our data.** Today: recent events show individual long balls and how goal kicks are taken; no totals yet. #48: "directness" detector: forward progress per possession and passes per possession.
 
 **Say it.**
 - Beginner: "They're passing it short from the back, being patient instead of kicking it long."
@@ -93,7 +93,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** A progressive pass moves the ball substantially closer to the opponent's goal. A line-breaking pass goes through or past a line of opponents, taking several of them out of the game at once. They're how good midfielders and defenders create chances without touching the final ball.
 
-**In our data.** Today: progressive passes per team, and pass rarity (`get_pass_rarity`: how much a pass gained compared with this match's other passes). Through balls are marked as a pass technique.
+**In our data.** Today: for one pass, how much it gained and how rare that is in this match (`get_pass_rarity`); through balls are marked in the events. The stats engine also counts progressive passes per team.
 
 **Say it.**
 - Beginner: "That one pass got them from the middle of the pitch right up to the goal area."
@@ -106,7 +106,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** A cross is a ball from a wide area into the box, often in the air. Many crosses are cleared, so a high number of them can mean a team is short of better ideas. A cut-back is a pass from near the goal line back to a teammate arriving at the edge of the six-yard box or penalty spot, usually a much better chance.
 
-**In our data.** Today: `cross: true` on passes, and their outcome. #48: "crossing reliance" detector: crosses per box entry, and how many crosses lead to shots.
+**In our data.** Today: recent events show individual crosses and whether they reached a teammate; no cross totals yet. #48: "crossing reliance" detector: crosses per box entry, and how many crosses lead to shots.
 
 **Say it.**
 - Beginner: "They keep lifting the ball into the box, but the defenders are heading it away."
@@ -119,7 +119,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** Corners, free kicks, throw-ins and penalties restart play from a fixed spot, so teams rehearse them. A large share of goals come from set pieces, and a tall team can get many of its chances this way. Penalties are scored roughly three times out of four.
 
-**In our data.** Today: pass type (`Corner`, `Free Kick`, `Throw-in`, `Goal Kick`), shot type (`Penalty`, `Free Kick`), play pattern `From Corner` / `From Free Kick`, and penalty xG (0.76). #48: "set-piece threat": shots from set pieces per team.
+**In our data.** Today: which recent and key chances came from a corner, free kick or penalty, and a penalty's xG (0.76); no set-piece totals yet. #48: "set-piece threat": shots from set pieces per team.
 
 **Say it.**
 - Beginner: "A corner: the ball is kicked in from the corner, and tall players try to head it in."
@@ -132,7 +132,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** A team defends close to its own goal with two compact lines, giving away possession and space far from goal but very little near it. Common when protecting a lead, playing with ten men, or against a stronger side. It invites crosses and long shots, which are usually low-quality chances.
 
-**In our data.** Indirectly: the opponent's high possession and field tilt, many of their shots from distance (low xG per shot), many crosses. Combine with game state (a team leading late).
+**In our data.** Today, indirectly: possession, shots and xG (the match picture) together with the score and minute, e.g. a team leading late with little of the ball; no shot-distance or cross totals yet. #48: field tilt.
 
 **Say it.**
 - Beginner: "Westvale are leading, so they're sitting back and keeping everyone near their own goal."
