@@ -105,6 +105,14 @@ class StatsEngine:
             return {self.home: 50.0, self.away: 50.0}
         return {team: round(100 * n / total, 1) for team, n in counts.items()}
 
+    def recent_shots(self) -> dict[str, int]:
+        """Shots per team in the last 10 minutes."""
+        counts = {self.home: 0, self.away: 0}
+        for _, team, type_, _ in self._recent:
+            if type_ == "Shot":
+                counts[team] += 1
+        return counts
+
     def momentum(self) -> dict:
         """Who is on top in the last 10 minutes: -1 (away dominating) to +1 (home dominating)."""
         threat = {self.home: 0.0, self.away: 0.0}
