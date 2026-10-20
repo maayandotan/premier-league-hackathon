@@ -66,7 +66,8 @@ def test_rules_come_from_our_glossary():
 
 def test_match_picture_has_everything_in_one_call():
     picture = tools_for([routine_pass(5, 0, "p")])["get_match_picture"]()
-    assert set(picture) == {"on_top_recently", "possession", "possession_last_10_min", "shots", "xg"}
+    assert set(picture) == {"score", "minute", "on_top_recently", "possession", "possession_last_10_min",
+                            "shots", "shots_last_10_min", "xg"}
 
 
 class FakeAgent:

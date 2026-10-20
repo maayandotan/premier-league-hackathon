@@ -12,6 +12,7 @@ Built step by step in spikes/agents/qa_step_a.py. What we learned:
 """
 import asyncio
 import logging
+import re
 from collections.abc import Sequence
 from typing import Annotated
 
@@ -19,6 +20,7 @@ from agent_framework import Agent
 
 from app.agents.analyst import build_tools as stats_tools
 from app.agents.analyst import fit_to_words
+from app.agents.checker import check_answer, recorded, recording
 from app.agents.client import chat_client
 from app.agents.describe import event_fields
 from app.agents.tactics import CONCEPTS, LEVELS, PLAYBOOK_RULES, find_concept
@@ -32,6 +34,7 @@ log = logging.getLogger(__name__)
 DEADLINE_SECONDS = 12.0
 MAX_QUESTION_CHARS = 200
 UNAVAILABLE = "Sorry, I can't take questions right now. Keep watching!"
+NOT_SURE = "I want to get that one right with the numbers. Give me a moment and ask me again!"
 
 # Our own plain-words explanations, so the agent explains rules from a source we control.
 RULES = {
@@ -78,8 +81,12 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   don't measure it, explain the idea and say our match data can't show whether a team is doing
   it: never use other stats (like possession) as proof. Its example line shows tone only: never
   repeat its numbers or names. Never claim anything in its do_not_claim.
-- For anything about how the match is going, call get_match_picture: it has who's on top,
-  possession, shots and xG together. No claims beyond what it returns: no "likely", no guessing.
+- For how good a chance was, find it with get_events_before, then call get_shot_quality with its
+  event_id and use its label: "big chance" = great, "half chance" = decent, "low-probability
+  effort" = hard. Never judge a chance without it.
+- For anything about how the match is going (including the score), call get_match_picture: it has
+  the score, who's on top, possession, shots and xG together. No claims beyond what it returns:
+  no "likely", no guessing.
 - Every number comes from a tool. Don't invent details that the events don't show.
 - You CANNOT SEE THE VIDEO. Never judge whether a decision was right, a foul was clear, or a
   player was unlucky. "Did they deserve it?" is answered with data: who had been on top and how
@@ -164,14 +171,18 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
         return concept.brief(level if level in LEVELS else "fan")
 
     def get_match_picture() -> dict:
-        """How the match is going: who is on top recently (in words), possession overall and in the
-        last 10 minutes (%), shots and expected goals (xG) per team so far."""
-        return {"on_top_recently": momentum["get_momentum"](), "possession": stats.possession(),
+        """How the match is going: the score and minute, who is on top recently (in words), possession
+        overall and in the last 10 minutes (%), shots overall and in the last 10 minutes, and expected
+        goals (xG) per team so far."""
+        return {"score": stats.score, "minute": stats.minute,
+                "on_top_recently": momentum["get_momentum"](), "possession": stats.possession(),
                 "possession_last_10_min": stats.possession(recent=True),
+                "shots_last_10_min": stats.recent_shots(),
                 "shots": stats.shots, "xg": {team: round(xg, 2) for team, xg in stats.xg.items()}}
 
-    return [get_events_before, get_key_moments, get_rule, get_tactic, get_match_picture,
-            momentum["get_shot_quality"], momentum["get_pass_rarity"]]
+    tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_match_picture,
+             momentum["get_shot_quality"], momentum["get_pass_rarity"]]
+    return [recorded(tool) for tool in tools]  # so the answer can be checked against what they said
 
 
 class QuestionAnswerer:
@@ -184,6 +195,7 @@ class QuestionAnswerer:
             tools=build_qa_tools(stats, timeline, events_by_id),
             default_options={"temperature": 0.3, "max_tokens": 200},
         ) if use_model else None
+        self.stats = stats
 
     async def answer(self, question: str, minute: int, second: int, viewer: ViewerProfile,
                      full_time: bool = False) -> str:
@@ -194,13 +206,29 @@ class QuestionAnswerer:
         limit = WORD_LIMITS.get(viewer.level, WORD_LIMITS["fan"])
         prompt = (f"QUESTION: {question[:MAX_QUESTION_CHARS]}\nASKED_AT: {asked_at}\n"
                   f"VIEWER_LEVEL: {viewer.level}\nMAX_WORDS: {limit}")
+        said = {*re.findall(r"\b\d+(?:\.\d+)?\b", question), str(minute), str(second)}
         try:
-            return await asyncio.wait_for(self._write(prompt, viewer.level, limit), DEADLINE_SECONDS)
+            with recording() as tool_results:
+                return await asyncio.wait_for(self._write(prompt, viewer.level, limit, tool_results, said),
+                                              DEADLINE_SECONDS)
         except Exception as error:
             log.warning("Q&A failed: %s", type(error).__name__)
             return "Sorry, I couldn't work that one out in time. Ask me again in a moment!"
 
-    async def _write(self, prompt: str, level: str, limit: int) -> str:
+    async def _write(self, prompt: str, level: str, limit: int, tool_results: list, said: set[str]) -> str:
+        """Draft, check against what the tools returned, one retry if wrong, then an honest fallback
+        (the viewer asked, so silence isn't an option; a wrong number is worse than "ask again")."""
+        text = await self._draft(prompt, level, limit)
+        if problems := check_answer(text, tool_results, self.stats, said):
+            text = await self._draft(f"{prompt}\nYOUR LAST ANSWER: {text}\nWRONG: {'; '.join(problems)}.\n"
+                                     "Answer again, with only numbers your tools gave, each with its team.",
+                                     level, limit)
+            if problems := check_answer(text, tool_results, self.stats, said):
+                log.warning("Q&A answer failed the check twice: %s", "; ".join(problems))
+                return NOT_SURE
+        return text
+
+    async def _draft(self, prompt: str, level: str, limit: int) -> str:
         text = (await self.agent.run(prompt)).text.strip()
         if len(text.split()) > limit * 1.2:  # the model doesn't count words: ask once to shorten
             text = (await self.agent.run(

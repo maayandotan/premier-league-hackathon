@@ -29,7 +29,7 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 2. **Stats engine (code).** Score, xG, possession, momentum, tempo, pass progression: always exact, and exposed to the agents as tools.
 3. **Moment ranker (code).** Scores each event with a reason ("late go-ahead goal, against the run of play"), so most of the match is rightly left alone.
 4. **Producer (code).** Decides who speaks and when: Guy on live moments, Sonia in the quiet after, the Q&A agent when a viewer asks. Every model call has a deadline and a fallback, so the broadcast never waits.
-5. **AI agents** on Microsoft Foundry (`gpt-4.1-mini`) with the Microsoft Agent Framework: the **Caller**, the **Analyst** (code hands it the facts for the moment, grouped by team, and checks its line before it's spoken) and **Q&A** (tools for match events, rules, tactics and the match picture).
+5. **AI agents** on Microsoft Foundry (`gpt-4.1-mini`) with the Microsoft Agent Framework: the **Caller**, the **Analyst** (code hands it the facts for the moment, grouped by team) and **Q&A** (tools for match events, rules, tactics and the match picture). Both are checked before they speak.
 6. **Voice.** Azure AI Speech turns each line into speech (Guy with built-in excited and shouting styles, Sonia calm), mixed over the crowd in the browser.
 
 Design notes: [docs/agents.md](docs/agents.md), [docs/architecture.md](docs/architecture.md), and the lessons we learned building the agents in [AGENTS.md](AGENTS.md).
@@ -37,7 +37,7 @@ Design notes: [docs/agents.md](docs/agents.md), [docs/architecture.md](docs/arch
 ## Keeping the AI honest
 
 - Every number comes from the stats engine, through tools or facts code hands the agent; tests check them.
-- Every analyst line is checked in code before it's spoken: no number that wasn't given, possession and shots with the right team, the right chance label, the right scorer. One retry if it's wrong, then silence: a wrong fact is worse than none.
+- Every analyst line and every answer is checked in code before it's spoken: no number the agent wasn't given (answers are checked against what their tools returned for that question), possession, shots and xG with the right team, "more shots" or "more of the ball" right for the whole match and the last 10 minutes, the right chance label, the right scorer, no guessing. One retry, told exactly what was wrong; then silence for the analyst, or an honest "ask me again" for a viewer's question.
 - Code decides the angle, the excitement and who speaks; the model writes the words. When the data disagrees with a story, code picks the angle that is true.
 - The agents know they can't see the video: they never judge a referee's decision or whether a player was unlucky, and answer "was it deserved?" with data.
 - Each agent was built step by step and checked by running it on real outputs at every level; the experiments are in [spikes/agents/](spikes/agents/).
