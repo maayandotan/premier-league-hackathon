@@ -97,7 +97,6 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <span>{feedOptions.source} · ×{feedOptions.speed}</span>
         <span>Fictional teams and players · Crowd audio: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0</span>
       </footer>
     </div>

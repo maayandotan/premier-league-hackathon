@@ -14,26 +14,31 @@ function icon(e: MatchEvent, m: Moment): ReactNode {
   return <span className="dot" />
 }
 
-/** Key moments only (what the Moment Ranker scored 3+), with the reason it mattered. */
+/** A real key moment: a goal, a card, a penalty, or a big chance. Not every carry into the box. */
+function isKeyMoment({ event, moment }: RankedEvent): boolean {
+  if (moment.kind === 'phase') return false
+  return moment.kind === 'goal' || Boolean(event.card ?? event.foul?.card) || moment.score >= 7
+}
+
+/** The match's key moments, newest first, with the reason each mattered. */
 export function EventTicker({ events, homeTeam }: { events: RankedEvent[]; homeTeam: string }) {
-  const key = events.filter(({ moment }) => moment.score >= 3).slice(0, 12)
+  const key = events.filter(isKeyMoment).slice(0, 10)
   return (
     <section className="card ticker" aria-label="Key moments">
       <h2>Key moments</h2>
       {key.length === 0 ? (
-        <p className="empty">Nothing notable yet.</p>
+        <p className="empty">Goals, cards and big chances will appear here.</p>
       ) : (
         <ol>
           {key.map(({ event: e, moment }) => (
             <li key={e.id} className={e.team === homeTeam ? 'home' : 'away'}
-              data-level={moment.score >= 9 ? 'high' : moment.score >= 6 ? 'mid' : 'low'}>
+              data-goal={moment.kind === 'goal'}>
               <span className="minute">{e.minute}'</span>
               <span className="icon" aria-hidden="true">{icon(e, moment)}</span>
               <span className="what">
                 <strong>{e.player?.split(' ').slice(-1)[0] ?? e.team}</strong>
                 <span className="reason">{moment.reason}</span>
               </span>
-              <span className="score-badge" title="How interesting the ranker found it">{moment.score}</span>
             </li>
           ))}
         </ol>

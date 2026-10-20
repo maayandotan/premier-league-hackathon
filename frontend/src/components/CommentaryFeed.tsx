@@ -1,8 +1,8 @@
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 
 const VOICES = {
-  caller: { initial: 'G', name: 'Guy', role: 'Play-by-play' },
-  analyst: { initial: 'S', name: 'Sonia', role: 'Analyst' },
+  caller: { name: 'Guy', role: 'Play-by-play' },
+  analyst: { name: 'Sonia', role: 'Analyst' },
 } as const
 
 /**
@@ -22,11 +22,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
     <section className="card feed" aria-label="Commentary" aria-live="polite">
       <h2>
         Commentary
-        {speakingId && (
-          <span className="on-air" aria-label="Speaking now">
-            <span className="wave"><i /><i /><i /><i /></span> On air
-          </span>
-        )}
+        {speakingId && <span className="on-air" aria-label="Speaking now">On air</span>}
       </h2>
       {lines.length === 0 && pending.length === 0 ? (
         <p className="empty">The commentators are ready. Kick off to hear them.</p>
@@ -34,11 +30,8 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
         <ol>
           {pending.map((q) => (
             <li key={q.id} className="line viewer">
-              <span className="avatar" aria-hidden="true">You</span>
-              <div className="bubble">
-                <div className="who">You <span className="role">· asked at {q.clock}</span></div>
-                <p>{q.text}</p>
-              </div>
+              <div className="who">You <span className="role">asked at {q.clock}</span></div>
+              <p>{q.text}</p>
             </li>
           ))}
           {lines.map((line) => {
@@ -47,16 +40,11 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
             return (
               <li key={line.id} className={`line ${line.speaker}`} data-excitement={line.excitement}
                 data-speaking={line.id === speakingId}>
-                <span className="avatar" aria-hidden="true">{voice.initial}</span>
-                <div className="bubble">
-                  <div className="who">
-                    {voice.name} <span className="role">· {question ? 'Answering you' : voice.role}</span>
-                    <span className="level-tag">{line.level}</span>
-                    <span className="source" data-source={line.source}>{line.source === 'model' ? 'AI' : 'Auto'}</span>
-                  </div>
-                  {question && <blockquote>“{question.text}” <span>· {question.clock}</span></blockquote>}
-                  <p>{line.text}</p>
+                <div className="who">
+                  {voice.name} <span className="role">{question ? 'Answering you' : voice.role}</span>
                 </div>
+                {question && <blockquote>“{question.text}”</blockquote>}
+                <p>{line.text}</p>
               </li>
             )
           })}
