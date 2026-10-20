@@ -119,7 +119,13 @@ async def match_feed(ws: WebSocket) -> None:
         nonlocal questions_asked
         try:
             while True:
-                message = await ws.receive_json()
+                try:
+                    message = await ws.receive_json()
+                except ValueError:  # one bad message: skip it, keep listening for the rest of the match
+                    log.warning("ignored a malformed message from the browser")
+                    continue
+                if not isinstance(message, dict):
+                    continue
                 kind = message.get("type")
                 if kind == "set_level" and viewer.set_level(str(message.get("level"))):
                     await send({"type": "level", "level": viewer.level})
@@ -136,8 +142,6 @@ async def match_feed(ws: WebSocket) -> None:
                     task.add_done_callback(tasks.discard)
         except (WebSocketDisconnect, RuntimeError):
             pass  # the match ended or the viewer left
-        except ValueError:
-            log.warning("ignored a malformed message from the browser")
 
     listener = asyncio.create_task(listen())
     try:
