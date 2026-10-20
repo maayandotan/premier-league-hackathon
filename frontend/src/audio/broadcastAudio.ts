@@ -2,16 +2,15 @@
  * The broadcast's sound, with the Web Audio API (#20):
  * - a crowd bed that loops all match and dips while someone is speaking
  * - a goal roar, started the moment the goal event arrives (before the commentary)
- * - a queue of commentary clips: played in order, big moments (excitement 2) cut in,
- *   and clips that waited too long are dropped rather than played late
- * - an answer to the viewer's question goes ahead of regular lines, survives big-moment cuts and
- *   stays valid for 8 minutes of match time after the question (rules in clipQueue.ts)
+ * - a queue of commentary clips in three tiers (big moments, viewers' answers, the rest), with
+ *   late clips dropped rather than played late. Rules and tests in clipQueue.ts
+ * - an answer to the viewer's question stays valid for 8 minutes of match time after the question
  * - while the viewer is asking a question by voice, the commentators fall silent and the crowd
  *   drops right down (so they can be heard, and the mic doesn't pick up the commentary)
  * Crowd audio: "Free Crowd Cheering Sounds" by Gregor Quendel, CC BY 4.0 (assets/audio/CREDITS.md).
  */
 
-import { type Clip, insertClip, takeNext } from './clipQueue'
+import { type Clip, type Tier, insertClip, takeNext, tierOf } from './clipQueue'
 
 const CROWD_LEVEL = 0.35
 const CROWD_UNDER_VOICE = 0.18
@@ -38,6 +37,7 @@ export class BroadcastAudio {
   played = 0 // for debugging: clips actually played
   dropped = 0 // clips skipped because they arrived too late
   private matchClock = 0 // seconds, from the latest event: answers expire on match time
+  private currentTier: Tier | undefined // tier of the clip playing now
 
   /** The match clock (seconds) of the latest event; 0 at kick-off. */
   setMatchClock(seconds: number): void {
@@ -114,13 +114,15 @@ export class BroadcastAudio {
 
   /**
    * A commentary clip arrived (base64 MP3). askedAtClock (match clock in seconds when the viewer
-   * asked) marks the clip as an answer to that question.
+   * asked) marks an answer to that question; bigMoment marks a line about an event that beats
+   * viewers' questions.
    */
-  async enqueue(lineId: string, mp3: string, excitement: number, askedAtClock?: number): Promise<void> {
+  async enqueue(lineId: string, mp3: string, excitement: number,
+    { askedAtClock, bigMoment }: { askedAtClock?: number; bigMoment?: boolean } = {}): Promise<void> {
     if (!this.ctx) return
     const buffer = await this.ctx.decodeAudioData(decodeBase64(mp3))
-    const clip: QueuedClip = { lineId, buffer, excitement, receivedAt: performance.now(), askedAtClock }
-    const { queue, cut } = insertClip(this.queue, clip)
+    const clip: QueuedClip = { lineId, buffer, excitement, receivedAt: performance.now(), askedAtClock, bigMoment }
+    const { queue, cut } = insertClip(this.queue, clip, this.current ? this.currentTier : undefined)
     this.queue = queue
     if (cut) this.cutCurrent()
     if (!this.current && !this.listening) this.playNext()
@@ -148,6 +150,7 @@ export class BroadcastAudio {
       }
     }
     this.current = source
+    this.currentTier = tierOf(clip)
     this.duckCrowd(true)
     this.onSpeaking(clip.lineId)
     source.start()

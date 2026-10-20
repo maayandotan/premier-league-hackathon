@@ -22,6 +22,7 @@ export interface Moment {
   reason: string
   kind: string
   quiet: boolean
+  beats_questions?: boolean // heard before a viewer's answer (goal, red card, penalty, big chance, close free kick)
 }
 
 export interface RankedEvent {
