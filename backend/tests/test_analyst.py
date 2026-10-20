@@ -2,8 +2,10 @@
 import asyncio
 from types import SimpleNamespace
 
+import pytest
+
 from app.agents import analyst as analyst_module
-from app.agents.analyst import Analyst, angle_for, build_tools
+from app.agents.analyst import Analyst, angle_for, build_tools, facts_for
 from app.agents.caller import Caller
 from app.agents.pipeline import ANALYSIS_COOLDOWN, CommentaryPipeline
 from app.agents.viewer import ViewerProfile
@@ -78,13 +80,37 @@ def test_angle_contrast_when_one_team_had_everything():
     assert angle_for(GOAL, last_ten_minutes(ball=AWAY, danger=AWAY)).startswith("CONTRAST")
 
 
-def test_analysis_gets_the_moment_angle_and_event_id():
+def test_analysis_gets_the_angle_and_the_facts_in_one_call():
     agent = FakeAgent()
     text = asyncio.run(analyst_with(agent).analyse(shot(), GOAL, ViewerProfile(level="beginner")))
     assert text == "That came against the run of play."
+    assert len(agent.inputs) == 1  # one model call: the facts are already in the input
     sent = agent.inputs[0]
-    assert "ANGLE: CONTRAST" in sent and "event_id: s1" in sent and "player: M. Ferro" in sent
-    assert "VIEWER_LEVEL: beginner" in sent
+    assert "ANGLE: CONTRAST" in sent and "player: M. Ferro" in sent and "VIEWER_LEVEL: beginner" in sent
+    assert f"FACT this shot, by {HOME}: big chance: about" in sent
+    assert f"FACT {HOME}, last 10 min:" in sent and f"FACT {AWAY}, last 10 min:" in sent
+
+
+def test_facts_keep_each_number_with_its_team():
+    """Grouped by team: listed by topic, the model re-paired numbers with the wrong team."""
+    facts = facts_for(shot(), GOAL, last_ten_minutes(ball=HOME, danger=AWAY))
+    assert facts[f"{HOME}, last 10 min"] == "100% of the ball, 0 shots"
+    assert facts[f"{AWAY}, last 10 min"] == "0% of the ball, 3 shots; the more dangerous side (dominating)"
+
+
+def test_facts_for_a_pass_and_for_half_time():
+    stats = StatsEngine(HOME, AWAY)
+    short = MatchEvent(id="p0", index=1, period=1, minute=10, second=0, type="Pass", team=HOME,
+                       location=(40.0, 40.0), **{"pass": PassDetails(end_location=(45.0, 40.0))})
+    long = MatchEvent(id="p1", index=2, period=1, minute=11, second=0, type="Pass", team=HOME,
+                      location=(40.0, 40.0), **{"pass": PassDetails(end_location=(100.0, 40.0))})
+    stats.update(short)
+    stats.update(long)
+    facts = facts_for(long, BOX_ENTRY, stats)
+    assert facts[f"this pass, by {HOME}"].startswith("moved the ball 52 m towards goal")
+    half_time = Moment(score=6, reason="end of the half", kind="phase", quiet=True)
+    whole = facts_for(long, half_time, stats)
+    assert whole[f"{HOME}, whole match"] == "100% of the ball, 0 shots, xG 0.00"
 
 
 def test_late_or_missing_analyst_stays_quiet(monkeypatch):
@@ -130,14 +156,14 @@ class ShorteningAgent(FakeAgent):
     async def run(self, prompt):
         self.inputs.append(prompt)
         if prompt.startswith("Rewrite in at most"):
-            return SimpleNamespace(text="Short and sharp: a 9 percent chance.")
+            return SimpleNamespace(text="Short and sharp: a big chance, taken.")
         return SimpleNamespace(text=" ".join(["word"] * 50) + ".")
 
 
 def test_too_long_analysis_is_shortened_by_the_model_not_cut():
     agent = ShorteningAgent()
     text = asyncio.run(analyst_with(agent).analyse(shot(), GOAL, ViewerProfile(level="fan")))
-    assert text == "Short and sharp: a 9 percent chance."
+    assert text == "Short and sharp: a big chance, taken."
     assert agent.inputs[1].startswith("Rewrite in at most 30 words for a fan viewer")
 
 
@@ -165,3 +191,49 @@ def test_level_switch_applies_to_the_next_line():
     assert (first.level, second.level) == ("fan", "analyst")
     assert "VIEWER_LEVEL: analyst" in agent.inputs[1]
     assert not pipeline.viewer.set_level("expert")  # unknown levels are ignored
+
+
+# ---------- the checker: every line is checked in code before it's spoken ----------
+
+def split_stats() -> StatsEngine:
+    return last_ten_minutes(ball=HOME, danger=AWAY)  # Northbridge 100% of the ball, Westvale 3 shots
+
+
+@pytest.mark.parametrize("line, problem", [
+    ("Westvale had more of the ball and scored.", "more of the ball"),
+    ("Northbridge took more shots than anyone.", "more shots"),
+    ("A 42% chance, well taken.", "number 42"),
+    ("What a half chance that was.", "half chance"),
+    ("Westvale United's late goal changed everything.", "scored"),
+    ("Westvale scored against the run of play.", "scored"),
+])
+def test_checker_catches_wrong_lines(line, problem):
+    from app.agents.checker import check_line, numbers_in
+    stats = split_stats()
+    problems = check_line(line, shot(), stats, numbers_in("100% of the ball, 0 shots", "3 shots"))
+    assert any(problem in p for p in problems), problems
+
+
+def test_checker_passes_a_true_line():
+    from app.agents.checker import check_line, numbers_in
+    line = ("Northbridge had 100% of the ball, but Westvale took 3 shots. Northbridge's goal came from "
+            "a big chance, and Northbridge scored it.")
+    assert check_line(line, shot(), split_stats(), numbers_in("100% of the ball", "3 shots")) == []
+
+
+def test_a_wrong_line_gets_one_retry_then_silence():
+    class Stubborn:
+        def __init__(self, lines):
+            self.lines, self.inputs = lines, []
+
+        async def run(self, prompt):
+            self.inputs.append(prompt)
+            return SimpleNamespace(text=self.lines[min(len(self.inputs), len(self.lines)) - 1])
+
+    fixed = Stubborn(["Westvale had more of the ball.", "Northbridge had more of the ball."])
+    stats = split_stats()
+    assert asyncio.run(analyst_with(fixed, stats).analyse(shot(), GOAL, ViewerProfile())) == \
+        "Northbridge had more of the ball."
+    assert "WRONG: you gave Westvale United more of the ball" in fixed.inputs[1]
+    stubborn = Stubborn(["Westvale had more of the ball."])
+    assert asyncio.run(analyst_with(stubborn, split_stats()).analyse(shot(), GOAL, ViewerProfile())) is None

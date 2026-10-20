@@ -18,6 +18,7 @@ from typing import Annotated
 from agent_framework import Agent
 
 from app.agents.analyst import build_tools as stats_tools
+from app.agents.analyst import fit_to_words
 from app.agents.client import chat_client
 from app.agents.describe import event_fields
 from app.agents.tactics import CONCEPTS, LEVELS, PLAYBOOK_RULES, find_concept
@@ -85,11 +86,28 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   good the chances were (get_match_picture, get_shot_quality for one shot).
 - If you can't tell which moment they mean, say so briefly and answer about the most likely one.
 - If the question isn't about this match or football, say kindly that you can only talk about the match.
-- Answer in 2-3 short spoken sentences at VIEWER_LEVEL:
+- Say when things happened the way the tools say it ("a moment ago", "in the 72nd minute").
+  Never read out a clock time like "72:16" or ASKED_AT.
+- Answer in 2-3 short spoken sentences, at most MAX_WORDS words, at VIEWER_LEVEL:
   beginner = everyday words, explain terms, at most one number said simply;
   fan = clear football language with a number or two, never the word "xG";
   analyst = precise terms and the numbers behind the answer (possession %, shots, xG).
 - Never say tool names or internal scales."""
+
+
+WORD_LIMITS: dict[str, int] = {"beginner": 40, "fan": 40, "analyst": 50}
+
+
+def ordinal(n: int) -> str:
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"
+
+
+def when(event: MatchEvent, asked: int | None = None) -> str:
+    """When something happened, the way a commentator says it: never a clock like "72:16"."""
+    if asked is not None and 0 <= asked - event.match_seconds < 90:
+        return "a moment ago" if asked - event.match_seconds < 20 else "just before you asked"
+    return f"in the {ordinal(event.minute)} minute"
 
 
 def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Moment]],
@@ -109,7 +127,7 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
             fields = event_fields(event, moment, stats)
             fields.pop("score", None)
             fields.pop("minute", None)
-            result.append({"clock": f"{event.minute}:{event.second:02d}", "event_id": event.id, **fields})
+            result.append({"when": when(event, asked), "event_id": event.id, **fields})
         return result
 
     def get_key_moments(
@@ -123,7 +141,7 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
             fields = event_fields(event, moment, stats)
             fields.pop("score", None)
             fields.pop("minute", None)
-            result.append({"clock": f"{event.minute}:{event.second:02d}", "event_id": event.id, **fields})
+            result.append({"when": when(event), "event_id": event.id, **fields})
         return result
 
     def get_rule(topic: Annotated[str, "A rule or football term, e.g. offside, penalty"]) -> dict:
@@ -150,7 +168,7 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
         last 10 minutes (%), shots and expected goals (xG) per team so far."""
         return {"on_top_recently": momentum["get_momentum"](), "possession": stats.possession(),
                 "possession_last_10_min": stats.possession(recent=True),
-                "shots": stats.shots, "xg": stats.xg}
+                "shots": stats.shots, "xg": {team: round(xg, 2) for team, xg in stats.xg.items()}}
 
     return [get_events_before, get_key_moments, get_rule, get_tactic, get_match_picture,
             momentum["get_shot_quality"], momentum["get_pass_rarity"]]
@@ -173,11 +191,19 @@ class QuestionAnswerer:
         if not self.agent:
             return UNAVAILABLE
         asked_at = "full time (the match is over)" if full_time else f"{minute}:{second:02d}"
+        limit = WORD_LIMITS.get(viewer.level, WORD_LIMITS["fan"])
         prompt = (f"QUESTION: {question[:MAX_QUESTION_CHARS]}\nASKED_AT: {asked_at}\n"
-                  f"VIEWER_LEVEL: {viewer.level}")
+                  f"VIEWER_LEVEL: {viewer.level}\nMAX_WORDS: {limit}")
         try:
-            response = await asyncio.wait_for(self.agent.run(prompt), DEADLINE_SECONDS)
-            return response.text.strip() or UNAVAILABLE
+            return await asyncio.wait_for(self._write(prompt, viewer.level, limit), DEADLINE_SECONDS)
         except Exception as error:
             log.warning("Q&A failed: %s", type(error).__name__)
             return "Sorry, I couldn't work that one out in time. Ask me again in a moment!"
+
+    async def _write(self, prompt: str, level: str, limit: int) -> str:
+        text = (await self.agent.run(prompt)).text.strip()
+        if len(text.split()) > limit * 1.2:  # the model doesn't count words: ask once to shorten
+            text = (await self.agent.run(
+                f"Rewrite this spoken answer in at most {limit} words for a {level} viewer. Keep the "
+                f"answer to the question and every number exactly as it is. Text: {text}")).text.strip()
+        return fit_to_words(text, limit + 10) or UNAVAILABLE
