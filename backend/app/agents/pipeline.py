@@ -85,7 +85,7 @@ class CommentaryPipeline:
     def should_analyse(self, event: MatchEvent, moment: Moment) -> bool:
         """Big moments only, and not too often; or a stoppage to flag a new pattern. Marks the time
         when it says yes."""
-        if self.analyst is None:
+        if self.analyst is None or event.type == "Half Start":  # nothing to analyse at kick-off yet
             return False
         if moment.score < ANALYSIS_THRESHOLD or moment.kind not in ANALYSIS_KINDS:
             return self._flag_pattern(event, moment)
