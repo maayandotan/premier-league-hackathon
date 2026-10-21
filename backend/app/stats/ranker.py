@@ -4,18 +4,23 @@ It runs on every event, so it must be instant and predictable. The score (0-10)
 tells the Producer whether to speak; the reason tells the agents what to talk about.
 Call it AFTER the stats engine has seen the event.
 """
+import math
 from typing import Literal
 
 from pydantic import BaseModel
 
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine, pass_progression
-from app.stats.geometry import in_box
+from app.stats.geometry import METERS_PER_UNIT, distance_to_goal, in_box
 from app.stats.xg import shot_xg
 
 LATE_MINUTE = 80
 # Events that stop play: the Analyst's chance to speak.
 STOPPAGES = {"Foul Committed", "Offside", "Substitution", "Injury Stoppage", "Card", "Half End"}
+BIG_CHANCE_XG = 0.3
+# A viewer's answer waits only for these: a goal, a red card, a penalty, a real threat on goal
+# (big chance or woodwork) and a free kick within this distance of goal.
+DANGEROUS_FREE_KICK_METERS = 23.0
 
 # Data terms -> plain words for the agents.
 OUTCOME_WORDS = {
@@ -31,6 +36,7 @@ class Moment(BaseModel):
     reason: str  # short, for the agents: "late equalizer", "big chance"
     kind: Kind
     quiet: bool  # play has stopped: a window for the Analyst
+    beats_questions: bool = False  # important enough to be heard before a viewer's answer
 
 
 def _goal(event: MatchEvent, stats: StatsEngine, momentum_before: float | None) -> Moment:
@@ -61,7 +67,7 @@ def _shot(event: MatchEvent) -> Moment:
     if event.shot.outcome == "Post":
         return Moment(score=7, reason="hits the post", kind="chance", quiet=False)
     xg = shot_xg(event) or 0
-    if xg >= 0.3:
+    if xg >= BIG_CHANCE_XG:
         return Moment(score=7, reason=f"big chance, {outcome}", kind="chance", quiet=False)
     if xg >= 0.1:
         return Moment(score=5, reason=f"half chance, {outcome}", kind="chance", quiet=False)
@@ -124,6 +130,36 @@ def _base(event: MatchEvent, stats: StatsEngine, momentum_before: float | None) 
     return Moment(score=0, reason=event.type.lower(), kind="routine", quiet=event.type in STOPPAGES)
 
 
+def _within_meters_of_goal(distance_units: float, meters: float) -> bool:
+    return distance_units * METERS_PER_UNIT <= meters
+
+
+def beats_questions(event: MatchEvent, moment: Moment) -> bool:
+    """Does this moment outrank a viewer's question? Everything else waits for the answer."""
+    if moment.kind == "goal":
+        return True
+    if event.shot is not None:
+        if event.period == 5 or event.shot.type == "Penalty":
+            return True
+        if event.shot.type == "Free Kick" and event.location:
+            x, y = event.location[:2]
+            if _within_meters_of_goal(distance_to_goal(x, y), DANGEROUS_FREE_KICK_METERS):
+                return True
+        # A real threat on goal: a big chance or the woodwork.
+        return event.shot.outcome == "Post" or (shot_xg(event) or 0) >= BIG_CHANCE_XG
+    card = event.card or (event.foul.card if event.foul else None)
+    if card in ("Red Card", "Second Yellow"):
+        return True
+    if event.type == "Foul Committed":
+        if event.foul and event.foul.penalty:
+            return True
+        if event.location:
+            # The fouling team's view: their own goal is at (0, 40), where the free kick is aimed.
+            x, y = event.location[:2]
+            return _within_meters_of_goal(math.hypot(x, y - 40), DANGEROUS_FREE_KICK_METERS)
+    return False
+
+
 def rank(event: MatchEvent, stats: StatsEngine, momentum_before: float | None = None) -> Moment:
     """Score an event 0-10. momentum_before (the stats engine's momentum value just
     before this event) lets a goal be called 'against the run of play'."""
@@ -134,4 +170,4 @@ def rank(event: MatchEvent, stats: StatsEngine, momentum_before: float | None = 
     if late_and_close and 2 <= moment.score < 9 and moment.kind != "phase":
         reason = f"{moment.reason}, late in a close game"
         moment = moment.model_copy(update={"score": moment.score + 1, "reason": reason})
-    return moment
+    return moment.model_copy(update={"beats_questions": beats_questions(event, moment)})

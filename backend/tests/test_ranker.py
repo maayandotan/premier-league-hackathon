@@ -82,3 +82,27 @@ def test_half_markers_once_and_tension_boost_late_in_close_games():
     assert booking_late.score == booking_early.score + 1
     assert booking_late.reason == "booked, late in a close game"
     assert ranked(stats, ev("Half Start", minute=90, period=3)).reason == "kick-off"  # no boost on phases
+
+
+def test_only_big_moments_beat_a_viewers_question():
+    stats = StatsEngine(HOME, AWAY)
+    beats = [
+        goal(),
+        ev("Card", card="Red Card"),
+        ev("Foul Committed", foul=FoulDetails(penalty=True)),
+        ev("Shot", location=(108.0, 40.0), shot=ShotDetails(outcome="Saved", type="Penalty")),
+        ev("Shot", location=(114.0, 40.0), shot=ShotDetails(outcome="Saved")),  # big chance
+        ev("Shot", location=(95.0, 40.0), shot=ShotDetails(outcome="Post")),
+        ev("Foul Committed", location=(25.0, 40.0)),  # free kick about 22 m out
+        ev("Shot", location=(95.0, 40.0), shot=ShotDetails(outcome="Off T", type="Free Kick")),
+    ]
+    waits = [
+        ev("Card", card="Yellow Card"),
+        ev("Foul Committed", location=(30.0, 40.0)),  # about 26 m: shooting range, but not 23 m
+        ev("Foul Committed", location=(60.0, 40.0)),
+        ev("Shot", location=(88.0, 40.0), shot=ShotDetails(outcome="Off T")),
+        ev("Pass", **{"pass": PassDetails(end_location=(62.0, 45.0), type="Corner")}),
+        ev("Half End", team=HOME),
+    ]
+    assert all(ranked(stats, e).beats_questions for e in beats)
+    assert not any(ranked(stats, e).beats_questions for e in waits)
