@@ -138,6 +138,8 @@ def concept_for(event: MatchEvent, moment: Moment, stats: StatsEngine) -> Concep
             return CONCEPTS["Counter-attack and transitions"]
         if event.play_pattern in ("From Corner", "From Free Kick") or shot_type in ("Penalty", "Free Kick"):
             return CONCEPTS["Set pieces"]
+        if moment.kind == "goal" and "most-used side" in (stats.patterns.goal_route(event) or ""):
+            return CONCEPTS["Attacking channels and overloads"]
         if moment.kind == "goal":
             picture = run_of_play(stats)
             if picture["more_of_the_ball"] not in (picture["more_dangerous"], "neither team, about even"):
@@ -183,6 +185,11 @@ def facts_for(event: MatchEvent, moment: Moment, stats: StatsEngine) -> dict[str
         facts[f"{team}, last 10 min"] = line
     if momentum["on_top"] == "neither team":
         facts["more dangerous, last 10 min"] = "neither team, evenly matched"
+    for team in (stats.home, stats.away):
+        for i, pattern in enumerate(stats.patterns.patterns(team), 1):
+            facts[f"{team}, pattern {i}"] = pattern
+    if event.is_goal and (route := stats.patterns.goal_route(event)):
+        facts[f"this goal's attack, by {event.team}"] = route
     if event.shot and (quality := stats.shot_quality(event)):
         xg = quality["xg"]
         facts[f"this shot, by {event.team}"] = (f"{quality['label']}: about {round(xg * 100)}% of shots like "
@@ -260,8 +267,10 @@ class Analyst:
         """One or two sentences at the viewer's level; None without a model or when too slow."""
         if not self.agent:
             return None
-        fields = event_fields(event, moment, self.stats) | {
-            "ANGLE": angle_for(moment, self.stats), "VIEWER_LEVEL": viewer.level}
+        angle = angle_for(moment, self.stats)
+        if event.is_goal and "most-used side" in (self.stats.patterns.goal_route(event) or ""):
+            angle += " It came down their most-used side: connect the goal to that pattern."
+        fields = event_fields(event, moment, self.stats) | {"ANGLE": angle, "VIEWER_LEVEL": viewer.level}
         facts = facts_for(event, moment, self.stats)
         fields |= {f"FACT {name}": fact for name, fact in facts.items()}
         if concept := concept_for(event, moment, self.stats):

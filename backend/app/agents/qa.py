@@ -77,7 +77,7 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
 - For a question about tactics or how a team is playing (counter-attacks, pressing, possession,
   crosses, set pieces, sitting deep, playing with ten men...), call get_tactic with the
   VIEWER_LEVEL and explain the idea in your own words. Apply it to this match ONLY through what
-  its what_we_measure_in_this_match says, with numbers from the other tools. If that says we
+  its what_we_measure_in_this_match says, with numbers from get_patterns and the other tools. If that says we
   don't measure it, explain the idea and say our match data can't show whether a team is doing
   it: never use other stats (like possession) as proof. Its example line shows tone only: never
   repeat its numbers or names. Never claim anything in its do_not_claim.
@@ -134,6 +134,8 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
             fields = event_fields(event, moment, stats)
             fields.pop("score", None)
             fields.pop("minute", None)
+            if event.is_goal and (route := stats.patterns.goal_route(event)):
+                fields["attack_route"] = route
             result.append({"when": when(event, asked), "event_id": event.id, **fields})
         return result
 
@@ -148,6 +150,8 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
             fields = event_fields(event, moment, stats)
             fields.pop("score", None)
             fields.pop("minute", None)
+            if event.is_goal and (route := stats.patterns.goal_route(event)):
+                fields["attack_route"] = route
             result.append({"when": when(event), "event_id": event.id, **fields})
         return result
 
@@ -170,6 +174,13 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
             return {"error": f"no playbook entry for {topic!r}", "known_topics": list(CONCEPTS)}
         return concept.brief(level if level in LEVELS else "fan")
 
+    def get_patterns() -> dict:
+        """Tactical patterns per team: in the last 15 minutes, in words with their counts (the side a
+        team keeps attacking down, high pressing, quick attacks after winning the ball, crosses,
+        territory; "no clear pattern" means there isn't one, so don't claim one), and the team's
+        final-third entries by side over the whole match."""
+        return stats.patterns.summary()
+
     def get_match_picture() -> dict:
         """How the match is going: the score and minute, who is on top recently (in words), possession
         overall and in the last 10 minutes (%), shots overall and in the last 10 minutes, and expected
@@ -180,7 +191,7 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
                 "shots_last_10_min": stats.recent_shots(),
                 "shots": stats.shots, "xg": {team: round(xg, 2) for team, xg in stats.xg.items()}}
 
-    tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_match_picture,
+    tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_patterns, get_match_picture,
              momentum["get_shot_quality"], momentum["get_pass_rarity"]]
     return [recorded(tool) for tool in tools]  # so the answer can be checked against what they said
 

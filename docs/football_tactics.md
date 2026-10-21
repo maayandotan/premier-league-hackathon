@@ -5,7 +5,7 @@ The football knowledge our analyst (Sonia) and the Q&A agent explain from. Writt
 **How the agents use it.** Each concept has the same parts, so code can load just the section a moment needs into an agent's context:
 
 - **What it is**: the idea in plain words.
-- **In our data**: what the event feed can actually show, and which stat or detector measures it. "Today" means the stats engine has it now; "#48" means a planned detector ([Tactical Intelligence Engine](https://github.com/maayandotan/premier-league-hackathon/issues/48)). The agents are told only the "Today" part: for a concept with none, they explain the idea but can't say whether a team is doing it.
+- **In our data**: what the event feed can actually show, and which stat or detector measures it. "Today" means the stats engine has it now; "#48" means a detector still to build ([Tactical Intelligence Engine](https://github.com/maayandotan/premier-league-hackathon/issues/48)). The agents are told only the "Today" part: for a concept with none, they explain the idea but can't say whether a team is doing it.
 - **Say it**: one line per viewer level, as a model of tone and depth (not a script).
 - **Don't claim**: what event data can't support. The agents can't see the video.
 
@@ -28,7 +28,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** The moment the ball changes hands, both teams are briefly out of shape. A counter-attack uses that moment: win the ball and go forward fast, before the opponents can get back behind the ball. Teams that defend deep and break quickly rely on it.
 
-**In our data.** Today: recent and key events show which attacks came `From Counter` (a fast break); no counts of counters yet. #48: "transitions" detector (ball won, then a shot or box entry within about 12 seconds), counted per team over a rolling window.
+**In our data.** Today: quick attacks per team in the last 15 minutes (the ball won, then a shot or a box entry within 12 seconds), from `get_patterns`; and which attacks came `From Counter` in the events.
 
 **Say it.**
 - Beginner: "They won the ball and ran at goal before the other team could get back."
@@ -41,7 +41,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** Pressing is going after the ball high up the pitch instead of waiting for the opponents to come forward. Counter-pressing (gegenpressing) is pressing immediately after losing the ball, to win it back while the other team is still disorganised. A ball won high up is close to the opponent's goal, so it often leads to a chance.
 
-**In our data.** #48: "pressing height" detector: ball recoveries and interceptions in the opponent's half, and PPDA (opponent passes allowed per defensive action in their half; lower means more intense pressing).
+**In our data.** Today: balls won in the opponent's half per team in the last 15 minutes, compared with the other team (`get_patterns`); claimed only when it's at least 6 and double the other side's. #48: PPDA (opponent passes allowed per defensive action).
 
 **Say it.**
 - Beginner: "They're chasing the ball right up near the other team's goal, so it's hard to play out."
@@ -54,7 +54,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** Having the ball is not the same as being on top. A team can pass it around for minutes without creating anything ("sterile possession"), while the other side defends deep and is more dangerous on the break. Territory (how much of the play happens in the opponent's final third) and chance quality tell more than possession alone.
 
-**In our data.** Today: possession (overall and last 10 minutes), momentum (who has been more dangerous), shots and xG, and `get_run_of_play`, which reports the ball and the danger separately. #48: field tilt (share of final-third passes).
+**In our data.** Today: possession (overall and last 10 minutes), momentum (who has been more dangerous), shots and xG, `get_run_of_play`, which reports the ball and the danger separately, and field tilt (a team's share of the final-third passes in the last 15 minutes, claimed at 75%+, from `get_patterns`).
 
 **Say it.**
 - Beginner: "Northbridge have had the ball more, but Westvale have had the better chances."
@@ -67,7 +67,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** Teams often attack more down one side: to target a weaker defender, to use a quick winger, or to overload one flank with extra players and then switch play to the other side where there's space. The pitch is often described in five vertical lanes: the two wings, the two "half-spaces" between wing and centre, and the centre.
 
-**In our data.** #48: "attacking channel" detector: final-third entries by left, centre and right over a rolling window. Our synthetic scenarios can give a team a preferred side, so the pattern is really there.
+**In our data.** Today: final-third entries by left, centre and right in the last 15 minutes (`get_patterns`; claimed with at least 6 entries and 60% on one side), and for a goal, which side its attack came down compared with the whole match. Synthetic scenarios can give a team a favourite side, so the pattern is really there.
 
 **Say it.**
 - Beginner: "They keep attacking down the right side. That's where they think the other team is weakest."
@@ -106,7 +106,7 @@ We **don't** have the positions of players without the ball, the shape of the te
 
 **What it is.** A cross is a ball from a wide area into the box, often in the air. Many crosses are cleared, so a high number of them can mean a team is short of better ideas. A cut-back is a pass from near the goal line back to a teammate arriving at the edge of the six-yard box or penalty spot, usually a much better chance.
 
-**In our data.** Today: recent events show individual crosses and whether they reached a teammate; no cross totals yet. #48: "crossing reliance" detector: crosses per box entry, and how many crosses lead to shots.
+**In our data.** Today: crosses per team in the last 15 minutes and how many led to a shot (`get_patterns`; claimed with at least 7 crosses and at most 1 shot).
 
 **Say it.**
 - Beginner: "They keep lifting the ball into the box, but the defenders are heading it away."

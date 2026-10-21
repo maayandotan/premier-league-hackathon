@@ -31,7 +31,7 @@ Breaking one of these can disqualify the entry. If a task seems to need breaking
 |---|---|
 | `backend/app/main.py` | FastAPI app: `/ws/match` WebSocket, `/api/speech-token`, serves the built frontend |
 | `backend/app/agents/` | The AI agents and the pipeline that decides who speaks (see below) |
-| `backend/app/stats/` | Stats engine (`engine.py`), moment ranker (`ranker.py`), xG (`xg.py`): plain code, exact numbers |
+| `backend/app/stats/` | Stats engine (`engine.py`), moment ranker (`ranker.py`), xG (`xg.py`), tactical patterns (`patterns.py`): plain code, exact numbers |
 | `backend/app/events/` | Event models (`models.py`, the schema's source of truth) and adapters |
 | `backend/app/match/` | Replay and match sources (`demo`, `synthetic:<name>`, `statsbomb:<id>` local only) |
 | `backend/app/speech/` | Azure Speech: TTS with SSML styles, browser STT token |
@@ -132,8 +132,9 @@ These came from real failures. Follow them when changing or adding an agent.
 11. **Knowledge needs its limits.** Given the playbook's idea of pressing but nothing measuring it, Q&A answered "yes, Northbridge are pressing high" and used possession as proof. Every concept now tells the agent what we can measure in this match, or plainly "nothing yet" (`app/agents/tactics.py`).
 12. **Hand over facts, grouped by team; then check.** Tool round trips made Sonia take ~6 s against a 7 s deadline; code now gathers her facts and she writes in one call (~2-3 s). Listed by topic, she re-paired numbers with the wrong team; grouped by team, much less. Prompts never get it to zero, so `checker.py` checks every line in code (numbers, possession, shots, chance label, scorer): one retry, then silence.
 13. **Check the checker on real answers.** A clause-wide "overall" rule rejected a true answer ("better chances overall and more possession in the last 10 minutes"), which would have told viewers "ask me again" for nothing. Run real questions and read every rejection; every false alarm becomes a test (`tests/test_qa_check.py`).
-14. **Never put example numbers in instructions.** "58 percent of the ball" as a phrasing example came back as a fact. Use placeholders ("N percent").
-15. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
+14. **Calibrate pattern claims on data with no pattern in it.** At first bars, a match with no tactics "showed" field tilt in a third of checks: random data always looks like something. The thresholds in `patterns.py` were raised until style-less matches stay quiet, and the generator's team styles (`Style` in scenarios) were made strong enough to stand out. Also: say "open play" instead of leaving it out; a gap got filled with "from a corner".
+15. **Never put example numbers in instructions.** "58 percent of the ball" as a phrasing example came back as a fact. Use placeholders ("N percent").
+16. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
 
 ## Open work
 

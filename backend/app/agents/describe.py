@@ -17,7 +17,7 @@ PLAIN = {
     "Head": "header", "Goal": "goal", "Saved": "saved", "Off T": "off target", "Post": "hits the post",
     "Blocked": "blocked", "Wayward": "off target", "From Counter": "counter-attack",
     "From Corner": "from a corner", "From Free Kick": "from a free kick", "From Throw In": "from a throw-in",
-    "Regular Play": None,
+    "Regular Play": "open play",  # said, not left out: a gap got filled with "from a corner"
 }
 
 

@@ -19,6 +19,7 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 - **Adapts to the viewer.** The same goal gets plain words and at most one simple number for a beginner, and xG, possession and the run of play for an analyst.
 - **Explainable by design.** Numbers (xG, possession, momentum, pass value) come from a stats engine written in code. The agents ask for them through tools and put them into words; they never compute or invent a statistic.
 - **Questions mid-match.** Voice or text, answered in the analyst's voice in a few seconds. "That" and "just now" are resolved from the moment the question was asked.
+- **It reads the game, not just the events.** Tactical detectors in code find patterns as they build (the side a team keeps attacking down, high pressing, quick counters, crossing, territory) and only claim one when there's enough of it. When a goal comes down a team's usual side, Sonia connects them: "25 of their 31 final-third entries this match came down the right".
 - **A broadcast, not a chatbot.** A ranker scores every event 0–10 so the commentators know when to speak and when to stay quiet, a goal cuts in over whatever is playing, and the crowd roars before the caller does.
 
 ## How it works
@@ -26,7 +27,7 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 <p align="center"><img src="docs/images/agent-flow.svg" alt="Agent flow: match feed, stats engine, moment ranker, producer, then the caller, analyst and Q&A agents, voice, and the viewer" width="820"></p>
 
 1. **Match feed.** Events (passes, shots, fouls...) arrive one at a time, as from a live data provider, in a StatsBomb-style schema ([docs/event-schema.md](docs/event-schema.md)). For the demo the feed replays matches from our own synthetic generator.
-2. **Stats engine (code).** Score, xG, possession, momentum, tempo, pass progression: always exact, and exposed to the agents as tools.
+2. **Stats engine (code).** Score, xG, possession, momentum, tempo, pass progression, and tactical patterns from event locations and timing: always exact, and exposed to the agents as tools.
 3. **Moment ranker (code).** Scores each event with a reason ("late go-ahead goal, against the run of play"), so most of the match is rightly left alone.
 4. **Producer (code).** Decides who speaks and when: Guy on live moments, Sonia in the quiet after, the Q&A agent when a viewer asks. Every model call has a deadline and a fallback, so the broadcast never waits.
 5. **AI agents** on Microsoft Foundry (`gpt-4.1-mini`) with the Microsoft Agent Framework: the **Caller**, the **Analyst** (code hands it the facts for the moment, grouped by team) and **Q&A** (tools for match events, rules, tactics and the match picture). Both are checked before they speak.

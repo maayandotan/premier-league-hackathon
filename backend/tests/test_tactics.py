@@ -102,8 +102,11 @@ def test_rules_use_the_playbooks_fuller_offside():
 
 def test_agents_are_told_what_we_cannot_measure():
     """Asked "are they pressing?", a model used possession as proof. Now the brief says plainly."""
-    pressing = CONCEPTS["Pressing and counter-pressing"].brief("fan")
-    assert pressing["what_we_measure_in_this_match"].startswith("Nothing yet")
+    from dataclasses import replace
+    unmeasured = replace(CONCEPTS["Pressing and counter-pressing"], measured="").brief("fan")
+    assert unmeasured["what_we_measure_in_this_match"].startswith("Nothing yet")
+    pressing = CONCEPTS["Pressing and counter-pressing"].brief("fan")  # measured since #48
+    assert "opponent's half" in pressing["what_we_measure_in_this_match"]
     counter = CONCEPTS["Counter-attack and transitions"].brief("fan")
     assert "From Counter" in counter["what_we_measure_in_this_match"]
     assert "#48" not in counter["what_we_measure_in_this_match"]  # planned detectors stay out
