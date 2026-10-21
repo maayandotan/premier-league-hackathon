@@ -130,3 +130,10 @@ def test_half_time_is_the_storytellers_recap():
     half_end = MatchEvent(id="h", index=1, period=1, minute=47, second=0, type="Half End", team=HOME)
     line = asyncio.run(pipeline.analyse(half_end, pipeline.rank(half_end)))
     assert line.text == recap
+
+
+def test_no_analysis_at_kick_off():
+    """At 0' there's nothing to analyse yet: Sonia said "Northbridge have controlled all the possession"."""
+    pipeline = pipeline_with(analyst_agent=Scripted("anything"))
+    kick_off = MatchEvent(id="k", index=1, period=1, minute=0, second=0, type="Half Start", team=HOME)
+    assert not pipeline.should_analyse(kick_off, pipeline.rank(kick_off))

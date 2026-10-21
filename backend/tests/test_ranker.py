@@ -106,3 +106,10 @@ def test_only_big_moments_beat_a_viewers_question():
     ]
     assert all(ranked(stats, e).beats_questions for e in beats)
     assert not any(ranked(stats, e).beats_questions for e in waits)
+
+
+def test_the_whistles_are_named_right():
+    """"End of the half" at the end of the match made the Caller say "half time" at full time."""
+    stats = StatsEngine(HOME, AWAY)
+    assert ranked(stats, ev("Half End", minute=47, period=1)).reason == "half-time"
+    assert ranked(stats, ev("Half End", minute=94, period=2)).reason == "full time"
