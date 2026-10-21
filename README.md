@@ -20,6 +20,7 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 - **Explainable by design.** Numbers (xG, possession, momentum, pass value) come from a stats engine written in code. The agents ask for them through tools and put them into words; they never compute or invent a statistic.
 - **Questions mid-match.** Voice or text, answered in the analyst's voice in a few seconds. "That" and "just now" are resolved from the moment the question was asked.
 - **It reads the game, not just the events.** Tactical detectors in code find patterns as they build (the side a team keeps attacking down, high pressing, quick counters, crossing, territory) and only claim one when there's enough of it. When a goal comes down a team's usual side, Sonia connects them: "25 of their 31 final-third entries this match came down the right".
+- **It remembers the match.** A match log in code (goals, red cards, big chances, each pattern as it appears, and what was said on air) feeds a Storyteller agent that keeps the story so far. When a goal pays off something Sonia said earlier, she says so with the real minute ("We flagged that right side at 66'"). She reads recaps at half-time and full time, and "What did I miss?" catches up a viewer who just joined.
 - **A broadcast, not a chatbot.** A ranker scores every event 0–10 so the commentators know when to speak and when to stay quiet, a goal cuts in over whatever is playing, and the crowd roars before the caller does.
 
 ## How it works
@@ -30,7 +31,7 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 2. **Stats engine (code).** Score, xG, possession, momentum, tempo, pass progression, and tactical patterns from event locations and timing: always exact, and exposed to the agents as tools.
 3. **Moment ranker (code).** Scores each event with a reason ("late go-ahead goal, against the run of play"), so most of the match is rightly left alone.
 4. **Producer (code).** Decides who speaks and when: Guy on live moments, Sonia in the quiet after, the Q&A agent when a viewer asks. Every model call has a deadline and a fallback, so the broadcast never waits.
-5. **AI agents** on Microsoft Foundry (`gpt-4.1-mini`) with the Microsoft Agent Framework: the **Caller**, the **Analyst** (code hands it the facts for the moment, grouped by team) and **Q&A** (tools for match events, rules, tactics and the match picture). Both are checked before they speak.
+5. **AI agents** on Microsoft Foundry (`gpt-4.1-mini`) with the Microsoft Agent Framework: the **Storyteller** (the match story and recaps, in the background), the **Caller**, the **Analyst** (code hands it the facts for the moment, grouped by team) and **Q&A** (tools for match events, rules, tactics and the match picture). Both are checked before they speak.
 6. **Voice.** Azure AI Speech turns each line into speech (Guy with built-in excited and shouting styles, Sonia calm), mixed over the crowd in the browser.
 
 Design notes: [docs/agents.md](docs/agents.md), [docs/architecture.md](docs/architecture.md), and the lessons we learned building the agents in [AGENTS.md](AGENTS.md).

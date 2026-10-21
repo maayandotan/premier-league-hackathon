@@ -155,8 +155,8 @@ class PatternTracker:
             found.append(f"{mine['cross']} crosses {WINDOW_WORDS}, {mine['cross_shot']} led to a shot")
         f3_total = mine["f3_pass"] + theirs["f3_pass"]
         if mine["f3_pass"] >= MIN_FINAL_THIRD_PASSES and mine["f3_pass"] / max(1, f3_total) >= MIN_TILT:
-            found.append(f"{round(100 * mine['f3_pass'] / f3_total)}% of the passes in the final third "
-                         f"{WINDOW_WORDS}")
+            found.append(f"{round(100 * mine['f3_pass'] / f3_total)}% of all the passes played in the final "
+                         f"third, territory not a side, {WINDOW_WORDS}")
         return found
 
     def summary(self) -> dict:

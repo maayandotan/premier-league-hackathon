@@ -13,7 +13,7 @@ Built step by step in spikes/agents/qa_step_a.py. What we learned:
 import asyncio
 import logging
 import re
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from typing import Annotated
 
 from agent_framework import Agent
@@ -84,6 +84,8 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
 - For how good a chance was, find it with get_events_before, then call get_shot_quality with its
   event_id and use its label: "big chance" = great, "half chance" = decent, "low-probability
   effort" = hard. Never judge a chance without it.
+- For "what did I miss?", a catch-up, or anything about earlier in the match, call get_match_story
+  (and get_key_moments): tell it as a short story at VIEWER_LEVEL, in order.
 - For anything about how the match is going (including the score), call get_match_picture: it has
   the score, who's on top, possession, shots and xG together. No claims beyond what it returns:
   no "likely", no guessing.
@@ -118,7 +120,7 @@ def when(event: MatchEvent, asked: int | None = None) -> str:
 
 
 def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Moment]],
-                   events_by_id: dict[str, MatchEvent]) -> list:
+                   events_by_id: dict[str, MatchEvent], story: Callable[[], dict] | None = None) -> list:
     momentum = {t.__name__: t for t in stats_tools(stats, events_by_id)}
 
     def get_events_before(
@@ -191,19 +193,26 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
                 "shots_last_10_min": stats.recent_shots(),
                 "shots": stats.shots, "xg": {team: round(xg, 2) for team, xg in stats.xg.items()}}
 
-    tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_patterns, get_match_picture,
+    def get_match_story() -> dict:
+        """The story of the match so far and its latest logged moments (goals, red cards, big chances,
+        patterns, what was said on air), with minutes. For catching up and anything about earlier."""
+        return story() if story else {"story": "(no story yet)"}
+
+    tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_patterns, get_match_story,
+             get_match_picture,
              momentum["get_shot_quality"], momentum["get_pass_rarity"]]
     return [recorded(tool) for tool in tools]  # so the answer can be checked against what they said
 
 
 class QuestionAnswerer:
     def __init__(self, stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Moment]],
-                 events_by_id: dict[str, MatchEvent], use_model: bool) -> None:
+                 events_by_id: dict[str, MatchEvent], use_model: bool,
+                 story: Callable[[], dict] | None = None) -> None:
         self.agent = Agent(
             chat_client(),
             name="qa",
             instructions=INSTRUCTIONS,
-            tools=build_qa_tools(stats, timeline, events_by_id),
+            tools=build_qa_tools(stats, timeline, events_by_id, story),
             default_options={"temperature": 0.3, "max_tokens": 200},
         ) if use_model else None
         self.stats = stats

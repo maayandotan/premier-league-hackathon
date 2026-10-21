@@ -81,13 +81,13 @@ async def match_feed(ws: WebSocket) -> None:
     viewer.set_level(params.get("level", "fan"))
     pipeline = CommentaryPipeline(stats, caller, analyst, viewer)
     pipeline.qa = QuestionAnswerer(stats, pipeline.timeline, {e.id: e for e in match.events},
-                                   use_model=agents_enabled())
+                                   use_model=agents_enabled(), story=pipeline.storyteller.view)
     speech = Speech() if speech_enabled() else None
     speed = float(params.get("speed", settings.replay_speed))
     start = int(params.get("start", 0))
-    for event in match.events:  # fast-forward: earlier events still count for score and stats
+    for event in match.events:  # fast-forward: earlier events count for the stats and the story
         if event.minute < start:
-            stats.update(event)
+            pipeline.rank(event)
 
     send_lock = asyncio.Lock()  # background tasks and the main loop share one socket
     tasks: set[asyncio.Task] = set()
@@ -150,6 +150,10 @@ async def match_feed(ws: WebSocket) -> None:
         await caller.warm_up()
         async for event in replay(match.events, speed=speed, start_minute=start):
             moment = pipeline.rank(event)
+            if (story := pipeline.story_job(event)) is not None:  # background, never delays the match
+                task = asyncio.create_task(story)
+                tasks.add(task)
+                task.add_done_callback(tasks.discard)
             await send({"type": "event", "event": event.model_dump(by_alias=True, exclude_none=True),
                         "moment": moment.model_dump()})
             jobs = []

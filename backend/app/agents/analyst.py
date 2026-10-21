@@ -263,14 +263,21 @@ class Analyst:
         ) if use_model else None
         self.stats = stats
 
-    async def analyse(self, event: MatchEvent, moment: Moment, viewer: ViewerProfile) -> str | None:
-        """One or two sentences at the viewer's level; None without a model or when too slow."""
+    async def analyse(self, event: MatchEvent, moment: Moment, viewer: ViewerProfile,
+                      context: dict[str, str] | None = None, angle: str | None = None) -> str | None:
+        """One or two sentences at the viewer's level; None without a model or when too slow.
+        The pipeline can add context (the story so far, what she said earlier) and its own angle."""
         if not self.agent:
             return None
-        angle = angle_for(moment, self.stats)
+        context = context or {}
+        angle = angle or angle_for(moment, self.stats)
         if event.is_goal and "most-used side" in (self.stats.patterns.goal_route(event) or ""):
             angle += " It came down their most-used side: connect the goal to that pattern."
+        if "CALLBACK" in context:  # code wrote the opening, so the minute stays with the old remark
+            angle += (" You flagged this earlier (YOU SAID EARLIER). Begin your line with CALLBACK exactly, "
+                      "then connect this goal to it.")
         fields = event_fields(event, moment, self.stats) | {"ANGLE": angle, "VIEWER_LEVEL": viewer.level}
+        fields |= context
         facts = facts_for(event, moment, self.stats)
         fields |= {f"FACT {name}": fact for name, fact in facts.items()}
         if concept := concept_for(event, moment, self.stats):
@@ -278,7 +285,8 @@ class Analyst:
             fields |= {"TACTICS": f"{brief['concept']}: {brief['idea']}",
                        "TACTICS_EXAMPLE": brief["example_line_for_tone_only"],
                        "TACTICS_DO_NOT_CLAIM": brief["do_not_claim"]}
-        allowed = numbers_in(*facts.values(), str(event.minute)) | self._one_in(event)
+        allowed = numbers_in(*facts.values(), *context.values(), angle, str(event.minute))
+        allowed |= self._one_in(event)
         try:
             return await asyncio.wait_for(self._write(as_text(fields), viewer.level, event, allowed),
                                           DEADLINE_SECONDS)
