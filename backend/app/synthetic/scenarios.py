@@ -24,6 +24,13 @@ class Beat:
 
 
 @dataclass(frozen=True)
+class Style:
+    """How a team plays, so the tactical detectors (#48) find real patterns, not noise."""
+    channel: Literal["left", "right"] | None = None  # the side it keeps attacking down
+    press: bool = False  # goes after the ball high up the pitch
+
+
+@dataclass(frozen=True)
 class Scenario:
     name: str
     description: str
@@ -32,6 +39,8 @@ class Scenario:
     away: str = WESTVALE
     home_strength: float = 0.5  # 0-1: how good the home side is on the ball
     away_strength: float = 0.5
+    home_style: Style = Style()
+    away_style: Style = Style()
 
     @property
     def scripted(self) -> bool:
@@ -41,8 +50,9 @@ class Scenario:
 SCENARIOS: dict[str, Scenario] = {s.name: s for s in [
     Scenario(
         name="comeback",
-        description="Westvale go ahead on the counter. Northbridge hit the post, then turn it around: "
-                    "a corner header and a winner two minutes from time.",
+        description="Westvale press high and go ahead on the counter. Northbridge keep attacking down the "
+                    "right, hit the post, then turn it around: a corner header and a winner from the right "
+                    "two minutes from time.",
         beats=[
             Beat(18, WESTVALE, "goal", "counter", player="C. Dunmore"),
             Beat(39, NORTHBRIDGE, "big_miss", player="M. Ferro"),
@@ -51,6 +61,8 @@ SCENARIOS: dict[str, Scenario] = {s.name: s for s in [
             Beat(88, NORTHBRIDGE, "goal", "open_play", player="M. Ferro"),
         ],
         home_strength=0.55,
+        home_style=Style(channel="right"),
+        away_style=Style(press=True),
     ),
     Scenario(
         name="red_card",
@@ -62,6 +74,7 @@ SCENARIOS: dict[str, Scenario] = {s.name: s for s in [
             Beat(79, NORTHBRIDGE, "goal", "long_range", player="D. Arlo"),
         ],
         away_strength=0.55,
+        away_style=Style(channel="left"),
     ),
     Scenario(
         name="late_equaliser",
@@ -72,6 +85,8 @@ SCENARIOS: dict[str, Scenario] = {s.name: s for s in [
             Beat(58, WESTVALE, "big_miss", player="L. Pirozzi"),
             Beat(92, WESTVALE, "goal", "corner", player="K. Osei"),
         ],
+        home_style=Style(channel="left"),
+        away_style=Style(press=True),
     ),
     Scenario(
         name="open",
