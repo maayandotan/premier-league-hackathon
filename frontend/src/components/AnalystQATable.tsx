@@ -24,7 +24,6 @@ export function AnalystQATable({
   onAsk,
   canAsk = true,
 }: AnalystQATableProps) {
-  const [filter, setFilter] = useState<'all' | 'answered' | 'pending'>('all')
   const [search, setSearch] = useState('')
 
   // Map reply_to -> CommentaryLine (Sonia's answer)
@@ -50,93 +49,45 @@ export function AnalystQATable({
     })
   }, [questions, answersByQuestionId])
 
-  const answeredCount = qaItems.filter((i) => i.isAnswered).length
-  const pendingCount = qaItems.length - answeredCount
-
   const filteredItems = useMemo(() => {
+    if (!search.trim()) return qaItems
+    const query = search.toLowerCase()
     return qaItems.filter((item) => {
-      if (filter === 'answered' && !item.isAnswered) return false
-      if (filter === 'pending' && item.isAnswered) return false
-
-      if (search.trim()) {
-        const query = search.toLowerCase()
-        const matchQ = item.question.text.toLowerCase().includes(query)
-        const matchA = item.answer?.text.toLowerCase().includes(query) ?? false
-        if (!matchQ && !matchA) return false
-      }
-
-      return true
+      const matchQ = item.question.text.toLowerCase().includes(query)
+      const matchA = item.answer?.text.toLowerCase().includes(query) ?? false
+      return matchQ || matchA
     })
-  }, [qaItems, filter, search])
+  }, [qaItems, search])
 
   return (
-    <section className="card qa-table-card" aria-label="Analyst Q&A Table">
+    <section className="card qa-table-card" aria-label="Questions Table">
       <div className="qa-header">
         <div className="qa-title-group">
           <div className="qa-badge-icon" aria-hidden="true">💬</div>
           <div>
-            <h2>Analyst Q&A</h2>
+            <h2>Questions</h2>
             <p className="qa-subtitle">
-              Viewer questions and Sonia's real-time personalized analysis
+              Your questions and Sonia's real-time personalized analysis
             </p>
           </div>
         </div>
 
         <div className="qa-stats-chips">
           <span className="qa-stat-pill total">
-            <strong>{qaItems.length}</strong> Total Questions
+            <strong>{qaItems.length}</strong> {qaItems.length === 1 ? 'Question' : 'Questions'}
           </span>
-          <span className="qa-stat-pill answered">
-            <strong>{answeredCount}</strong> Answered
-          </span>
-          {pendingCount > 0 && (
-            <span className="qa-stat-pill pending">
-              <span className="pulse-dot" />
-              <strong>{pendingCount}</strong> In Progress
-            </span>
-          )}
         </div>
       </div>
 
       {qaItems.length > 0 && (
         <div className="qa-toolbar">
-          <div className="qa-filter-tabs" role="tablist" aria-label="Filter questions">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={filter === 'all'}
-              className={`qa-tab ${filter === 'all' ? 'active' : ''}`}
-              onClick={() => setFilter('all')}
-            >
-              All ({qaItems.length})
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={filter === 'answered'}
-              className={`qa-tab ${filter === 'answered' ? 'active' : ''}`}
-              onClick={() => setFilter('answered')}
-            >
-              Answered ({answeredCount})
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={filter === 'pending'}
-              className={`qa-tab ${filter === 'pending' ? 'active' : ''}`}
-              onClick={() => setFilter('pending')}
-            >
-              Pending ({pendingCount})
-            </button>
-          </div>
-
           <div className="qa-search-box">
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search questions & answers..."
-              aria-label="Search questions and answers"
+              placeholder="Search questions..."
+              aria-label="Search questions"
             />
             {search && (
               <button
@@ -180,9 +131,9 @@ export function AnalystQATable({
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="qa-empty-filter">
-          <p>No questions match your current search or filter.</p>
-          <button type="button" className="chip" onClick={() => { setFilter('all'); setSearch('') }}>
-            Reset filter
+          <p>No questions match "{search}".</p>
+          <button type="button" className="chip" onClick={() => setSearch('')}>
+            Clear search
           </button>
         </div>
       ) : (
@@ -193,7 +144,6 @@ export function AnalystQATable({
                 <th className="col-clock">Time</th>
                 <th className="col-question">Question (You)</th>
                 <th className="col-answer">Sonia's Analysis</th>
-                <th className="col-status">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -203,7 +153,7 @@ export function AnalystQATable({
                 return (
                   <tr
                     key={question.id}
-                    className={`qa-row ${isAnswered ? 'answered' : 'pending'} ${isSpeaking ? 'speaking' : ''}`}
+                    className={`qa-row ${isSpeaking ? 'speaking' : ''}`}
                   >
                     {/* Time / Clock Column */}
                     <td className="col-clock">
@@ -231,7 +181,7 @@ export function AnalystQATable({
                           <div className="qa-answer-body">
                             <div className="qa-answer-meta">
                               <span className="qa-speaker-name">Sonia (Analyst)</span>
-                              <span className="level-tag">{answer.level}</span>
+                              {answer.level && <span className="level-tag">{answer.level}</span>}
                               {isSpeaking && (
                                 <span className="on-air qa-on-air-badge">
                                   <span className="wave"><i /><i /><i /><i /></span> On Air
@@ -244,21 +194,8 @@ export function AnalystQATable({
                       ) : (
                         <div className="qa-thinking-indicator">
                           <span className="qa-spinner" aria-hidden="true" />
-                          <span className="qa-thinking-text">Sonia is analyzing match data and formulating an answer...</span>
+                          <span className="qa-thinking-text">Sonia is analyzing match data...</span>
                         </div>
-                      )}
-                    </td>
-
-                    {/* Status Column */}
-                    <td className="col-status">
-                      {isAnswered ? (
-                        <span className="qa-status-tag answered">
-                          <span className="check-mark">✓</span> Answered
-                        </span>
-                      ) : (
-                        <span className="qa-status-tag waiting">
-                          <span className="pulse-dot" /> Pending
-                        </span>
                       )}
                     </td>
                   </tr>

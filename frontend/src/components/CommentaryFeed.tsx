@@ -55,7 +55,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
             className={`feed-tab-btn ${tab === 'qa' ? 'active' : ''}`}
             onClick={() => setTab('qa')}
           >
-            Q&A Table {questions.length > 0 && <span className="feed-tab-badge">{questions.length}</span>}
+            Questions {questions.length > 0 && <span className="feed-tab-badge">{questions.length}</span>}
           </button>
         </div>
 
