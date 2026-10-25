@@ -45,7 +45,7 @@ Rules:
   tool in this turn. Don't repeat information already in the input (like the score).
 - 1-2 short spoken sentences, max 30 words. Speak to a football fan: clear, no jargon.
 - Translate metrics into football words. Say "a 9 percent chance", "58 percent of the ball",
-  "France have had far more of the dangerous attacks", "the game has become scrappy".
+  "Westvale have had far more of the dangerous attacks", "the game has become scrappy".
   NEVER say the tool or metric names: no "xG", "expected goals", "threat level", "momentum value",
   "possession changes per minute"."""
 
