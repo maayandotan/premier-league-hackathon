@@ -68,18 +68,34 @@ export default function App() {
                 </div>
                 {stats && <MomentumBar stats={stats} />}
               </section>
+              <AnalystQATable
+                questions={questions}
+                lines={lines}
+                speakingId={speakingId}
+                onAsk={ask}
+                canAsk={canAsk}
+              />
             </>
           ) : (
-            <section className="card hero">
-              <div className="hero-text">
-                <span className="eyebrow">Live · AI broadcast</span>
-                <h2>Two AI commentators.<br />Your level.</h2>
-                <p>A caller for the action, an analyst for the why, and a crowd that roars on every goal.
-                  Ask them anything, by voice, while the match goes on.</p>
-                <button className="kickoff big" onClick={start}><PlayIcon size={20} /> Kick off</button>
-                <p className="hint"><SpeakerIcon size={16} /> Turn your sound on</p>
-              </div>
-            </section>
+            <>
+              <section className="card hero">
+                <div className="hero-text">
+                  <span className="eyebrow">Live · AI broadcast</span>
+                  <h2>Two AI commentators.<br />Your level.</h2>
+                  <p>A caller for the action, an analyst for the why, and a crowd that roars on every goal.
+                    Ask them anything, by voice, while the match goes on.</p>
+                  <button className="kickoff big" onClick={start}><PlayIcon size={20} /> Kick off</button>
+                  <p className="hint"><SpeakerIcon size={16} /> Turn your sound on</p>
+                </div>
+              </section>
+              <AnalystQATable
+                questions={questions}
+                lines={lines}
+                speakingId={speakingId}
+                onAsk={ask}
+                canAsk={canAsk}
+              />
+            </>
           )}
         </div>
 
@@ -95,16 +111,6 @@ export default function App() {
             <EventTicker events={events} homeTeam={info.home.name} />
           </div>
         )}
-
-        <div className="qa-area">
-          <AnalystQATable
-            questions={questions}
-            lines={lines}
-            speakingId={speakingId}
-            onAsk={ask}
-            canAsk={canAsk}
-          />
-        </div>
       </main>
 
       <footer className="footer">
