@@ -3,8 +3,8 @@ import type { CommentaryLine, ViewerQuestion } from '../match/types'
 import { useT } from '../i18n'
 
 const VOICES = {
-  caller: { initial: 'D', name: 'Davis', role: 'Play-by-play' },
-  analyst: { initial: 'R', name: 'Roy', role: 'Analyst' },
+  caller: { name: 'Davis', role: 'Play-by-play' },
+  analyst: { name: 'Roy', role: 'Analyst' },
 } as const
 
 /**
@@ -79,7 +79,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
                 return (
                   <li key={q.id} className={`feed-qa-item ${answer ? 'answered' : 'pending'}`}>
                     <div className="feed-qa-q">
-                      <span className="avatar you" aria-hidden="true">{t('You')}</span>
+                      <span className="qa-avatar you" aria-hidden="true">{t('You')}</span>
                       <div className="bubble">
                         <div className="who">
                           {t('You')} <span className="role">· {t('asked at {clock}', { clock: q.clock })}</span>
@@ -91,11 +91,10 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
 
                     {answer ? (
                       <div className="feed-qa-a" data-speaking={isSpeaking}>
-                        <span className="avatar roy" aria-hidden="true">R</span>
+                        <span className="qa-avatar roy" aria-hidden="true">{t.name('Roy')[0]}</span>
                         <div className="bubble">
                           <div className="who">
-                            Roy <span className="role">· {t('Answering you')}</span>
-                            {answer.level && <span className="level-tag">{t(answer.level)}</span>}
+                            {t.name('Roy')} <span className="role">· {t('Answering you')}</span>
                             {isSpeaking && <span className="qa-on-air-pill">{t('On Air')}</span>}
                           </div>
                           <p>{answer.text}</p>
@@ -119,7 +118,6 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
         <ol>
           {pending.map((q) => (
             <li key={q.id} className="line viewer">
-              <span className="avatar" aria-hidden="true">{t('You')}</span>
               <div className="bubble">
                 <div className="who">{t('You')} <span className="role">· {t('asked at {clock}', { clock: q.clock })}</span></div>
                 <p>{q.text}</p>
@@ -132,12 +130,9 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
             return (
               <li key={line.id} className={`line ${line.speaker}`} data-excitement={line.excitement}
                 data-speaking={line.id === speakingId}>
-                <span className="avatar" aria-hidden="true">{voice.initial}</span>
                 <div className="bubble">
                   <div className="who">
-                    {voice.name} <span className="role">· {t(question ? 'Answering you' : voice.role)}</span>
-                    {line.level && <span className="level-tag">{t(line.level)}</span>}
-                    {line.source && <span className="source" data-source={line.source}>{t(line.source === 'model' ? 'AI' : 'Auto')}</span>}
+                    {t.name(voice.name)} <span className="role">· {t(question ? 'Answering you' : voice.role)}</span>
                   </div>
                   {question && <blockquote>“{question.text}” <span>· {question.clock}</span></blockquote>}
                   <p>{line.text}</p>
