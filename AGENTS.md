@@ -4,7 +4,7 @@ Instructions for AI coding agents (GitHub Copilot agent mode, Claude Code, other
 
 ## The project
 
-**Match Intelligence**: live AI football commentary that adapts to the viewer, built for the Microsoft × Premier League [Inside the Game](https://github.com/microsoft/insidethegamehackathon) hackathon.
+**Your Call**: live AI football commentary that adapts to the viewer, built for the Microsoft × Premier League [Inside the Game](https://github.com/microsoft/insidethegamehackathon) hackathon.
 
 - Two AI commentators: **Davis** (the caller, play-by-play) and **Roy** (the analyst, explains why a moment mattered).
 - Three viewer levels: **beginner**, **fan**, **analyst**. The same moment is explained differently for each.

@@ -1,4 +1,4 @@
-/* Match Intelligence: a calm, broadcast-style look. One primary colour (white on dark), team colours
+/* Your Call: a calm, broadcast-style look. One primary colour (white on dark), team colours
    for the teams, gold only for goals. No glows; capitals only for small labels and the TV scorebug. */
 
 :root {
@@ -1095,7 +1095,7 @@ html.themed body::before {
   background: var(--accent); border-color: var(--accent); color: var(--accent-ink);
 }
 .app.themed .pm-choices label.active, .app.themed .pm-fixture-list a.active { border-color: var(--accent); }
-.app.themed .brand-mark { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.app.themed .brand-mark { border-color: var(--accent); --logo-accent: var(--accent); }
 .app.themed .line[data-speaking='true'] { border-left-color: var(--accent); }
 .app.themed .now { background: var(--accent); }
 .pm-club { border: 0; margin: 0; padding: 0; }

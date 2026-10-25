@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { AnalystQATable } from './components/AnalystQATable'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
-import { BallIcon, PlayIcon, RestartIcon, SpeakerIcon } from './components/Icons'
+import { PlayIcon, RestartIcon, SpeakerIcon } from './components/Icons'
 import { type Level, LevelPicker } from './components/LevelPicker'
 import { MatchTimeline } from './components/MatchTimeline'
 import { GoalBanner, LowerThird } from './components/PitchOverlays'
@@ -15,6 +15,7 @@ import { PatternsCard } from './components/PatternsCard'
 import { XgTimeline } from './components/XgTimeline'
 import { Crest } from './components/Scorebug'
 import { LeagueTable } from './components/LeagueTable'
+import { Logo } from './components/Logo'
 import { PreMatch } from './components/PreMatch'
 import { Pitch } from './match/Pitch'
 import type { ClubSeason, League, MatchInfo } from './match/types'
@@ -130,10 +131,10 @@ export default function App() {
     <div className={`app level-${level}${info ? '' : ' pre-match'}${club ? ' themed' : ''}`}>
       <header className="topbar">
         <div className="brand">
-          <span className="brand-mark" aria-hidden="true"><BallIcon size={24} /></span>
+          <span className="brand-mark" aria-hidden="true"><Logo size={34} /></span>
           <div>
-            <h1>Match Intelligence</h1>
-            <p>AI commentary at your level</p>
+            <h1>Your Call</h1>
+            <p>The match, explained your way</p>
           </div>
         </div>
         <div className="controls">
