@@ -30,12 +30,19 @@ export interface RankedEvent {
   moment: Moment
 }
 
+export interface Player {
+  name: string
+  jersey_number?: number
+  position?: string
+  starter?: boolean
+}
+
 export interface MatchInfo {
   id: string
   source: string
   competition?: string
-  home: { name: string }
-  away: { name: string }
+  home: { name: string; players?: Player[] }
+  away: { name: string; players?: Player[] }
 }
 
 export interface CommentaryLine {

@@ -3,7 +3,7 @@ import { teamCode } from '../match/teams'
 import type { MatchInfo, MatchStats } from '../match/types'
 
 /** A plain shield with the team code: our own design, no real club badge. */
-function Crest({ name, side }: { name: string; side: 'home' | 'away' }) {
+export function Crest({ name, side }: { name: string; side: 'home' | 'away' }) {
   return (
     <svg className={`crest ${side}`} viewBox="0 0 40 46" aria-hidden="true">
       <path d="M20 2 L37 8 V22 C37 33 29 40 20 44 C11 40 3 33 3 22 V8 Z" className="crest-shield" />

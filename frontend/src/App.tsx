@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
 import { BallIcon, PlayIcon, RestartIcon, SpeakerIcon } from './components/Icons'
@@ -7,7 +8,9 @@ import { GoalBanner, LowerThird } from './components/PitchOverlays'
 import { QuestionBox } from './components/QuestionBox'
 import { Scorebug } from './components/Scorebug'
 import { MomentumBar, StatBars } from './components/StatBars'
+import { PreMatch } from './components/PreMatch'
 import { Pitch } from './match/Pitch'
+import type { MatchInfo } from './match/types'
 import { useMatchFeed } from './match/useMatchFeed'
 
 // Pick the match from the URL, e.g. ?source=synthetic:red_card&speed=20&start=60 (default: the comeback)
@@ -19,9 +22,25 @@ const feedOptions = {
   level: params.get('level') ?? 'fan',
 }
 
+/** The teams and line-ups before kick-off, for the pre-match screen (null until loaded, or if it fails:
+ * then the plain kick-off card shows). */
+function usePreMatchInfo(source: string): MatchInfo | null {
+  const [info, setInfo] = useState<MatchInfo | null>(null)
+  useEffect(() => {
+    let current = true
+    fetch(`/api/match-info?source=${encodeURIComponent(source)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => { if (current) setInfo(data) })
+      .catch(() => {})
+    return () => { current = false }
+  }, [source])
+  return info
+}
+
 export default function App() {
   const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask,
     setListening, toggleMute, start, connected } = useMatchFeed(feedOptions)
+  const preInfo = usePreMatchInfo(feedOptions.source)
   const answered = new Set(lines.map((l) => l.reply_to))
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
@@ -30,7 +49,7 @@ export default function App() {
   const scoreText = info && stats ? `${stats.score[info.home.name]}–${stats.score[info.away.name]}` : ''
 
   return (
-    <div className="app">
+    <div className={info ? 'app' : 'app pre-match'}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true"><BallIcon size={24} /></span>
@@ -68,6 +87,8 @@ export default function App() {
                 {stats && <MomentumBar stats={stats} />}
               </section>
             </>
+          ) : preInfo ? (
+            <PreMatch info={preInfo} level={level as Level} onLevel={setLevel} onKickOff={start} />
           ) : (
             <section className="card hero">
               <div className="hero-text">

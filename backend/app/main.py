@@ -38,6 +38,17 @@ def health() -> dict:
     return {"status": "ok"}
 
 
+@app.get("/api/match-info")
+def match_info(source: str = "demo") -> dict:
+    """The teams and line-ups for the pre-match screen, before kick-off. No scenario description: it
+    would spoil the story."""
+    try:
+        info = load_source(source).info
+    except UnknownSource as error:
+        raise HTTPException(404, str(error)) from error
+    return info.model_dump(exclude={"extra"}, exclude_none=True)
+
+
 @app.get("/api/speech-token")
 async def get_speech_token() -> dict:
     """A 10-minute token so the browser's microphone can talk to Azure Speech without our key."""
