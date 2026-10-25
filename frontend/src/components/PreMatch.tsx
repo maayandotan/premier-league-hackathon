@@ -12,9 +12,9 @@ const SHORT: Record<string, string> = {
   'Right Wing': 'RW', 'Left Wing': 'LW', 'Center Forward': 'CF',
 }
 const CHOICES: { id: Level; label: string; title: string; hint: string }[] = [
-  { id: 'beginner', label: 'Beginner', title: 'New to football', hint: 'Everything explained, no jargon' },
-  { id: 'fan', label: 'Fan', title: 'I follow the game', hint: 'Clear football talk, a few numbers' },
-  { id: 'analyst', label: 'Analyst', title: 'Give me the numbers', hint: 'xG, possession and the tactics' },
+  { id: 'beginner', label: 'BEGINNER', title: 'New to football', hint: 'Everything explained, no jargon' },
+  { id: 'fan', label: 'FAN', title: 'I follow the game', hint: 'Clear football talk, a few numbers' },
+  { id: 'analyst', label: 'ANALYST', title: 'Give me the numbers', hint: 'xG, possession and the tactics' },
 ]
 
 /** The page's URL with another match: the other options (level, speed) stay, the start minute goes. */
@@ -111,7 +111,7 @@ export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, 
         <legend>How well do you know football?</legend>
         <div className="pm-choices">
           {CHOICES.map((c) => (
-            <label key={c.id} className={level === c.id ? 'active' : ''}>
+            <label key={c.id} className={level === c.id ? 'active' : ''} data-level={c.id}>
               <input type="radio" name="level" value={c.id} checked={level === c.id} onChange={() => onLevel(c.id)} />
               <span className="pm-choice-level">{c.label}</span>
               <span className="pm-choice-title">{c.title}</span>

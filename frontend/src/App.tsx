@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { AnalystQATable } from './components/AnalystQATable'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
 import { BallIcon, PlayIcon, RestartIcon, SpeakerIcon } from './components/Icons'
@@ -169,22 +170,38 @@ export default function App() {
                 </div>
                 {stats && <MomentumBar stats={stats} />}
               </section>
+              <AnalystQATable
+                questions={questions}
+                lines={lines}
+                speakingId={speakingId}
+                onAsk={ask}
+                canAsk={canAsk}
+              />
             </>
           ) : preInfo ? (
             <PreMatch info={preInfo} level={level as Level} onLevel={setLevel} onKickOff={start}
               fixtures={league?.fixtures} matchday={league?.matchday} source={feedOptions.source}
               clubs={league?.clubs} team={team} onTeam={setTeam} />
           ) : (
-            <section className="card hero">
-              <div className="hero-text">
-                <span className="eyebrow">Live · AI broadcast</span>
-                <h2>Two AI commentators.<br />Your level.</h2>
-                <p>A caller for the action, an analyst for the why, and a crowd that roars on every goal.
-                  Ask them anything, by voice, while the match goes on.</p>
-                <button className="kickoff big" onClick={start}><PlayIcon size={20} /> Kick off</button>
-                <p className="hint"><SpeakerIcon size={16} /> Turn your sound on</p>
-              </div>
-            </section>
+            <>
+              <section className="card hero">
+                <div className="hero-text">
+                  <span className="eyebrow">Live · AI broadcast</span>
+                  <h2>Two AI commentators.<br />Your level.</h2>
+                  <p>A caller for the action, an analyst for the why, and a crowd that roars on every goal.
+                    Ask them anything, by voice, while the match goes on.</p>
+                  <button className="kickoff big" onClick={start}><PlayIcon size={20} /> Kick off</button>
+                  <p className="hint"><SpeakerIcon size={16} /> Turn your sound on</p>
+                </div>
+              </section>
+              <AnalystQATable
+                questions={questions}
+                lines={lines}
+                speakingId={speakingId}
+                onAsk={ask}
+                canAsk={canAsk}
+              />
+            </>
           )}
         </div>
 

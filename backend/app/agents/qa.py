@@ -13,6 +13,7 @@ Built step by step in spikes/agents/qa_step_a.py. What we learned:
 import asyncio
 import logging
 import re
+from collections import deque
 from collections.abc import Callable, Sequence
 from typing import Annotated
 
@@ -30,11 +31,13 @@ from app.league.clubs import CLUB_BY_NAME
 from app.league.db import league
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment
+from app.synthetic.squads import SQUADS, captain, find_player
 
 log = logging.getLogger(__name__)
 
 DEADLINE_SECONDS = 12.0
 MAX_QUESTION_CHARS = 200
+HISTORY = 6  # earlier questions and answers given with each new question, so "he" and "them" resolve
 UNAVAILABLE = "Sorry, I can't take questions right now. Keep watching!"
 NOT_SURE = "I want to get that one right with the numbers. Give me a moment and ask me again!"
 
@@ -98,6 +101,13 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   player was unlucky. "Did they deserve it?" is answered with data: who had been on top and how
   good the chances were (get_match_picture, get_shot_quality for one shot).
 - If you can't tell which moment they mean, say so briefly and answer about the most likely one.
+- CONVERSATION SO FAR holds the viewer's earlier questions and your answers. Use it to understand who
+  "he", "him", "that player", "they" or "the same team" mean; then answer the QUESTION with fresh
+  tool calls (numbers may have changed since). A short follow-up that leaves out its subject
+  continues the previous question: after "Is he the captain?", "who is then?" asks who the captain is.
+  "He" or "him" is MOST_RECENT_PLAYER when it's given.
+- For anything about a player (who he is, his goals and assists, his position, his match so far),
+  call get_player.
 - If VIEWER_SUPPORTS is given, the viewer is a fan of that club: "we", "us", "my team" and "our"
   mean that club (call get_club_season for it). Stay fair and accurate about both teams.
 - If the question isn't about this match or football, say kindly that you can only talk about the match.
@@ -192,6 +202,31 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
         return {"table": [{key: row[key] for key in keys} for row in lg.table()],
                 "top_scorers": lg.top_scorers()}
 
+    def get_player(name: Annotated[str, "A player's name or surname, e.g. Ferro or M. Ferro"]) -> dict:
+        """One player: club, shirt number, position, captain or not, league goals and assists BEFORE
+        this match, and what he has done in this match so far (goals, shots, cards, substitution)."""
+        found = find_player(name, preferred=(stats.home, stats.away))
+        if found is None:
+            return {"error": f"no player called {name!r} in the league"}
+        club, player = found
+        this_match = {"goals": 0, "shots": 0, "cards": [], "substituted": None}
+        for event, _ in timeline:
+            if event.player == player.name:
+                this_match["shots"] += event.shot is not None
+                this_match["goals"] += event.is_goal
+                if card := (event.foul.card if event.foul else event.card):
+                    this_match["cards"].append(f"{card} in the {ordinal(event.minute)} minute")
+                if event.substitution:
+                    this_match["substituted"] = f"off in the {ordinal(event.minute)} minute"
+            if event.substitution and event.substitution.replacement == player.name:
+                this_match["substituted"] = f"came on in the {ordinal(event.minute)} minute"
+        playing = club in (stats.home, stats.away)
+        return {"name": player.name, "club": club, "number": player.number,
+                "position": player.position if player.starter else f"substitute ({player.position})",
+                "captain": captain(club) == player.name, "club_captain": captain(club),
+                **league().player_season(player.name),
+                "this_match": this_match if playing else "not playing in this match"}
+
     def get_club_season(team: Annotated[str, "A club's full name, e.g. Northbridge FC"]) -> dict:
         """A club's league season BEFORE this match: position, points, record, form, captain, its top
         scorers and assisters this season."""
@@ -215,7 +250,7 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
         return story() if story else {"story": "(no story yet)"}
 
     tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_patterns, get_match_story,
-             get_league_table, get_club_season, get_match_picture,
+             get_league_table, get_club_season, get_player, get_match_picture,
              momentum["get_shot_quality"], momentum["get_pass_rarity"]]
     return [recorded(tool) for tool in tools]  # so the answer can be checked against what they said
 
@@ -232,6 +267,9 @@ class QuestionAnswerer:
             default_options={"temperature": 0.3, "max_tokens": 200},
         ) if use_model else None
         self.stats = stats
+        self.history: deque[tuple[str, str]] = deque(maxlen=HISTORY)  # what the viewer heard, in order
+        self.recent_player: str | None = None  # who "he" means: found by code, not guessed by the model
+        self._players = [p.name for team in (stats.home, stats.away) for p in SQUADS.get(team, [])]
 
     async def answer(self, question: str, minute: int, second: int, viewer: ViewerProfile,
                      full_time: bool = False) -> str:
@@ -244,14 +282,34 @@ class QuestionAnswerer:
                   f"VIEWER_LEVEL: {viewer.level}\nMAX_WORDS: {limit}")
         if viewer.team:
             prompt += f"\nVIEWER_SUPPORTS: {viewer.team}"
+        if self.recent_player:
+            prompt += (f"\nMOST_RECENT_PLAYER: {self.recent_player} (who \"he\" or \"him\" means, unless the "
+                       "question names someone else)")
+        if self.history:  # code keeps the conversation: only what the viewer actually heard
+            prompt += "\nCONVERSATION SO FAR (oldest first):\n" + "\n".join(
+                f"Viewer: {q}\nSonia: {a}" for q, a in self.history)
         said = {*re.findall(r"\b\d+(?:\.\d+)?\b", question), str(minute), str(second)}
         try:
             with recording() as tool_results:
-                return await asyncio.wait_for(self._write(prompt, viewer.level, limit, tool_results, said),
-                                              DEADLINE_SECONDS)
+                answer = await asyncio.wait_for(self._write(prompt, viewer.level, limit, tool_results, said),
+                                                DEADLINE_SECONDS)
+            if answer not in (NOT_SURE, UNAVAILABLE):
+                self.history.append((question[:MAX_QUESTION_CHARS], answer))
+                self.recent_player = self._last_player_named(question + " " + answer) or self.recent_player
+            return answer
         except Exception as error:
             log.warning("Q&A failed: %s", type(error).__name__)
             return "Sorry, I couldn't work that one out in time. Ask me again in a moment!"
+
+    def _last_player_named(self, text: str) -> str | None:
+        """The player named last in a text ("M. Ferro" or just "Ferro"), from the two squads playing.
+        The model kept reading "he" as the conversation's first player even when told otherwise."""
+        found = {}
+        for name in self._players:
+            surname = name.split(". ")[-1]
+            for match in re.finditer(rf"\b{re.escape(surname)}\b", text):
+                found[name] = max(found.get(name, -1), match.start())
+        return max(found, key=found.get) if found else None
 
     async def _write(self, prompt: str, level: str, limit: int, tool_results: list, said: set[str]) -> str:
         """Draft, check against what the tools returned, one retry if wrong, then an honest fallback

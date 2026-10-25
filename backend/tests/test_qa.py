@@ -149,3 +149,51 @@ def test_long_answers_are_shortened_once():
     answer = asyncio.run(qa.answer("Why?", 5, 0, ViewerProfile(level="beginner")))
     assert answer == "Short and sweet." and len(calls) == 2
     assert "MAX_WORDS: 40" in calls[0] and "at most 40 words" in calls[1]
+
+
+def test_sonia_remembers_the_conversation():
+    """A follow-up ("how many has he scored?") needs the earlier question to know who "he" is."""
+    from app.agents.qa import HISTORY, NOT_SURE
+
+    class Answering:
+        def __init__(self, *answers):
+            self.answers, self.inputs = list(answers), []
+
+        async def run(self, prompt, **_):
+            self.inputs.append(prompt)
+            return SimpleNamespace(text=self.answers.pop(0))
+
+    stats, timeline = replay([routine_pass(5, 0, "p")])
+    qa = QuestionAnswerer(stats, timeline, {}, use_model=False)
+    qa.agent = Answering("M. Ferro is Northbridge's centre forward.", "He has scored once in the league.")
+    asyncio.run(qa.answer("Who is Ferro?", 5, 0, ViewerProfile()))
+    asyncio.run(qa.answer("How many goals has he scored?", 6, 0, ViewerProfile()))
+    assert "CONVERSATION SO FAR" not in qa.agent.inputs[0]
+    assert "Viewer: Who is Ferro?\nSonia: M. Ferro is Northbridge's centre forward." in qa.agent.inputs[1]
+    assert list(qa.history)[-1] == ("How many goals has he scored?", "He has scored once in the league.")
+    for i in range(HISTORY + 2):
+        qa.history.append((f"q{i}", f"a{i}"))
+    assert len(qa.history) == HISTORY  # bounded
+    assert NOT_SURE not in [a for _, a in qa.history]
+
+
+def test_player_tool_knows_club_season_and_this_match():
+    events = [foul(60, 0, "f1"), routine_pass(61, 0, "p1")]
+    tools = tools_for(events)
+    ferro = tools["get_player"](name="Ferro")
+    assert ferro["club"] == "Northbridge FC" and ferro["number"] == 10
+    assert ferro["position"] == "Center Forward"
+    assert ferro["captain"] is False and ferro["league_goals"] >= 1
+    assert tools["get_player"](name="R. Ashdown")["captain"] is True
+    osei = tools["get_player"](name="Osei")
+    assert osei["this_match"]["cards"] == [] and osei["club"] == "Westvale United"
+    assert "error" in tools["get_player"](name="Nobody at all")
+
+
+def test_code_tracks_who_he_means():
+    """After "Is Ferro the captain?" -> "...the captain is R. Ashdown", "he" is Ashdown."""
+    stats, timeline = replay([routine_pass(5, 0, "p")])
+    qa = QuestionAnswerer(stats, timeline, {}, use_model=False)
+    assert qa._last_player_named("Is Ferro the captain? No, the captain is R. Ashdown.") == "R. Ashdown"
+    assert qa._last_player_named("Who scored? Ferro did, after Ashdown's pass to Ferro.") == "M. Ferro"
+    assert qa._last_player_named("Nobody in particular.") is None

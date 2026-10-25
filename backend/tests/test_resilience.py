@@ -101,7 +101,7 @@ def test_one_broken_line_never_stops_the_match(monkeypatch):
 
 def test_junk_from_the_browser_is_ignored():
     long_question = "why " * 200
-    messages = run_match("/ws/match?speed=10000", send=[
+    messages = run_match("/ws/match?speed=1000", send=[
         {"type": "nonsense"},
         {"no_type": True},
         {"type": "question", "text": "   "},  # empty: not a question
