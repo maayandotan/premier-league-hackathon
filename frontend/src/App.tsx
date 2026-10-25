@@ -1,3 +1,4 @@
+import { AnalystQATable } from './components/AnalystQATable'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
 import { BallIcon, PlayIcon, RestartIcon, SpeakerIcon } from './components/Icons'
@@ -94,6 +95,16 @@ export default function App() {
             <EventTicker events={events} homeTeam={info.home.name} />
           </div>
         )}
+
+        <div className="qa-area">
+          <AnalystQATable
+            questions={questions}
+            lines={lines}
+            speakingId={speakingId}
+            onAsk={ask}
+            canAsk={canAsk}
+          />
+        </div>
       </main>
 
       <footer className="footer">
