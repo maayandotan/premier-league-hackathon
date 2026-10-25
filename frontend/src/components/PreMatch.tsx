@@ -1,4 +1,4 @@
-import type { LeagueFixture, MatchInfo, Player } from '../match/types'
+import type { Club, LeagueFixture, MatchInfo, Player } from '../match/types'
 import { PlayIcon, SpeakerIcon } from './Icons'
 import type { Level } from './LevelPicker'
 import { Crest } from './Scorebug'
@@ -43,7 +43,7 @@ function Lineup({ players, side }: { players: Player[]; side: 'home' | 'away' })
 
 /** Before kick-off, like a broadcast's opening: the teams, the line-ups, who's commentating, and the
  * viewer's level, chosen before the first line is spoken. */
-export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, source }: {
+export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, source, clubs, team, onTeam }: {
   info: MatchInfo
   level: Level
   onLevel: (level: Level) => void
@@ -51,6 +51,9 @@ export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, 
   fixtures?: LeagueFixture[] // today's matchday: pick another match to watch
   matchday?: number
   source: string
+  clubs?: Club[] // pick a favourite: the page takes its colours, the commentary relates to it
+  team: string | null
+  onTeam: (team: string | null) => void
 }) {
   return (
     <section className="card prematch" aria-label="Before kick-off">
@@ -89,6 +92,21 @@ export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, 
         Your commentators: <strong>Guy</strong> calls the action, <strong>Sonia</strong> explains why it matters.
         Ask them anything while the match goes on.
       </p>
+      {clubs && clubs.length > 0 && (
+        <fieldset className="pm-club">
+          <legend>Your club <span>(optional)</span></legend>
+          <div className="pm-club-list">
+            {clubs.map((c) => (
+              <button key={c.name} type="button" className={team === c.name ? 'active' : undefined}
+                aria-pressed={team === c.name} title={c.name} aria-label={c.name}
+                onClick={() => onTeam(team === c.name ? null : c.name)}>
+                <Crest name={c.name} side="home" code={c.code} color={c.color} />
+              </button>
+            ))}
+          </div>
+          <span className="pm-club-name">{team ?? 'Neutral: no club picked'}</span>
+        </fieldset>
+      )}
       <fieldset className="pm-level">
         <legend>How well do you know football?</legend>
         <div className="pm-choices">

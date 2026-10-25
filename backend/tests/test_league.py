@@ -88,3 +88,50 @@ def test_league_api_and_fixture_sources():
     assert info["home"]["code"] and info["home"]["color"].startswith("#")
     assert client.get("/api/league/club?name=Nowhere FC").status_code == 404
     assert client.get("/api/match-info?source=fixture:NOR-RED").status_code == 404  # not today's fixture
+
+
+def test_a_viewer_follows_a_league_club_or_none():
+    from app.agents.viewer import ViewerProfile
+    viewer = ViewerProfile()
+    assert viewer.set_team("Northbridge FC") and viewer.team == "Northbridge FC"
+    assert viewer.set_team("Nowhere FC") and viewer.team is None  # not a club: neutral
+    assert client.get("/api/league").json()["clubs"][0] == {"name": "Northbridge FC", "code": "NOR",
+                                                           "color": "#3b82f6", "secondary": "#f8fafc"}
+
+
+def test_sonia_and_qa_know_the_viewers_club():
+    import asyncio
+    from types import SimpleNamespace
+
+    from app.agents.analyst import Analyst
+    from app.agents.qa import QuestionAnswerer
+    from app.agents.viewer import ViewerProfile
+    from app.events.models import MatchEvent, ShotDetails
+    from app.stats.engine import StatsEngine
+    from app.stats.ranker import Moment
+
+    class Recorder:
+        def __init__(self):
+            self.inputs = []
+
+        async def run(self, prompt, **_):
+            self.inputs.append(prompt)
+            return SimpleNamespace(text="Good news for Northbridge.")
+
+    stats = StatsEngine("Northbridge FC", "Westvale United")
+    viewer = ViewerProfile()
+    viewer.set_team("Northbridge FC")
+    goal = MatchEvent(id="g", index=1, period=2, minute=88, second=0, type="Shot", team="Northbridge FC",
+                      player="M. Ferro", location=(108.0, 40.0), shot=ShotDetails(outcome="Goal"))
+    analyst = Analyst(stats, {}, use_model=False)
+    analyst.agent = Recorder()
+    moment = Moment(score=10, reason="late go-ahead goal", kind="goal", quiet=True)
+    asyncio.run(analyst.analyse(goal, moment, viewer))
+    sent = analyst.agent.inputs[0]
+    assert "VIEWER_SUPPORTS: Northbridge FC" in sent and "Speak to the Northbridge FC fan" in sent
+    assert "good news" in sent and "Northbridge FC, league before today: 14th of 20" in sent
+
+    qa = QuestionAnswerer(stats, [], {}, use_model=False)
+    qa.agent = Recorder()
+    asyncio.run(qa.answer("How are we doing?", 88, 0, viewer))
+    assert "VIEWER_SUPPORTS: Northbridge FC" in qa.agent.inputs[0]

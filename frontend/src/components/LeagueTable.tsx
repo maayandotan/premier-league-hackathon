@@ -2,7 +2,7 @@ import type { League } from '../match/types'
 
 /** The Meridian League table, with the two clubs in this match highlighted. Before today's match it's
  * the table after the matchdays already played; at full time it updates with this result. */
-export function LeagueTable({ league, teams }: { league: League; teams: string[] }) {
+export function LeagueTable({ league, teams, mine }: { league: League; teams: string[]; mine?: string | null }) {
   return (
     <section className="card league" aria-label="League table">
       <h2>{league.league} <span className="league-sub">Matchday {league.matchday}</span></h2>
@@ -12,7 +12,8 @@ export function LeagueTable({ league, teams }: { league: League; teams: string[]
         </thead>
         <tbody>
           {league.table.map((row) => (
-            <tr key={row.team} className={teams.includes(row.team) ? 'playing' : undefined}>
+            <tr key={row.team}
+              className={[teams.includes(row.team) && 'playing', row.team === mine && 'mine'].filter(Boolean).join(' ') || undefined}>
               <td>{row.position}</td>
               <td className="team">{row.team}</td>
               <td>{row.played}</td>

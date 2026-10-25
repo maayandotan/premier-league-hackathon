@@ -98,6 +98,8 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   player was unlucky. "Did they deserve it?" is answered with data: who had been on top and how
   good the chances were (get_match_picture, get_shot_quality for one shot).
 - If you can't tell which moment they mean, say so briefly and answer about the most likely one.
+- If VIEWER_SUPPORTS is given, the viewer is a fan of that club: "we", "us", "my team" and "our"
+  mean that club (call get_club_season for it). Stay fair and accurate about both teams.
 - If the question isn't about this match or football, say kindly that you can only talk about the match.
 - Say when things happened the way the tools say it ("a moment ago", "in the 72nd minute").
   Never read out a clock time like "72:16" or ASKED_AT.
@@ -240,6 +242,8 @@ class QuestionAnswerer:
         limit = WORD_LIMITS.get(viewer.level, WORD_LIMITS["fan"])
         prompt = (f"QUESTION: {question[:MAX_QUESTION_CHARS]}\nASKED_AT: {asked_at}\n"
                   f"VIEWER_LEVEL: {viewer.level}\nMAX_WORDS: {limit}")
+        if viewer.team:
+            prompt += f"\nVIEWER_SUPPORTS: {viewer.team}"
         said = {*re.findall(r"\b\d+(?:\.\d+)?\b", question), str(minute), str(second)}
         try:
             with recording() as tool_results:
