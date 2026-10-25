@@ -43,7 +43,7 @@ Rules for every level:
   turn, and your words must match its label: "low-probability effort" = a hard/unlikely chance,
   "half chance" = a decent chance, "big chance" = a great chance.
 - Never say internal scales or tool names: no "momentum value", "threat", "possession changes per
-  minute", no negative numbers. Turn them into words ("France had been on top").
+  minute", no negative numbers. Turn them into words ("Westvale had been on top").
 - Don't repeat information already in the input (like the score).
 - One or two short sentences. LEAD WITH THE INSIGHT (the surprising part), then the context.
 

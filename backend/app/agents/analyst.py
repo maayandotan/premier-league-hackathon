@@ -9,7 +9,7 @@ Built step by step in spikes/agents/analyst_step_*.py. What we learned:
 - No template fallback: a generic "why" is worse than silence. If it's late, it stays quiet.
 Personalization (#15, spikes/agents/levels_step_*.py):
 - One agent; the instructions describe the three levels and each request says VIEWER_LEVEL.
-- Tools speak in words where we don't want numbers spoken ("France, slightly" not "-0.3").
+- Tools speak in words where we don't want numbers spoken ("Westvale, slightly" not "-0.3").
 - Too long? Ask the model once to shorten (keeping the insight) instead of cutting the end,
   which removed the punchline.
 Speed: with tools, each line took 2-3 model round trips (~6 s against a 7 s deadline, so she was
@@ -55,7 +55,7 @@ Rules for every level:
   "low-probability effort" = a hard/unlikely chance, "half chance" = a decent chance,
   "big chance" = a great chance.
 - Never say internal scales or field names: no "momentum value", "threat", "possession changes per
-  minute", no negative numbers. Turn them into words ("France had been on top").
+  minute", no negative numbers. Turn them into words ("Westvale had been on top").
 - Don't repeat information already in the input (like the score).
 - If a TACTICS note is given, you may use its idea to explain the moment, in your own words.
   Its example line shows tone only: never repeat its numbers, names or wording. Never claim
