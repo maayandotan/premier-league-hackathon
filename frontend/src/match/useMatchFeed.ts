@@ -11,12 +11,13 @@ export interface FeedOptions {
   start: number // minute
   level: string // beginner | fan | analyst, at kick-off
   team: string | null // the viewer's club, or null for neutral
+  lang: string // 'en' | 'es': the commentary's language
 }
 
 const MAX_EVENTS = 200 // a full match has thousands; keep the list light
 
 /** Connects to the backend's live match WebSocket and collects events, commentary and stats. */
-export function useMatchFeed({ source, speed, start, level: initialLevel, team }: FeedOptions) {
+export function useMatchFeed({ source, speed, start, level: initialLevel, team, lang }: FeedOptions) {
   const [status, setStatus] = useState<FeedStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<MatchInfo | null>(null)
@@ -51,7 +52,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel, team }
     setXgHistory([])
     setError(null)
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws'
-    const query = new URLSearchParams({ source, speed: String(speed), start: String(start), level })
+    const query = new URLSearchParams({ source, speed: String(speed), start: String(start), level, lang })
     if (team) query.set('team', team)
     const ws = new WebSocket(`${protocol}://${location.host}/ws/match?${query}`)
     let ended = false
@@ -121,7 +122,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel, team }
       }
     }
     socket.current = ws
-  }, [source, speed, start, level, team, audio])
+  }, [source, speed, start, level, team, lang, audio])
 
   useEffect(() => () => {
     socket.current?.close()
@@ -140,6 +141,12 @@ export function useMatchFeed({ source, speed, start, level: initialLevel, team }
     const ws = socket.current
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_team', team }))
   }, [team])
+
+  // A new language mid-match goes to the server too: the next lines are in it.
+  useEffect(() => {
+    const ws = socket.current
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_language', language: lang }))
+  }, [lang])
 
   /** Ask the analyst a question; the match keeps going and the answer arrives as a line. */
   const ask = useCallback((text: string) => {

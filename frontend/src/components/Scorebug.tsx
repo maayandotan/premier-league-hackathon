@@ -1,6 +1,7 @@
 import type { FeedStatus } from '../match/useMatchFeed'
 import { teamCode } from '../match/teams'
 import type { MatchInfo, MatchStats } from '../match/types'
+import { useT } from '../i18n'
 
 /** A plain shield with the team code: our own design, no real club badge. */
 export function Crest({ name, side, code, color }: {
@@ -28,14 +29,15 @@ export function Scorebug({ info, stats, status, period }: {
   status: FeedStatus
   period: number | null
 }) {
+  const t = useT()
   const home = info.home.name
   const away = info.away.name
   const score = stats?.score ?? { [home]: 0, [away]: 0 }
-  const phase = status === 'ended' ? 'Full time' : period ? PERIODS[period] : 'Pre-match'
+  const phase = t(status === 'ended' ? 'Full time' : period ? PERIODS[period] : 'Pre-match')
   return (
     <div className="scorebug" role="group" aria-label={`${home} ${score[home] ?? 0}, ${away} ${score[away] ?? 0}`}>
       <div className="competition">
-        <span>{info.competition ?? 'Match'}</span>
+        <span>{info.competition ?? t('Match')}</span>
         <span className="phase">{phase}</span>
       </div>
       <div className="team home">
@@ -53,10 +55,10 @@ export function Scorebug({ info, stats, status, period }: {
       </div>
       <div className="clock">
         {status === 'live' && <span className="live-dot" aria-hidden="true" />}
-        <span>{status === 'ended' ? 'FT' : stats ? `${stats.minute}'` : '—'}</span>
+        <span>{status === 'ended' ? t('FT') : stats ? `${stats.minute}'` : '—'}</span>
       </div>
       {stats?.shootout && (
-        <div className="shootout">Penalties {stats.shootout[home]} – {stats.shootout[away]}</div>
+        <div className="shootout">{t('Penalties')} {stats.shootout[home]} – {stats.shootout[away]}</div>
       )}
     </div>
   )

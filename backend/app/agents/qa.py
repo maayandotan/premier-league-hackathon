@@ -282,6 +282,8 @@ class QuestionAnswerer:
                   f"VIEWER_LEVEL: {viewer.level}\nMAX_WORDS: {limit}")
         if viewer.team:
             prompt += f"\nVIEWER_SUPPORTS: {viewer.team}"
+        if viewer.language != "en":  # the checker reads English; code translates the checked answer
+            prompt += "\nANSWER_IN: English, even though the question may be in Spanish"
         if self.recent_player:
             prompt += (f"\nMOST_RECENT_PLAYER: {self.recent_player} (who \"he\" or \"him\" means, unless the "
                        "question names someone else)")
