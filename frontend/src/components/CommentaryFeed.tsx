@@ -1,41 +1,127 @@
+import { useState } from 'react'
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 
 const VOICES = {
-  caller: { name: 'Guy', role: 'Play-by-play' },
-  analyst: { name: 'Sonia', role: 'Analyst' },
+  caller: { initial: 'G', name: 'Guy', role: 'Play-by-play' },
+  analyst: { initial: 'S', name: 'Sonia', role: 'Analyst' },
 } as const
 
 /**
  * The commentary as a live feed: newest on top, the line being spoken highlighted.
  * Viewer questions show as "You" bubbles until Sonia answers; her answer quotes the question.
+ * Also provides a toggle to view only Questions & Answers right in the sidebar.
  */
 export function CommentaryFeed({ lines, questions, speakingId }: {
   lines: CommentaryLine[]
   questions: ViewerQuestion[]
   speakingId: string | null
 }) {
+  const [tab, setTab] = useState<'feed' | 'qa'>('feed')
+
   const answered = new Set(lines.map((line) => line.reply_to).filter(Boolean))
   const pending = questions.filter((q) => !answered.has(q.id)).reverse()
   const byId = new Map(questions.map((q) => [q.id, q]))
 
+  // All Q&A pairs (questions + answers from Sonia)
+  const answersByQuestionId = new Map<string, CommentaryLine>()
+  for (const line of lines) {
+    if (line.reply_to) {
+      answersByQuestionId.set(line.reply_to, line)
+    }
+  }
+
+  const qaList = [...questions].reverse().map((q) => ({
+    question: q,
+    answer: answersByQuestionId.get(q.id),
+  }))
+
   return (
     <section className="card feed" aria-label="Commentary" aria-live="polite">
-      <h2>
-        Commentary
+      <div className="feed-header-row">
+        <div className="feed-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'feed'}
+            className={`feed-tab-btn ${tab === 'feed' ? 'active' : ''}`}
+            onClick={() => setTab('feed')}
+          >
+            Commentary
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={tab === 'qa'}
+            className={`feed-tab-btn ${tab === 'qa' ? 'active' : ''}`}
+            onClick={() => setTab('qa')}
+          >
+            Q&A Table {questions.length > 0 && <span className="feed-tab-badge">{questions.length}</span>}
+          </button>
+        </div>
+
         {speakingId && (
           <span className="on-air" aria-label="Speaking now">
             <span className="wave"><i /><i /><i /><i /></span> On air
           </span>
         )}
-      </h2>
-      {lines.length === 0 && pending.length === 0 ? (
+      </div>
+
+      {tab === 'qa' ? (
+        <div className="feed-qa-view">
+          {qaList.length === 0 ? (
+            <p className="empty">No questions asked yet. Ask Sonia below!</p>
+          ) : (
+            <ol className="feed-qa-list">
+              {qaList.map(({ question: q, answer }) => {
+                const isSpeaking = answer && answer.id === speakingId
+                return (
+                  <li key={q.id} className={`feed-qa-item ${answer ? 'answered' : 'pending'}`}>
+                    <div className="feed-qa-q">
+                      <span className="avatar you" aria-hidden="true">You</span>
+                      <div className="bubble">
+                        <div className="who">
+                          You <span className="role">· asked at {q.clock}</span>
+                          {!answer && <span className="qa-pill-pending">Thinking...</span>}
+                        </div>
+                        <p>{q.text}</p>
+                      </div>
+                    </div>
+
+                    {answer ? (
+                      <div className="feed-qa-a" data-speaking={isSpeaking}>
+                        <span className="avatar sonia" aria-hidden="true">S</span>
+                        <div className="bubble">
+                          <div className="who">
+                            Sonia <span className="role">· Answering you</span>
+                            {answer.level && <span className="level-tag">{answer.level}</span>}
+                            {isSpeaking && <span className="qa-on-air-pill">On Air</span>}
+                          </div>
+                          <p>{answer.text}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="feed-qa-waiting">
+                        <span className="qa-spinner" aria-hidden="true" />
+                        <span>Sonia is analyzing match data...</span>
+                      </div>
+                    )}
+                  </li>
+                )
+              })}
+            </ol>
+          )}
+        </div>
+      ) : lines.length === 0 && pending.length === 0 ? (
         <p className="empty">The commentators are ready. Kick off to hear them.</p>
       ) : (
         <ol>
           {pending.map((q) => (
             <li key={q.id} className="line viewer">
-              <div className="who">You <span className="role">asked at {q.clock}</span></div>
-              <p>{q.text}</p>
+              <span className="avatar" aria-hidden="true">You</span>
+              <div className="bubble">
+                <div className="who">You <span className="role">· asked at {q.clock}</span></div>
+                <p>{q.text}</p>
+              </div>
             </li>
           ))}
           {lines.map((line) => {
@@ -44,11 +130,16 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
             return (
               <li key={line.id} className={`line ${line.speaker}`} data-excitement={line.excitement}
                 data-speaking={line.id === speakingId}>
-                <div className="who">
-                  {voice.name} <span className="role">{question ? 'Answering you' : voice.role}</span>
+                <span className="avatar" aria-hidden="true">{voice.initial}</span>
+                <div className="bubble">
+                  <div className="who">
+                    {voice.name} <span className="role">· {question ? 'Answering you' : voice.role}</span>
+                    {line.level && <span className="level-tag">{line.level}</span>}
+                    {line.source && <span className="source" data-source={line.source}>{line.source === 'model' ? 'AI' : 'Auto'}</span>}
+                  </div>
+                  {question && <blockquote>“{question.text}” <span>· {question.clock}</span></blockquote>}
+                  <p>{line.text}</p>
                 </div>
-                {question && <blockquote>“{question.text}”</blockquote>}
-                <p>{line.text}</p>
               </li>
             )
           })}
