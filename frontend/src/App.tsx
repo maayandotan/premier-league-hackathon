@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { type CSSProperties, useEffect, useState } from 'react'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
 import { BallIcon, PlayIcon, RestartIcon, SpeakerIcon } from './components/Icons'
@@ -8,10 +8,11 @@ import { GoalBanner, LowerThird } from './components/PitchOverlays'
 import { QuestionBox } from './components/QuestionBox'
 import { Scorebug } from './components/Scorebug'
 import { MomentumBar, StatBars } from './components/StatBars'
+import { ClubPanel } from './components/ClubPanel'
 import { LeagueTable } from './components/LeagueTable'
 import { PreMatch } from './components/PreMatch'
 import { Pitch } from './match/Pitch'
-import type { League, MatchInfo } from './match/types'
+import type { ClubSeason, League, MatchInfo } from './match/types'
 import { useMatchFeed } from './match/useMatchFeed'
 
 // Pick the match from the URL, e.g. ?source=synthetic:red_card&speed=20&start=60 (default: the comeback)
@@ -52,11 +53,51 @@ function useLeague(refresh: boolean): League | null {
   return league
 }
 
+const TEAM_KEY = 'match-intelligence.team'
+
+/** The viewer's club: from ?team= or remembered from last time (browser storage can fail: then not). */
+function useFavourite(): [string | null, (team: string | null) => void] {
+  const [team, setTeam] = useState<string | null>(() => {
+    try { return params.get('team') ?? localStorage.getItem(TEAM_KEY) } catch { return null }
+  })
+  const choose = (next: string | null) => {
+    setTeam(next)
+    try { if (next) localStorage.setItem(TEAM_KEY, next); else localStorage.removeItem(TEAM_KEY) } catch { /* fine */ }
+  }
+  return [team, choose]
+}
+
+/** The viewer's club's season (refetched at full time, when the result is in). */
+function useClubSeason(team: string | null, refresh: boolean): ClubSeason | null {
+  const [season, setSeason] = useState<ClubSeason | null>(null)
+  useEffect(() => {
+    let current = true
+    if (team) {
+      fetch(`/api/league/club?name=${encodeURIComponent(team)}`)
+        .then((response) => (response.ok ? response.json() : null))
+        .then((data) => { if (current) setSeason(data) })
+        .catch(() => {})
+    }
+    return () => { current = false }
+  }, [team, refresh])
+  return team ? season : null
+}
+
+/** Text that reads on a club colour: dark on light colours (Elmsworth yellow), white on dark ones. */
+function inkFor(hex: string): string {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? '#0b1220' : '#ffffff'
+}
+
 export default function App() {
+  const [team, setTeam] = useFavourite()
   const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask,
-    setListening, toggleMute, start, connected } = useMatchFeed(feedOptions)
+    setListening, toggleMute, start, connected } = useMatchFeed({ ...feedOptions, team })
   const preInfo = usePreMatchInfo(feedOptions.source)
   const league = useLeague(status === 'ended') // fetched again at full time: the result is in the table
+  const club = league?.clubs.find((c) => c.name === team) ?? null
+  const clubSeason = useClubSeason(club ? team : null, status === 'ended')
+  const theme = club ? { '--accent': club.color, '--accent-ink': inkFor(club.color) } as CSSProperties : undefined
   const answered = new Set(lines.map((l) => l.reply_to))
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
@@ -65,7 +106,7 @@ export default function App() {
   const scoreText = info && stats ? `${stats.score[info.home.name]}–${stats.score[info.away.name]}` : ''
 
   return (
-    <div className={info ? 'app' : 'app pre-match'}>
+    <div className={`app${info ? '' : ' pre-match'}${club ? ' themed' : ''}`} style={theme}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true"><BallIcon size={24} /></span>
@@ -105,7 +146,8 @@ export default function App() {
             </>
           ) : preInfo ? (
             <PreMatch info={preInfo} level={level as Level} onLevel={setLevel} onKickOff={start}
-              fixtures={league?.fixtures} matchday={league?.matchday} source={feedOptions.source} />
+              fixtures={league?.fixtures} matchday={league?.matchday} source={feedOptions.source}
+              clubs={league?.clubs} team={team} onTeam={setTeam} />
           ) : (
             <section className="card hero">
               <div className="hero-text">
@@ -127,9 +169,11 @@ export default function App() {
         </aside>
 
         <div className="lower">
+          {club && clubSeason && <ClubPanel club={club} season={clubSeason}
+            today={league?.fixtures.find((f) => f.home === club.name || f.away === club.name)} />}
           {info && stats && <StatBars info={info} stats={stats} />}
           {info && stats && <EventTicker events={events} homeTeam={info.home.name} />}
-          {league && <LeagueTable league={league}
+          {league && <LeagueTable league={league} mine={team}
             teams={[(info ?? preInfo)?.home.name, (info ?? preInfo)?.away.name].filter((t): t is string => !!t)} />}
         </div>
       </main>
