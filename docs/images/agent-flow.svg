@@ -135,7 +135,7 @@
     <rect x="300" y="762" width="300" height="76" rx="14" fill="#f1f4f8" stroke="#c3cbd6"/>
   </g>
   <text x="450" y="792" class="title" text-anchor="middle">🔊 Voice</text>
-  <text x="450" y="815" class="sub" text-anchor="middle">Guy &amp; Sonia · crowd · priority queue</text>
+  <text x="450" y="815" class="sub" text-anchor="middle">Davis &amp; Roy · crowd · priority queue</text>
   <circle cx="286" cy="772" r="13" fill="#0f172a"/><text x="286" y="776" class="step" text-anchor="middle">6</text>
 
   <!-- ===== Viewer ===== -->

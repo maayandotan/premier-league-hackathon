@@ -1,6 +1,6 @@
 # Football tactics playbook
 
-The football knowledge our analyst (Sonia) and the Q&A agent explain from. Written by us, in our own words, from general football knowledge (see [Further reading](#further-reading)); nothing is copied from another source.
+The football knowledge our analyst (Roy) and the Q&A agent explain from. Written by us, in our own words, from general football knowledge (see [Further reading](#further-reading)); nothing is copied from another source.
 
 **How the agents use it.** Each concept has the same parts, so code can load just the section a moment needs into an agent's context:
 

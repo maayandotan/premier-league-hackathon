@@ -151,7 +151,7 @@ def test_long_answers_are_shortened_once():
     assert "MAX_WORDS: 40" in calls[0] and "at most 40 words" in calls[1]
 
 
-def test_sonia_remembers_the_conversation():
+def test_roy_remembers_the_conversation():
     """A follow-up ("how many has he scored?") needs the earlier question to know who "he" is."""
     from app.agents.qa import HISTORY, NOT_SURE
 
@@ -169,7 +169,7 @@ def test_sonia_remembers_the_conversation():
     asyncio.run(qa.answer("Who is Ferro?", 5, 0, ViewerProfile()))
     asyncio.run(qa.answer("How many goals has he scored?", 6, 0, ViewerProfile()))
     assert "CONVERSATION SO FAR" not in qa.agent.inputs[0]
-    assert "Viewer: Who is Ferro?\nSonia: M. Ferro is Northbridge's centre forward." in qa.agent.inputs[1]
+    assert "Viewer: Who is Ferro?\nRoy: M. Ferro is Northbridge's centre forward." in qa.agent.inputs[1]
     assert list(qa.history)[-1] == ("How many goals has he scored?", "He has scored once in the league.")
     for i in range(HISTORY + 2):
         qa.history.append((f"q{i}", f"a{i}"))

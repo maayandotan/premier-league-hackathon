@@ -17,7 +17,7 @@ export function BeginnerGuide() {
           <div key={term}><dt>{term}</dt><dd>{text}</dd></div>
         ))}
       </dl>
-      <p className="stat-note">Ask Sonia about anything else, any time: the match keeps going.</p>
+      <p className="stat-note">Ask Roy about anything else, any time: the match keeps going.</p>
     </section>
   )
 }

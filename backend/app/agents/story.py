@@ -3,8 +3,8 @@
 Two parts, like everything else here (code decides, the model writes):
 - MatchLog (code): what happened and what was said on air, with the minute. Exact: goals with the
   score and the route of the attack, red cards, penalties, big chances, each tactical pattern the
-  moment it first shows up, and Sonia's own lines. It's what lets her say "as we said at 64'"
-  truthfully: code finds the line she really said.
+  moment it first shows up, and Roy's own lines. It's what lets him say "as we said at 64'"
+  truthfully: code finds the line he really said.
 - Storyteller (model): turns the log into a short story every STORY_EVERY match minutes, in the
   background (never on the live path), and writes the recaps at the viewer's level. Checked like
   the other agents: no number that isn't in what it was given; if it fails, the old story stays.
@@ -107,10 +107,10 @@ class MatchLog:
         return new
 
     def said(self, minute: int, text: str) -> None:
-        self.entries.append(Entry(minute, "said", f'Sonia said: "{text}"'))
+        self.entries.append(Entry(minute, "said", f'Roy said: "{text}"'))
 
     def earlier_line(self, words: list[str], team: str, before_minute: int, gap: int = 3) -> Entry | None:
-        """The latest thing Sonia said, at least `gap` minutes ago, that names the team and any of
+        """The latest thing Roy said, at least `gap` minutes ago, that names the team and any of
         the words: what a goal can pay off ("down the right", "pressing high")."""
         short = team.split()[0].lower()
         for entry in reversed(self.entries):
@@ -158,7 +158,7 @@ class Storyteller:
         self.story = text
 
     async def recap(self, which: str, level: str, facts: dict[str, str]) -> str | None:
-        """The half-time or full-time recap at the viewer's level, or None (then Sonia's usual
+        """The half-time or full-time recap at the viewer's level, or None (then Roy's usual
         summary is used)."""
         if not self.agent:
             return None

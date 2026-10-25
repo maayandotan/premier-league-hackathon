@@ -10,7 +10,7 @@ type MicState = 'idle' | 'listening' | 'error'
  * Ask the analyst a question mid-match (#18), by typing or with the microphone (#21).
  * The mic is a toggle: press to talk, press again to stop and send. Typing always works,
  * even while listening, so the viewer can never be locked out of asking.
- * The match keeps going; Sonia answers in a few seconds.
+ * The match keeps going; Roy answers in a few seconds.
  */
 export function QuestionBox({ open, fullTime, waiting, onAsk, onListening }: {
   open: boolean // during the match and after full time
@@ -73,8 +73,8 @@ export function QuestionBox({ open, fullTime, waiting, onAsk, onListening }: {
         </button>
         <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} disabled={!open}
           placeholder={listening ? 'Listening… press the mic again to send'
-            : fullTime ? 'Full time: ask Sonia about the match…'
-            : open ? 'Ask Sonia about the match…' : 'Kick off to ask questions'}
+            : fullTime ? 'Full time: ask Roy about the match…'
+            : open ? 'Ask Roy about the match…' : 'Kick off to ask questions'}
           aria-label="Your question" />
         <button type="submit" disabled={!open || !text.trim()}>Ask</button>
       </div>
@@ -85,7 +85,7 @@ export function QuestionBox({ open, fullTime, waiting, onAsk, onListening }: {
           ) : listening ? (
             <span className="thinking">Listening… press the mic again when you're done</span>
           ) : waiting ? (
-            <span className="thinking">Sonia is thinking… the match goes on</span>
+            <span className="thinking">Roy is thinking… the match goes on</span>
           ) : (
             (fullTime ? FULL_TIME_SUGGESTIONS : SUGGESTIONS).map((s) => (
               <button key={s} type="button" className="chip" onClick={() => onAsk(s)}>{s}</button>

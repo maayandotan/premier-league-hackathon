@@ -1,9 +1,9 @@
 """Stress test: several viewers watch full matches at once, asking questions and switching levels.
 
 Plays every scenario at the same time against a running server, with the real agents and voices.
-Each viewer asks a question right after every goal (the hardest moment: Guy, Sonia, the roar and
+Each viewer asks a question right after every goal (the hardest moment: Davis, Roy, the roar and
 the answer all at once) plus a few at random, and changes level mid-match. Then it reports, per
-match: how fast Guy called moments, how often the template fallback was used, how many
+match: how fast Davis called moments, how often the template fallback was used, how many
 questions got answers and how fast, the audio clips, and any errors.
 
 Run from backend/ with the server running:
@@ -31,7 +31,7 @@ class Report:
     events: int = 0
     goals: int = 0
     lines: dict[str, int] = field(default_factory=dict)  # "caller/model", "analyst/model", ...
-    call_delays: list[float] = field(default_factory=list)  # seconds from event to Guy's line
+    call_delays: list[float] = field(default_factory=list)  # seconds from event to Davis's line
     asked: dict[str, float] = field(default_factory=dict)  # question id -> time asked
     answer_delays: list[float] = field(default_factory=list)
     audio: int = 0
@@ -140,7 +140,7 @@ async def main() -> None:
               f"{report.goals} goals, "
               f"final {report.final_score}")
         print(f"   lines: {dict(sorted(report.lines.items()))}, audio clips {report.audio}")
-        print(f"   Guy after the event: {describe(report.call_delays)}")
+        print(f"   Davis after the event: {describe(report.call_delays)}")
         print(f"   questions answered {answered}/{len(report.asked)}: {describe(report.answer_delays)}")
         for text in report.sample_answers:
             print(f"     e.g. {text}")

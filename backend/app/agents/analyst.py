@@ -12,9 +12,9 @@ Personalization (#15, spikes/agents/levels_step_*.py):
 - Tools speak in words where we don't want numbers spoken ("Westvale, slightly" not "-0.3").
 - Too long? Ask the model once to shorten (keeping the insight) instead of cutting the end,
   which removed the punchline.
-Speed: with tools, each line took 2-3 model round trips (~6 s against a 7 s deadline, so she was
+Speed: with tools, each line took 2-3 model round trips (~6 s against a 7 s deadline, so he was
 often silent). Now code gathers the FACTS the angle needs and the model writes in one call.
-Facts are grouped by team (by topic, she re-paired numbers with the wrong team), and every line is
+Facts are grouped by team (by topic, he re-paired numbers with the wrong team), and every line is
 checked in code before it's spoken (checker.py): one retry if it's wrong, then silence.
 """
 import asyncio
@@ -280,7 +280,7 @@ class Analyst:
     async def analyse(self, event: MatchEvent, moment: Moment, viewer: ViewerProfile,
                       context: dict[str, str] | None = None, angle: str | None = None) -> str | None:
         """One or two sentences at the viewer's level; None without a model or when too slow.
-        The pipeline can add context (the story so far, what she said earlier) and its own angle."""
+        The pipeline can add context (the story so far, what he said earlier) and its own angle."""
         if not self.agent:
             return None
         context = context or {}

@@ -287,7 +287,7 @@ class QuestionAnswerer:
                        "question names someone else)")
         if self.history:  # code keeps the conversation: only what the viewer actually heard
             prompt += "\nCONVERSATION SO FAR (oldest first):\n" + "\n".join(
-                f"Viewer: {q}\nSonia: {a}" for q, a in self.history)
+                f"Viewer: {q}\nRoy: {a}" for q, a in self.history)
         said = {*re.findall(r"\b\d+(?:\.\d+)?\b", question), str(minute), str(second)}
         try:
             with recording() as tool_results:

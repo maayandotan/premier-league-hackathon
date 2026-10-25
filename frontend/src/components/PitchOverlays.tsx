@@ -19,7 +19,7 @@ export function GoalBanner({ events, score }: { events: RankedEvent[]; score: st
   )
 }
 
-const VOICE_NAMES: Record<string, string> = { caller: 'Guy · Play-by-play', analyst: 'Sonia · Analyst' }
+const VOICE_NAMES: Record<string, string> = { caller: 'Davis · Play-by-play', analyst: 'Roy · Analyst' }
 
 /** Live subtitles: the line being spoken right now, as a broadcast lower third. */
 export function LowerThird({ lines, speakingId }: { lines: CommentaryLine[]; speakingId: string | null }) {
@@ -27,7 +27,7 @@ export function LowerThird({ lines, speakingId }: { lines: CommentaryLine[]; spe
   if (!line) return null
   return (
     <div key={line.id} className={`lower-third ${line.speaker}`} aria-hidden="true">
-      <span className="lt-name">{line.reply_to ? 'Sonia · Answering you' : VOICE_NAMES[line.speaker] ?? line.speaker}</span>
+      <span className="lt-name">{line.reply_to ? 'Roy · Answering you' : VOICE_NAMES[line.speaker] ?? line.speaker}</span>
       <span className="lt-text">{line.text}</span>
     </div>
   )
