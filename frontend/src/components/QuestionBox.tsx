@@ -1,40 +1,84 @@
 import { type FormEvent, useRef, useState } from 'react'
 import { MicIcon } from './Icons'
+import type { Level } from './LevelPicker'
 
-const SUGGESTIONS = ['What did I miss?', 'Why was that a foul?', 'Who has been better?']
-const FULL_TIME_SUGGESTIONS = ['Who was the better team?', 'What was the key moment?', 'Was the result deserved?']
+const LEVEL_SUGGESTIONS: Record<Level, string[]> = {
+  beginner: [
+    'Why was that a foul?',
+    'Explain offside rule',
+    'What did I miss?',
+  ],
+  fan: [
+    'Who has been better so far?',
+    'Was that a red card?',
+    'How does this affect the table?',
+  ],
+  analyst: [
+    'Analyze our pressing structure',
+    'What is the xG difference?',
+    'How are half-spaces exploited?',
+  ],
+}
+
+const LEVEL_FULL_TIME_SUGGESTIONS: Record<Level, string[]> = {
+  beginner: [
+    'Who won and why?',
+    'What was the key moment?',
+    'Explain the final score',
+  ],
+  fan: [
+    'Who was the better team?',
+    'Was the result deserved?',
+    'How does this affect our season form?',
+  ],
+  analyst: [
+    'Detailed xG & shot quality breakdown',
+    'Tactical shifts that decided the match',
+    'Possession efficiency analysis',
+  ],
+}
 
 type MicState = 'idle' | 'listening' | 'error'
 
 /**
  * Ask the analyst a question mid-match (#18), by typing or with the microphone (#21).
- * The mic is a toggle: press to talk, press again to stop and send. Typing always works,
- * even while listening, so the viewer can never be locked out of asking.
- * The match keeps going; Roy answers in a few seconds.
+ * Suggestions are adapted dynamically to the viewer's level (Beginner, Fan, Analyst).
  */
-export function QuestionBox({ open, fullTime, waiting, onAsk, onListening }: {
-  open: boolean // during the match and after full time
+export function QuestionBox({
+  open,
+  fullTime,
+  waiting,
+  level = 'fan',
+  onAsk,
+  onListening,
+}: {
+  open: boolean
   fullTime: boolean
   waiting: boolean
+  level?: Level
   onAsk: (q: string) => void
-  onListening: (on: boolean) => void // the commentators go quiet while the viewer speaks
+  onListening: (on: boolean) => void
 }) {
   const [text, setText] = useState('')
   const [mic, setMic] = useState<MicState>('idle')
   const [micError, setMicError] = useState('')
   const stopListening = useRef<AbortController | null>(null)
 
+  const suggestions = fullTime
+    ? LEVEL_FULL_TIME_SUGGESTIONS[level] ?? LEVEL_FULL_TIME_SUGGESTIONS.fan
+    : LEVEL_SUGGESTIONS[level] ?? LEVEL_SUGGESTIONS.fan
+
   const submit = (event: FormEvent) => {
     event.preventDefault()
     if (!text.trim()) return
-    stopListening.current?.abort() // typed while listening: stop the mic, the typed text wins
+    stopListening.current?.abort()
     onAsk(text.trim())
     setText('')
   }
 
   const toggleMic = async () => {
     if (mic === 'listening') {
-      stopListening.current?.abort() // second press: stop and send what was heard
+      stopListening.current?.abort()
       return
     }
     const controller = new AbortController()
@@ -44,18 +88,21 @@ export function QuestionBox({ open, fullTime, waiting, onAsk, onListening }: {
     setText('')
     onListening(true)
     try {
-      // The Speech SDK is large: load it only when someone actually presses the mic.
       const { listenOnce } = await import('../audio/speechInput')
-      const heard = await listenOnce(setText, controller.signal) // words appear as you speak
+      const heard = await listenOnce(setText, controller.signal)
       if (heard.trim()) onAsk(heard.trim())
       else if (!controller.signal.aborted) setMicError("Didn't catch that. Try again?")
       setText('')
       setMic('idle')
     } catch (error) {
       setMic('error')
-      setMicError(error instanceof Error && /permission|denied|NotAllowed/i.test(error.message)
-        ? 'Microphone blocked. Allow it in the browser to ask by voice.'
-        : error instanceof Error ? error.message : 'The microphone did not work.')
+      setMicError(
+        error instanceof Error && /permission|denied|NotAllowed/i.test(error.message)
+          ? 'Microphone blocked. Allow it in the browser to ask by voice.'
+          : error instanceof Error
+            ? error.message
+            : 'The microphone did not work.',
+      )
     } finally {
       stopListening.current = null
       onListening(false)
@@ -66,29 +113,59 @@ export function QuestionBox({ open, fullTime, waiting, onAsk, onListening }: {
   return (
     <form className="ask" onSubmit={submit} aria-label="Ask the analyst">
       <div className="ask-row">
-        <button type="button" className={`mic ${listening ? 'on' : ''}`} onClick={toggleMic} disabled={!open}
-          aria-pressed={listening} aria-label={listening ? 'Stop and send' : 'Ask by voice'}
-          title={listening ? 'Stop and send' : 'Ask by voice'}>
+        <button
+          type="button"
+          className={`mic ${listening ? 'on' : ''}`}
+          onClick={toggleMic}
+          disabled={!open}
+          aria-pressed={listening}
+          aria-label={listening ? 'Stop and send' : 'Ask by voice'}
+          title={listening ? 'Stop and send' : 'Ask by voice'}
+        >
           {listening ? <span className="mic-dot" /> : <MicIcon />}
         </button>
-        <input value={text} onChange={(e) => setText(e.target.value)} maxLength={200} disabled={!open}
-          placeholder={listening ? 'Listening… press the mic again to send'
-            : fullTime ? 'Full time: ask Roy about the match…'
-            : open ? 'Ask Roy about the match…' : 'Kick off to ask questions'}
-          aria-label="Your question" />
-        <button type="submit" disabled={!open || !text.trim()}>Ask</button>
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          maxLength={200}
+          disabled={!open}
+          placeholder={
+            listening
+              ? 'Listening… press the mic again to send'
+              : fullTime
+                ? `Full time: ask Roy (${level} mode)…`
+                : open
+                  ? `Ask Roy (${level} mode)…`
+                  : 'Kick off to ask questions'
+          }
+          aria-label="Your question"
+        />
+        <button type="submit" disabled={!open || !text.trim()}>
+          Ask
+        </button>
       </div>
       {open && (
         <div className="ask-hints">
           {micError ? (
-            <span className="mic-error" role="status">{micError}</span>
+            <span className="mic-error" role="status">
+              {micError}
+            </span>
           ) : listening ? (
             <span className="thinking">Listening… press the mic again when you're done</span>
           ) : waiting ? (
             <span className="thinking">Roy is thinking… the match goes on</span>
           ) : (
-            (fullTime ? FULL_TIME_SUGGESTIONS : SUGGESTIONS).map((s) => (
-              <button key={s} type="button" className="chip" onClick={() => onAsk(s)}>{s}</button>
+            suggestions.map((s) => (
+              <button
+                key={s}
+                type="button"
+                className="chip ask-level-chip"
+                data-level={level}
+                onClick={() => onAsk(s)}
+                title={`Ask: "${s}"`}
+              >
+                {s}
+              </button>
             ))
           )}
         </div>

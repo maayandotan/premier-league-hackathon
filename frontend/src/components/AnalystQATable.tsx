@@ -1,26 +1,43 @@
 import { useState, useMemo } from 'react'
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 import { ClockIcon } from './Icons'
+import type { Level } from './LevelPicker'
 
 interface AnalystQATableProps {
   questions: ViewerQuestion[]
   lines: CommentaryLine[]
   speakingId: string | null
+  level?: Level
   onAsk?: (questionText: string) => void
   canAsk?: boolean
 }
 
-const DEFAULT_SUGGESTIONS = [
-  'Why was that a foul?',
-  'Who has been better so far?',
-  'What is offside?',
-  'What was the key tactical change?',
-]
+const LEVEL_DEFAULT_SUGGESTIONS: Record<Level, string[]> = {
+  beginner: [
+    'Why was that a foul?',
+    'Explain offside rule',
+    'What did I miss?',
+    'What do the yellow cards mean?',
+  ],
+  fan: [
+    'Who has been better so far?',
+    'Who should be substituted?',
+    'Was that a red card?',
+    'How does this affect the table?',
+  ],
+  analyst: [
+    'Analyze our pressing structure',
+    'What is the xG difference?',
+    'How are half-spaces exploited?',
+    'What was the key tactical change?',
+  ],
+}
 
 export function AnalystQATable({
   questions,
   lines,
   speakingId,
+  level = 'analyst',
   onAsk,
   canAsk = true,
 }: AnalystQATableProps) {
@@ -59,6 +76,8 @@ export function AnalystQATable({
     })
   }, [qaItems, search])
 
+  const suggestions = LEVEL_DEFAULT_SUGGESTIONS[level] ?? LEVEL_DEFAULT_SUGGESTIONS.analyst
+
   return (
     <section className="card qa-table-card" aria-label="Questions Table">
       <div className="qa-header">
@@ -67,7 +86,7 @@ export function AnalystQATable({
           <div>
             <h2>Questions</h2>
             <p className="qa-subtitle">
-              Your questions and Roy's real-time personalized analysis
+              Your questions and Roy's real-time personalized analysis ({level} mode)
             </p>
           </div>
         </div>
@@ -113,9 +132,9 @@ export function AnalystQATable({
           </p>
           {onAsk && canAsk && (
             <div className="qa-empty-suggestions">
-              <span className="qa-suggestions-label">Try asking:</span>
+              <span className="qa-suggestions-label">Try asking ({level} level):</span>
               <div className="qa-suggestions-list">
-                {DEFAULT_SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
