@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BroadcastAudio } from '../audio/broadcastAudio'
 import { parseClock } from '../audio/clipQueue'
-import type { CommentaryLine, FeedMessage, MatchInfo, MatchStats, RankedEvent, ViewerQuestion } from './types'
+import type { CommentaryLine, FeedMessage, MatchInfo, MatchStats, RankedEvent, ViewerQuestion, XgPoint } from './types'
 
 export type FeedStatus = 'idle' | 'live' | 'ended' | 'error'
 
@@ -24,6 +24,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel, team }
   const [lines, setLines] = useState<CommentaryLine[]>([])
   const [questions, setQuestions] = useState<ViewerQuestion[]>([])
   const [stats, setStats] = useState<MatchStats | null>(null)
+  const [xgHistory, setXgHistory] = useState<XgPoint[]>([]) // each team's xG, minute by minute
   const socket = useRef<WebSocket | null>(null)
   const [speakingId, setSpeakingId] = useState<string | null>(null)
   const [audio] = useState(() => new BroadcastAudio(setSpeakingId))
@@ -47,6 +48,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel, team }
     setLines([])
     setQuestions([])
     setStats(null)
+    setXgHistory([])
     setError(null)
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws'
     const query = new URLSearchParams({ source, speed: String(speed), start: String(start), level })
@@ -104,6 +106,9 @@ export function useMatchFeed({ source, speed, start, level: initialLevel, team }
           break
         case 'stats':
           setStats(data.stats)
+          setXgHistory((prev) => (prev.length && prev[prev.length - 1].minute === data.stats.minute
+            ? [...prev.slice(0, -1), { minute: data.stats.minute, xg: data.stats.xg }]
+            : [...prev, { minute: data.stats.minute, xg: data.stats.xg }]))
           break
         case 'end':
           ended = true
@@ -157,6 +162,6 @@ export function useMatchFeed({ source, speed, start, level: initialLevel, team }
 
   return {
     status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask, setListening,
-    toggleMute, start: begin, connected,
+    toggleMute, start: begin, connected, xgHistory,
   }
 }
