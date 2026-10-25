@@ -30,6 +30,7 @@ from app.events.models import (
     ShotDetails,
     SubstitutionDetails,
 )
+from app.league.clubs import LEAGUE_NAME
 from app.stats.xg import shot_xg
 from app.synthetic.scenarios import Beat, Scenario, Style
 from app.synthetic.squads import FORMATION_433, SQUADS, SquadPlayer, team_info
@@ -142,7 +143,7 @@ class MatchSimulator:
         return Match(
             info=MatchInfo(
                 id=self.match_id, home=team_info(self.home), away=team_info(self.away),
-                competition="Synthetic League", source="synthetic",
+                competition=LEAGUE_NAME, source="synthetic",
                 extra={"scenario": self.scenario.name, "seed": self.seed,
                        "description": self.scenario.description},
             ),

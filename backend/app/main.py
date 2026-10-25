@@ -17,6 +17,9 @@ from app.agents.qa import MAX_QUESTION_CHARS, QuestionAnswerer
 from app.agents.viewer import ViewerProfile
 from app.config import REPO_ROOT, settings
 from app.events.models import MatchEvent
+from app.league.clubs import CLUB_BY_NAME
+from app.league.db import league
+from app.league.season import CURRENT_ROUND, FEATURED_SOURCE, summarize
 from app.match.replay import replay
 from app.match.sources import UnknownSource, load_source
 from app.speech.token import speech_token
@@ -36,6 +39,22 @@ app.mount("/static/audio", StaticFiles(directory=REPO_ROOT / "assets" / "audio")
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/api/league")
+def league_overview() -> dict:
+    """The Meridian League for the site: today's matchday, the table and the top scorers."""
+    lg = league()
+    return {**lg.summary(), "fixtures": lg.todays_fixtures(), "table": lg.table(),
+            "top_scorers": lg.top_scorers()}
+
+
+@app.get("/api/league/club")
+def league_club(name: str) -> dict:
+    """One club's season: position, points, form, captain, top scorers and assisters."""
+    if name not in CLUB_BY_NAME:
+        raise HTTPException(404, f"no club called {name!r}")
+    return league().club(name)
 
 
 @app.get("/api/match-info")
@@ -79,7 +98,8 @@ async def match_feed(ws: WebSocket) -> None:
     await ws.accept()
     params = ws.query_params
     try:
-        match = load_source(params.get("source", "demo"))
+        source_name = params.get("source", "demo")
+        match = load_source(source_name)
     except UnknownSource as e:
         await ws.send_json({"type": "error", "message": str(e)})
         await ws.close()
@@ -180,6 +200,8 @@ async def match_feed(ws: WebSocket) -> None:
         if tasks:  # let the last lines finish
             await asyncio.wait(tasks, timeout=10)
         pipeline.full_time = True
+        if is_league_match(source_name):  # the result goes into the league's table
+            league().record(summarize(match, CURRENT_ROUND))
         await send({"type": "end", "stats": stats.snapshot()})
         # Full time isn't the end of the conversation: viewers can still ask about the match.
         # Keep listening until they leave, or for POST_MATCH_SECONDS.
@@ -195,6 +217,10 @@ async def match_feed(ws: WebSocket) -> None:
             task.cancel()
         if speech:
             await speech.close()
+
+
+def is_league_match(source: str) -> bool:
+    return source.startswith("fixture:") or source == FEATURED_SOURCE
 
 
 # The built website (frontend/dist), served by this same app in production: one container,

@@ -22,10 +22,12 @@ from app.agents.analyst import build_tools as stats_tools
 from app.agents.analyst import fit_to_words
 from app.agents.checker import check_answer, recorded, recording
 from app.agents.client import chat_client
-from app.agents.describe import event_fields
+from app.agents.describe import event_fields, ordinal
 from app.agents.tactics import CONCEPTS, LEVELS, PLAYBOOK_RULES, find_concept
 from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
+from app.league.clubs import CLUB_BY_NAME
+from app.league.db import league
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment
 
@@ -86,6 +88,8 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   effort" = hard. Never judge a chance without it.
 - For "what did I miss?", a catch-up, or anything about earlier in the match, call get_match_story
   (and get_key_moments): tell it as a short story at VIEWER_LEVEL, in order.
+- For the league (points, the table, form, a club's top scorer or captain, the season so far), call
+  get_league_table or get_club_season. Say it's the table before today's match.
 - For anything about how the match is going (including the score), call get_match_picture: it has
   the score, who's on top, possession, shots and xG together. No claims beyond what it returns:
   no "likely", no guessing.
@@ -105,11 +109,6 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
 
 
 WORD_LIMITS: dict[str, int] = {"beginner": 40, "fan": 40, "analyst": 50}
-
-
-def ordinal(n: int) -> str:
-    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
-    return f"{n}{suffix}"
 
 
 def when(event: MatchEvent, asked: int | None = None) -> str:
@@ -183,6 +182,21 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
         final-third entries by side over the whole match."""
         return stats.patterns.summary()
 
+    def get_league_table() -> dict:
+        """The Meridian League table BEFORE this match (it updates at full time): position, points,
+        played, goal difference and form (last 5, oldest first) for every club, and the top scorers."""
+        lg = league()
+        keys = ("position", "team", "played", "points", "goal_difference", "form")
+        return {"table": [{key: row[key] for key in keys} for row in lg.table()],
+                "top_scorers": lg.top_scorers()}
+
+    def get_club_season(team: Annotated[str, "A club's full name, e.g. Northbridge FC"]) -> dict:
+        """A club's league season BEFORE this match: position, points, record, form, captain, its top
+        scorers and assisters this season."""
+        if team not in CLUB_BY_NAME:
+            return {"error": f"no club called {team!r}", "clubs": list(CLUB_BY_NAME)}
+        return league().club(team)
+
     def get_match_picture() -> dict:
         """How the match is going: the score and minute, who is on top recently (in words), possession
         overall and in the last 10 minutes (%), shots overall and in the last 10 minutes, and expected
@@ -199,7 +213,7 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
         return story() if story else {"story": "(no story yet)"}
 
     tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_patterns, get_match_story,
-             get_match_picture,
+             get_league_table, get_club_season, get_match_picture,
              momentum["get_shot_quality"], momentum["get_pass_rarity"]]
     return [recorded(tool) for tool in tools]  # so the answer can be checked against what they said
 

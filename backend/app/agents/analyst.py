@@ -26,10 +26,12 @@ from agent_framework import Agent
 
 from app.agents.checker import check_line, numbers_in
 from app.agents.client import chat_client
-from app.agents.describe import as_text, event_fields
+from app.agents.describe import as_text, event_fields, ordinal
 from app.agents.tactics import CONCEPTS, Concept
 from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
+from app.league.clubs import CLUB_BY_NAME
+from app.league.db import league
 from app.stats.engine import StatsEngine
 from app.stats.geometry import METERS_PER_UNIT
 from app.stats.ranker import Moment
@@ -185,6 +187,15 @@ def facts_for(event: MatchEvent, moment: Moment, stats: StatsEngine) -> dict[str
         facts[f"{team}, last 10 min"] = line
     if momentum["on_top"] == "neither team":
         facts["more dangerous, last 10 min"] = "neither team, evenly matched"
+    for team in (stats.home, stats.away):
+        if team in CLUB_BY_NAME:  # a league club: where it stands before today
+            row = next(r for r in league().table() if r["team"] == team)
+            facts[f"{team}, league before today"] = (
+                f"{ordinal(row['position'])} of 20, {row['points']} points from {row['played']} games, "
+                f"form {row['form'] or 'none'}")
+    if event.is_goal and event.player and event.team in CLUB_BY_NAME:
+        before = league().player_goals(event.player)
+        facts[f"{event.player}, league goals before today"] = str(before)
     for team in (stats.home, stats.away):
         for i, pattern in enumerate(stats.patterns.patterns(team), 1):
             facts[f"{team}, pattern {i}"] = pattern

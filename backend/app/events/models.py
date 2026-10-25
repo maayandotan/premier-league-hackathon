@@ -104,6 +104,8 @@ class Player(BaseModel):
 
 class Team(BaseModel):
     name: str
+    code: str | None = None  # 3 letters, like a TV scorebug
+    color: str | None = None  # the club colour (hex)
     players: list[Player] = Field(default_factory=list)
 
 

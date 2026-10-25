@@ -80,3 +80,9 @@ def event_fields(event: MatchEvent, moment: Moment, stats: StatsEngine) -> dict:
 
 def as_text(fields: dict) -> str:
     return "\n".join(f"{key}: {value}" for key, value in fields.items())
+
+
+def ordinal(n: int) -> str:
+    """1 -> "1st", 22 -> "22nd": for minutes and league positions."""
+    suffix = "th" if 10 <= n % 100 <= 20 else {1: "st", 2: "nd", 3: "rd"}.get(n % 10, "th")
+    return f"{n}{suffix}"

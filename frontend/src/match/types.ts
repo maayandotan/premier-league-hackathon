@@ -41,8 +41,42 @@ export interface MatchInfo {
   id: string
   source: string
   competition?: string
-  home: { name: string; players?: Player[] }
-  away: { name: string; players?: Player[] }
+  home: TeamInfo
+  away: TeamInfo
+}
+
+export interface TeamInfo {
+  name: string
+  code?: string
+  color?: string
+  players?: Player[]
+}
+
+export interface TableRow {
+  position: number
+  team: string
+  played: number
+  won: number
+  drawn: number
+  lost: number
+  goal_difference: number
+  points: number
+  form: string // last 5, oldest first: "WDLWW"
+}
+
+export interface LeagueFixture {
+  home: string
+  away: string
+  source: string
+  result: string | null
+}
+
+export interface League {
+  league: string
+  matchday: number
+  fixtures: LeagueFixture[]
+  table: TableRow[]
+  top_scorers: { player: string; team: string; goals: number }[]
 }
 
 export interface CommentaryLine {

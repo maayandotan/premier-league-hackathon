@@ -1,4 +1,4 @@
-import type { MatchInfo, Player } from '../match/types'
+import type { LeagueFixture, MatchInfo, Player } from '../match/types'
 import { PlayIcon, SpeakerIcon } from './Icons'
 import type { Level } from './LevelPicker'
 import { Crest } from './Scorebug'
@@ -16,6 +16,14 @@ const CHOICES: { id: Level; label: string; title: string; hint: string }[] = [
   { id: 'fan', label: 'Fan', title: 'I follow the game', hint: 'Clear football talk, a few numbers' },
   { id: 'analyst', label: 'Analyst', title: 'Give me the numbers', hint: 'xG, possession and the tactics' },
 ]
+
+/** The page's URL with another match: the other options (level, speed) stay, the start minute goes. */
+function withSource(source: string): string {
+  const params = new URLSearchParams(location.search)
+  params.set('source', source)
+  params.delete('start')
+  return `?${params}`
+}
 
 function Lineup({ players, side }: { players: Player[]; side: 'home' | 'away' }) {
   const starters = players.filter((p) => p.starter !== false)
@@ -35,19 +43,43 @@ function Lineup({ players, side }: { players: Player[]; side: 'home' | 'away' })
 
 /** Before kick-off, like a broadcast's opening: the teams, the line-ups, who's commentating, and the
  * viewer's level, chosen before the first line is spoken. */
-export function PreMatch({ info, level, onLevel, onKickOff }: {
+export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, source }: {
   info: MatchInfo
   level: Level
   onLevel: (level: Level) => void
   onKickOff: () => void
+  fixtures?: LeagueFixture[] // today's matchday: pick another match to watch
+  matchday?: number
+  source: string
 }) {
   return (
     <section className="card prematch" aria-label="Before kick-off">
-      <span className="eyebrow">{info.competition ?? 'Match'} · Kick-off</span>
+      {fixtures && fixtures.length > 0 && (
+        <nav className="pm-fixtures" aria-label={`Matchday ${matchday} fixtures`}>
+          <span className="pm-fixtures-title">Matchday {matchday}: pick a match</span>
+          <div className="pm-fixture-list">
+            {fixtures.map((f) => (
+              <a key={f.source} href={withSource(f.source)} className={f.source === source ? 'active' : undefined}
+                aria-current={f.source === source ? 'true' : undefined}>
+                <span>{f.home}</span>
+                <span className="pm-fixture-score">{f.result ?? 'v'}</span>
+                <span>{f.away}</span>
+              </a>
+            ))}
+          </div>
+        </nav>
+      )}
+      <span className="eyebrow">{info.competition ?? 'Match'}{matchday ? ` · Matchday ${matchday}` : ''} · Kick-off</span>
       <div className="pm-teams">
-        <div className="pm-team home"><Crest name={info.home.name} side="home" /><span>{info.home.name}</span></div>
+        <div className="pm-team home">
+          <Crest name={info.home.name} side="home" code={info.home.code} color={info.home.color} />
+          <span>{info.home.name}</span>
+        </div>
         <span className="pm-vs">vs</span>
-        <div className="pm-team away"><span>{info.away.name}</span><Crest name={info.away.name} side="away" /></div>
+        <div className="pm-team away">
+          <span>{info.away.name}</span>
+          <Crest name={info.away.name} side="away" code={info.away.code} color={info.away.color} />
+        </div>
       </div>
       <div className="pm-lineups" aria-label="Starting line-ups">
         <Lineup players={info.home.players ?? []} side="home" />

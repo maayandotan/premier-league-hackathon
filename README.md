@@ -21,6 +21,7 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 - **Questions mid-match.** Voice or text, answered in the analyst's voice in a few seconds. "That" and "just now" are resolved from the moment the question was asked.
 - **It reads the game, not just the events.** Tactical detectors in code find patterns as they build (the side a team keeps attacking down, high pressing, quick counters, crossing, territory) and only claim one when there's enough of it. When a goal comes down a team's usual side, Sonia connects them: "25 of their 31 final-third entries this match came down the right".
 - **It remembers the match.** A match log in code (goals, red cards, big chances, each pattern as it appears, and what was said on air) feeds a Storyteller agent that keeps the story so far. When a goal pays off something Sonia said earlier, she says so with the real minute ("We flagged that right side at 66'"). She reads recaps at half-time and full time, and "What did I miss?" catches up a viewer who just joined.
+- **A whole league, not one match.** The Meridian League: 20 fictional clubs with their own squads, captains, colours and styles of play, a full fixture list, and ten matchdays already played. Pick any of today's ten fixtures; the result goes into the table at full time. Ask "where are they in the table?" or "who's their top scorer?" and the answer comes from the league's results.
 - **A broadcast, not a chatbot.** A ranker scores every event 0–10 so the commentators know when to speak and when to stay quiet, a goal cuts in over whatever is playing, and the crowd roars before the caller does.
 
 ## How it works
@@ -102,6 +103,7 @@ cd backend && .venv/bin/python -m scripts.generate_match comeback --seed 7
 | `backend/app/agents/` | The Caller, Analyst and Q&A agents and the producer pipeline |
 | `backend/app/stats/` | Stats engine, moment ranker, xG |
 | `backend/app/synthetic/` | Synthetic match generator |
+| `backend/app/league/` | The Meridian League: clubs, fixtures, season, results database |
 | `backend/app/speech/` | Azure AI Speech |
 | `frontend/` | React + TypeScript broadcast UI |
 | `data/synthetic/` | Generated matches |
