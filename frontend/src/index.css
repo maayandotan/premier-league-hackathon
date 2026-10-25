@@ -198,6 +198,123 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
 /* ---------- Commentary feed ---------- */
 .feed { display: flex; flex-direction: column; }
 .feed ol { list-style: none; margin: 0; padding: 0 4px 0 0; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; }
+.feed-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.feed-tabs {
+  display: inline-flex;
+  background: #060e1a;
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  gap: 3px;
+}
+.feed-tab-btn {
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.feed-tab-btn:hover {
+  color: #fff;
+}
+.feed-tab-btn.active {
+  background: #13243f;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+.feed-tab-badge {
+  background: #a855f7;
+  color: #fff;
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-weight: 800;
+}
+.feed-qa-view {
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.feed-qa-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 4px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.feed-qa-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  background: rgba(10, 20, 38, 0.6);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  animation: slide-in 0.3s ease-out;
+}
+.feed-qa-item.answered {
+  border-left: 3px solid #14b8a6;
+}
+.feed-qa-item.pending {
+  border-left: 3px solid var(--away);
+}
+.feed-qa-q, .feed-qa-a {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+.qa-pill-pending {
+  margin-left: auto;
+  font-size: 0.68rem;
+  color: #5eead4;
+  background: rgba(20, 184, 166, 0.15);
+  border: 1px solid rgba(20, 184, 166, 0.3);
+  padding: 1px 7px;
+  border-radius: 999px;
+  animation: pulse 1s ease-in-out infinite;
+}
+.qa-on-air-pill {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(244, 63, 94, 0.2);
+  color: #fda4af;
+  font-weight: 700;
+}
+.feed-qa-waiting {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 44px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  color: #5eead4;
+  background: rgba(20, 184, 166, 0.08);
+  border-radius: 6px;
+  border: 1px dashed rgba(20, 184, 166, 0.3);
+}
+.feed-qa-a[data-speaking='true'] .bubble {
+  border-color: #a855f7;
+  box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.25);
+}
 
 .line { padding: 8px 12px; border-left: 2px solid var(--line); border-radius: 0 8px 8px 0; animation: slide-in 0.3s ease-out; transition: background 0.2s, border-color 0.2s; }
 @keyframes slide-in { from { opacity: 0; transform: translateY(-6px); } }
@@ -787,6 +904,58 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
     font-size: 0.85rem;
   }
 }
+
+.side .qa-table-card {
+  padding: 14px;
+}
+.side .qa-table-wrapper {
+  max-height: 380px;
+  overflow: auto;
+}
+.side .qa-header {
+  gap: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+}
+.side .qa-header h2 {
+  font-size: 1.05rem;
+}
+.side .qa-toolbar {
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.side .qa-filter-tabs {
+  padding: 2px;
+  gap: 2px;
+}
+.side .qa-tab {
+  padding: 4px 10px;
+  font-size: 0.78rem;
+}
+.side .qa-search-box input {
+  width: 100%;
+  max-width: 180px;
+  font-size: 0.8rem;
+  padding: 5px 28px 5px 12px;
+}
+.side .qa-table th, .side .qa-table td {
+  padding: 10px 8px;
+  font-size: 0.84rem;
+}
+.side .qa-empty-state {
+  padding: 20px 14px;
+}
+.side .qa-empty-icon {
+  font-size: 1.8rem;
+  margin-bottom: 6px;
+}
+.side .qa-empty-state h3 {
+  font-size: 1rem;
+}
+.side .qa-empty-state p {
+  font-size: 0.84rem;
+}
+
 
 /* ---------- Phones and tablets: the question bar stays at the bottom of the screen ---------- */
 @media (max-width: 960px) {
