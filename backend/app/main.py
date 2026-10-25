@@ -30,7 +30,7 @@ log = logging.getLogger(__name__)
 
 POST_MATCH_SECONDS = 10 * 60  # after full time, questions stay open this long
 
-app = FastAPI(title="Match Intelligence")
+app = FastAPI(title="Your Call")
 app.add_middleware(CORSMiddleware, allow_origins=[settings.frontend_origin], allow_methods=["*"])
 # Crowd ambience and goal roar (CC BY 4.0, see assets/audio/CREDITS.md)
 app.mount("/static/audio", StaticFiles(directory=REPO_ROOT / "assets" / "audio"), name="audio")

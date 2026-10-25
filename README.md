@@ -1,4 +1,4 @@
-# Match Intelligence
+# Your Call
 
 **Live AI football commentary that adapts to you.** Two AI commentators call and explain a match at your level, from someone watching their first game to a seasoned analyst, and every number they say is computed from the match data, not guessed. Ask "why was that a foul?" by voice or text mid-match and get an answer without the match ever pausing.
 
