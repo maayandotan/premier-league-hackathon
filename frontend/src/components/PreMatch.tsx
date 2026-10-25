@@ -11,10 +11,10 @@ const SHORT: Record<string, string> = {
   'Center Defensive Midfield': 'DM', 'Right Center Midfield': 'CM', 'Left Center Midfield': 'CM',
   'Right Wing': 'RW', 'Left Wing': 'LW', 'Center Forward': 'CF',
 }
-const CHOICES: { id: Level; title: string; hint: string }[] = [
-  { id: 'beginner', title: 'New to football', hint: 'Everything explained, no jargon' },
-  { id: 'fan', title: 'I follow the game', hint: 'Clear football talk, a few numbers' },
-  { id: 'analyst', title: 'Give me the numbers', hint: 'xG, possession and the tactics' },
+const CHOICES: { id: Level; label: string; title: string; hint: string }[] = [
+  { id: 'beginner', label: 'Beginner', title: 'New to football', hint: 'Everything explained, no jargon' },
+  { id: 'fan', label: 'Fan', title: 'I follow the game', hint: 'Clear football talk, a few numbers' },
+  { id: 'analyst', label: 'Analyst', title: 'Give me the numbers', hint: 'xG, possession and the tactics' },
 ]
 
 function Lineup({ players, side }: { players: Player[]; side: 'home' | 'away' }) {
@@ -63,6 +63,7 @@ export function PreMatch({ info, level, onLevel, onKickOff }: {
           {CHOICES.map((c) => (
             <label key={c.id} className={level === c.id ? 'active' : ''}>
               <input type="radio" name="level" value={c.id} checked={level === c.id} onChange={() => onLevel(c.id)} />
+              <span className="pm-choice-level">{c.label}</span>
               <span className="pm-choice-title">{c.title}</span>
               <span className="pm-choice-hint">{c.hint}</span>
             </label>
