@@ -1,7 +1,8 @@
 import type { MatchInfo, MatchStats } from '../match/types'
 
-function Row({ label, home, away, format = (v) => String(v) }: {
+function Row({ label, home, away, format = (v) => String(v), hint }: {
   label: string
+  hint?: string // a plain-words line under the bar, for beginners
   home: number
   away: number
   format?: (v: number) => string
@@ -17,14 +18,27 @@ function Row({ label, home, away, format = (v) => String(v) }: {
         <span className="fill home" style={{ width: `${share}%` }} />
         <span className="fill away" style={{ width: `${100 - share}%` }} />
       </div>
+      {hint && <p className="stat-hint">{hint}</p>}
     </div>
   )
 }
 
-/** Head-to-head numbers, like a half-time graphic. */
-export function StatBars({ info, stats }: { info: MatchInfo; stats: MatchStats }) {
+/** Head-to-head numbers, like a half-time graphic. A beginner sees two, in plain words, each explained;
+ * a fan the usual set; an analyst the lot. */
+export function StatBars({ info, stats, level = 'fan' }: { info: MatchInfo; stats: MatchStats; level?: string }) {
   const h = info.home.name
   const a = info.away.name
+  if (level === 'beginner') {
+    return (
+      <section className="card stats beginner" aria-label="Match stats">
+        <h2>The match in numbers</h2>
+        <Row label="Who has had the ball" home={stats.possession[h]} away={stats.possession[a]}
+          format={(v) => `${Math.round(v)}%`} hint="The team with more of the ball usually controls the game." />
+        <Row label="Shots at goal" home={stats.shots[h]} away={stats.shots[a]}
+          hint="Every attempt to score, whether it went in, was saved or missed." />
+      </section>
+    )
+  }
   return (
     <section className="card stats" aria-label="Match stats">
       <h2>Match stats</h2>
@@ -34,6 +48,12 @@ export function StatBars({ info, stats }: { info: MatchInfo; stats: MatchStats }
       <Row label="Shots" home={stats.shots[h]} away={stats.shots[a]} />
       <Row label="Expected goals" home={stats.xg[h]} away={stats.xg[a]} format={(v) => v.toFixed(2)} />
       <Row label="Progressive passes" home={stats.progressive_passes[h]} away={stats.progressive_passes[a]} />
+      {level === 'analyst' && (
+        <p className="stat-note">
+          Tempo: {stats.tempo.label} ({stats.tempo.possession_changes_per_min.toFixed(1)} possession changes a
+          minute) · Momentum {stats.momentum.value > 0 ? '+' : ''}{stats.momentum.value.toFixed(2)} (home +1, away −1)
+        </p>
+      )}
     </section>
   )
 }

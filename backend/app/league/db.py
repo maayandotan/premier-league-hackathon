@@ -91,6 +91,14 @@ class League:
         with self._lock:
             return self._db.execute("SELECT COUNT(*) FROM goals WHERE scorer = ?", (player,)).fetchone()[0]
 
+    def player_season(self, player: str) -> dict:
+        """A player's league goals and assists so far."""
+        with self._lock:
+            goals = self._db.execute("SELECT COUNT(*) FROM goals WHERE scorer = ?", (player,)).fetchone()[0]
+            assists = self._db.execute("SELECT COUNT(*) FROM goals WHERE assister = ?",
+                                       (player,)).fetchone()[0]
+        return {"league_goals": goals, "league_assists": assists}
+
     def top_scorers(self, n: int = 5) -> list[dict]:
         with self._lock:
             rows = self._db.execute("SELECT scorer, team, COUNT(*) AS goals FROM goals GROUP BY scorer, team "

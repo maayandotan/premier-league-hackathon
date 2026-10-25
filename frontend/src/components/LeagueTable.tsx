@@ -2,9 +2,14 @@ import type { League } from '../match/types'
 
 /** The Meridian League table, with the two clubs in this match highlighted. Before today's match it's
  * the table after the matchdays already played; at full time it updates with this result. */
-export function LeagueTable({ league, teams, mine }: { league: League; teams: string[]; mine?: string | null }) {
+export function LeagueTable({ league, teams, mine, simple }: {
+  league: League
+  teams: string[]
+  mine?: string | null
+  simple?: boolean // beginner: position, club, points
+}) {
   return (
-    <section className="card league" aria-label="League table">
+    <section className={`card league${simple ? ' simple' : ''}`} aria-label="League table">
       <h2>{league.league} <span className="league-sub">Matchday {league.matchday}</span></h2>
       <table>
         <thead>

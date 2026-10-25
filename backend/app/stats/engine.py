@@ -163,5 +163,6 @@ class StatsEngine:
             "momentum": self.momentum(),
             "tempo": self.tempo(),
             "progressive_passes": self.progressive_passes,
+            "patterns": self.patterns.summary(),  # the tactical detectors, for the analyst layout
             "cards": self.cards,
         }

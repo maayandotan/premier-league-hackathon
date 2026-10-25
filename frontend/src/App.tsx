@@ -9,7 +9,10 @@ import { GoalBanner, LowerThird } from './components/PitchOverlays'
 import { QuestionBox } from './components/QuestionBox'
 import { Scorebug } from './components/Scorebug'
 import { MomentumBar, StatBars } from './components/StatBars'
+import { BeginnerGuide } from './components/BeginnerGuide'
 import { ClubPanel } from './components/ClubPanel'
+import { PatternsCard } from './components/PatternsCard'
+import { XgTimeline } from './components/XgTimeline'
 import { Crest } from './components/Scorebug'
 import { LeagueTable } from './components/LeagueTable'
 import { PreMatch } from './components/PreMatch'
@@ -98,7 +101,7 @@ function inkFor(hex: string): string {
 export default function App() {
   const [team, setTeam] = useFavourite()
   const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask,
-    setListening, toggleMute, start, connected } = useMatchFeed({ ...feedOptions, team })
+    setListening, toggleMute, start, connected, xgHistory } = useMatchFeed({ ...feedOptions, team })
   const preInfo = usePreMatchInfo(feedOptions.source)
   const league = useLeague(status === 'ended') // fetched again at full time: the result is in the table
   const club = league?.clubs?.find((c) => c.name === team) ?? null
@@ -124,7 +127,7 @@ export default function App() {
   const scoreText = info && stats ? `${stats.score[info.home.name]}–${stats.score[info.away.name]}` : ''
 
   return (
-    <div className={`app${info ? '' : ' pre-match'}${club ? ' themed' : ''}`}>
+    <div className={`app level-${level}${info ? '' : ' pre-match'}${club ? ' themed' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true"><BallIcon size={24} /></span>
@@ -202,9 +205,12 @@ export default function App() {
         <div className="lower">
           {club && clubSeason && <ClubPanel club={club} season={clubSeason}
             today={league?.fixtures?.find((f) => f.home === club.name || f.away === club.name)} />}
-          {info && stats && <StatBars info={info} stats={stats} />}
+          {info && stats && <StatBars info={info} stats={stats} level={level} />}
+          {info && stats && level === 'analyst' && <XgTimeline info={info} history={xgHistory} />}
+          {info && stats && level === 'analyst' && <PatternsCard info={info} stats={stats} />}
+          {level === 'beginner' && <BeginnerGuide />}
           {info && stats && <EventTicker events={events} homeTeam={info.home.name} />}
-          {league && <LeagueTable league={league} mine={team}
+          {league && <LeagueTable league={league} mine={team} simple={level === 'beginner'}
             teams={[(info ?? preInfo)?.home.name, (info ?? preInfo)?.away.name].filter((t): t is string => !!t)} />}
         </div>
       </main>

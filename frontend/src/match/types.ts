@@ -123,6 +123,12 @@ export interface MatchStats {
   momentum: { value: number; leader: string | null }
   tempo: { possession_changes_per_min: number; label: string }
   progressive_passes: ByTeam<number>
+  patterns?: Record<string, { last_15_minutes: string[]; final_third_entries_all_match: ByTeam<number> }>
+}
+
+export interface XgPoint {
+  minute: number
+  xg: ByTeam<number>
 }
 
 export type FeedMessage =
