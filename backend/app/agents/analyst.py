@@ -63,6 +63,9 @@ Rules for every level:
   Its example line shows tone only: never repeat its numbers, names or wording. Never claim
   anything listed under TACTICS_DO_NOT_CLAIM.
 - One or two short sentences. LEAD WITH THE INSIGHT (the surprising part), then the context.
+- If VIEWER_SUPPORTS is given, the viewer is a fan of that club: relate the moment to them where it
+  fits ("for Northbridge fans...", their league position, their scorer's goals). Stay fair and
+  accurate about both teams: never mock or cheer against the other side.
 
 Adapt to VIEWER_LEVEL:
 - beginner: someone new to football. Everyday words only, no statistics vocabulary (never
@@ -288,6 +291,13 @@ class Analyst:
             angle += (" You flagged this earlier (YOU SAID EARLIER). Begin your line with CALLBACK exactly, "
                       "then connect this goal to it.")
         fields = event_fields(event, moment, self.stats) | {"ANGLE": angle, "VIEWER_LEVEL": viewer.level}
+        if viewer.team in (self.stats.home, self.stats.away):
+            fields["VIEWER_SUPPORTS"] = viewer.team
+            if moment.kind in ("goal", "chance", "card", "phase"):  # code decides: say it to the fan
+                good = (event.team == viewer.team) != (moment.kind == "card")
+                fields["ANGLE"] += (f" Speak to the {viewer.team} fan: what this means for their club "
+                                    f"({'good news' if good else 'a worry'}), using its league position "
+                                    "from the FACT lines. Stay fair to the other team.")
         fields |= context
         facts = facts_for(event, moment, self.stats)
         fields |= {f"FACT {name}": fact for name, fact in facts.items()}

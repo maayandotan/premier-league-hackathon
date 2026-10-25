@@ -71,7 +71,21 @@ export interface LeagueFixture {
   result: string | null
 }
 
+export interface Club {
+  name: string
+  code: string
+  color: string
+  secondary: string
+}
+
+export interface ClubSeason extends TableRow {
+  captain: string
+  top_scorers: { player: string; goals: number }[]
+  top_assisters: { player: string; assists: number }[]
+}
+
 export interface League {
+  clubs: Club[]
   league: string
   matchday: number
   fixtures: LeagueFixture[]
@@ -114,6 +128,7 @@ export interface MatchStats {
 export type FeedMessage =
   | { type: 'match'; info: MatchInfo; audio: boolean; level: string }
   | { type: 'level'; level: string }
+  | { type: 'team'; team: string | null }
   | { type: 'question'; id: string; text: string; clock: string }
   | { type: 'event'; event: MatchEvent; moment: Moment }
   | { type: 'commentary'; line: CommentaryLine }

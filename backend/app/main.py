@@ -17,7 +17,7 @@ from app.agents.qa import MAX_QUESTION_CHARS, QuestionAnswerer
 from app.agents.viewer import ViewerProfile
 from app.config import REPO_ROOT, settings
 from app.events.models import MatchEvent
-from app.league.clubs import CLUB_BY_NAME
+from app.league.clubs import CLUB_BY_NAME, CLUBS
 from app.league.db import league
 from app.league.season import CURRENT_ROUND, FEATURED_SOURCE, summarize
 from app.match.replay import replay
@@ -45,8 +45,9 @@ def health() -> dict:
 def league_overview() -> dict:
     """The Meridian League for the site: today's matchday, the table and the top scorers."""
     lg = league()
+    clubs = [{"name": c.name, "code": c.code, "color": c.primary, "secondary": c.secondary} for c in CLUBS]
     return {**lg.summary(), "fixtures": lg.todays_fixtures(), "table": lg.table(),
-            "top_scorers": lg.top_scorers()}
+            "top_scorers": lg.top_scorers(), "clubs": clubs}
 
 
 @app.get("/api/league/club")
@@ -110,6 +111,7 @@ async def match_feed(ws: WebSocket) -> None:
     analyst = Analyst(stats, {e.id: e for e in match.events}, use_model=agents_enabled())
     viewer = ViewerProfile()
     viewer.set_level(params.get("level", "fan"))
+    viewer.set_team(params.get("team"))
     pipeline = CommentaryPipeline(stats, caller, analyst, viewer)
     pipeline.qa = QuestionAnswerer(stats, pipeline.timeline, {e.id: e for e in match.events},
                                    use_model=agents_enabled(), story=pipeline.storyteller.view)
@@ -160,6 +162,8 @@ async def match_feed(ws: WebSocket) -> None:
                 kind = message.get("type")
                 if kind == "set_level" and viewer.set_level(str(message.get("level"))):
                     await send({"type": "level", "level": viewer.level})
+                elif kind == "set_team" and viewer.set_team(message.get("team")):
+                    await send({"type": "team", "team": viewer.team})
                 elif kind == "question" and (text := str(message.get("text", "")).strip()):
                     # The match keeps going: the answer is a background task like any other line.
                     questions_asked += 1

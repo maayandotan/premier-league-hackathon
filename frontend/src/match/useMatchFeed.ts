@@ -10,12 +10,13 @@ export interface FeedOptions {
   speed: number
   start: number // minute
   level: string // beginner | fan | analyst, at kick-off
+  team: string | null // the viewer's club, or null for neutral
 }
 
 const MAX_EVENTS = 200 // a full match has thousands; keep the list light
 
 /** Connects to the backend's live match WebSocket and collects events, commentary and stats. */
-export function useMatchFeed({ source, speed, start, level: initialLevel }: FeedOptions) {
+export function useMatchFeed({ source, speed, start, level: initialLevel, team }: FeedOptions) {
   const [status, setStatus] = useState<FeedStatus>('idle')
   const [error, setError] = useState<string | null>(null)
   const [info, setInfo] = useState<MatchInfo | null>(null)
@@ -49,6 +50,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
     setError(null)
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws'
     const query = new URLSearchParams({ source, speed: String(speed), start: String(start), level })
+    if (team) query.set('team', team)
     const ws = new WebSocket(`${protocol}://${location.host}/ws/match?${query}`)
     let ended = false
     ws.onopen = () => {
@@ -114,7 +116,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
       }
     }
     socket.current = ws
-  }, [source, speed, start, level, audio])
+  }, [source, speed, start, level, team, audio])
 
   useEffect(() => () => {
     socket.current?.close()
@@ -127,6 +129,12 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
     const ws = socket.current
     if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_level', level: next }))
   }, [])
+
+  // A new club mid-match goes to the server: the next lines and answers follow it.
+  useEffect(() => {
+    const ws = socket.current
+    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'set_team', team }))
+  }, [team])
 
   /** Ask the analyst a question; the match keeps going and the answer arrives as a line. */
   const ask = useCallback((text: string) => {
