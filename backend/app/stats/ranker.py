@@ -101,7 +101,11 @@ def _base(event: MatchEvent, stats: StatsEngine, momentum_before: float | None) 
         score = 6 if event.team == stats.home else 0
         if event.type == "Half Start":
             return Moment(score=score, reason="kick-off", kind="phase", quiet=False)
-        return Moment(score=score, reason="end of the half", kind="phase", quiet=True)
+        # Say which whistle it is: "end of the half" at the end of the match made the Caller say
+        # "half time whistle blows" at full time.
+        end = {1: "half-time", 2: "full time", 3: "end of the first half of extra time",
+               4: "end of extra time"}.get(event.period, "end of the half")
+        return Moment(score=score, reason=end, kind="phase", quiet=True)
     if event.type in ("Substitution", "Injury Stoppage"):
         return Moment(score=2, reason=event.type.lower(), kind="stoppage", quiet=True)
 

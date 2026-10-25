@@ -2,6 +2,7 @@
 
   demo                built-in moment (always available)
   synthetic:<name>    data/synthetic/<name>.json, our own format
+  fixture:<HOM>-<AWY> one of today's Meridian League fixtures, generated (same fixture, same match)
   statsbomb:<id>      data/real/events_<id>.json, LOCAL TESTING ONLY (git-ignored, DATA_POLICY.md)
 """
 import re
@@ -31,6 +32,11 @@ def load_source(source: str) -> Match:
         path = SYNTHETIC_DIR / f"{name}.json"
         if path.exists():
             return load_match_file(path)
+    elif kind == "fixture":
+        from app.league.season import CURRENT_ROUND, play, todays_fixture  # the league needs the generator
+
+        if teams := todays_fixture(name):
+            return play(CURRENT_ROUND, *teams)
     elif kind == "statsbomb":
         # Never on the deployed site (DATA_POLICY.md): real data is for local testing only.
         if settings.allow_real_data and (REAL_DIR / f"events_{name}.json").exists():

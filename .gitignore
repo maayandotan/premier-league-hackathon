@@ -43,3 +43,4 @@ spikes/**/out/
 
 # Local Claude Code settings
 .claude/
+.coverage

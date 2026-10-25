@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { AnalystQATable } from './components/AnalystQATable'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
@@ -8,7 +9,10 @@ import { GoalBanner, LowerThird } from './components/PitchOverlays'
 import { QuestionBox } from './components/QuestionBox'
 import { Scorebug } from './components/Scorebug'
 import { MomentumBar, StatBars } from './components/StatBars'
+import { LeagueTable } from './components/LeagueTable'
+import { PreMatch } from './components/PreMatch'
 import { Pitch } from './match/Pitch'
+import type { League, MatchInfo } from './match/types'
 import { useMatchFeed } from './match/useMatchFeed'
 
 // Pick the match from the URL, e.g. ?source=synthetic:red_card&speed=20&start=60 (default: the comeback)
@@ -20,18 +24,49 @@ const feedOptions = {
   level: params.get('level') ?? 'fan',
 }
 
+/** The teams and line-ups before kick-off, for the pre-match screen (null until loaded, or if it fails:
+ * then the plain kick-off card shows). */
+function usePreMatchInfo(source: string): MatchInfo | null {
+  const [info, setInfo] = useState<MatchInfo | null>(null)
+  useEffect(() => {
+    let current = true
+    fetch(`/api/match-info?source=${encodeURIComponent(source)}`)
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => { if (current) setInfo(data) })
+      .catch(() => {})
+    return () => { current = false }
+  }, [source])
+  return info
+}
+
+/** The Meridian League: today's fixtures, the table and the top scorers (null if unavailable). */
+function useLeague(refresh: boolean): League | null {
+  const [league, setLeague] = useState<League | null>(null)
+  useEffect(() => {
+    let current = true
+    fetch('/api/league')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => { if (current) setLeague(data) })
+      .catch(() => {})
+    return () => { current = false }
+  }, [refresh])
+  return league
+}
+
 export default function App() {
   const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask,
-    setListening, toggleMute, start } = useMatchFeed(feedOptions)
+    setListening, toggleMute, start, connected } = useMatchFeed(feedOptions)
+  const preInfo = usePreMatchInfo(feedOptions.source)
+  const league = useLeague(status === 'ended') // fetched again at full time: the result is in the table
   const answered = new Set(lines.map((l) => l.reply_to))
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
-  const canAsk = live || status === 'ended' // questions stay open after full time
+  const canAsk = connected && (live || status === 'ended') // questions stay open after full time
   const period = events[0]?.event.period ?? null
   const scoreText = info && stats ? `${stats.score[info.home.name]}–${stats.score[info.away.name]}` : ''
 
   return (
-    <div className="app">
+    <div className={info ? 'app' : 'app pre-match'}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true"><BallIcon size={24} /></span>
@@ -76,6 +111,9 @@ export default function App() {
                 canAsk={canAsk}
               />
             </>
+          ) : preInfo ? (
+            <PreMatch info={preInfo} level={level as Level} onLevel={setLevel} onKickOff={start}
+              fixtures={league?.fixtures} matchday={league?.matchday} source={feedOptions.source} />
           ) : (
             <>
               <section className="card hero">
@@ -105,16 +143,15 @@ export default function App() {
             onListening={setListening} />
         </aside>
 
-        {info && stats && (
-          <div className="lower">
-            <StatBars info={info} stats={stats} />
-            <EventTicker events={events} homeTeam={info.home.name} />
-          </div>
-        )}
+        <div className="lower">
+          {info && stats && <StatBars info={info} stats={stats} />}
+          {info && stats && <EventTicker events={events} homeTeam={info.home.name} />}
+          {league && <LeagueTable league={league}
+            teams={[(info ?? preInfo)?.home.name, (info ?? preInfo)?.away.name].filter((t): t is string => !!t)} />}
+        </div>
       </main>
 
       <footer className="footer">
-        <span>{feedOptions.source} · ×{feedOptions.speed}</span>
         <span>Fictional teams and players · Crowd audio: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0</span>
       </footer>
     </div>

@@ -66,7 +66,8 @@ def test_rules_come_from_our_glossary():
 
 def test_match_picture_has_everything_in_one_call():
     picture = tools_for([routine_pass(5, 0, "p")])["get_match_picture"]()
-    assert set(picture) == {"on_top_recently", "possession", "possession_last_10_min", "shots", "xg"}
+    assert set(picture) == {"score", "minute", "on_top_recently", "possession", "possession_last_10_min",
+                            "shots", "shots_last_10_min", "xg"}
 
 
 class FakeAgent:
@@ -116,3 +117,35 @@ def test_questions_stay_open_after_full_time():
             seen.append(ws.receive_json())
     assert seen[0]["type"] == "question"
     assert next(m for m in seen if m["type"] == "commentary")["line"]["reply_to"] == "q1"
+
+
+def test_tools_say_when_in_words_not_clock_times():
+    events = [foul(60, 0, "early"), foul(78, 13, "pen", penalty=True)]
+    found = tools_for(events)["get_events_before"](minute=78, second=20)
+    assert [e["when"] for e in found] == ["in the 60th minute", "a moment ago"]
+    assert all("clock" not in e for e in found)
+    key = tools_for(events)["get_key_moments"](count=1)
+    assert key[0]["when"] == "in the 78th minute"
+
+
+def test_ordinals():
+    from app.agents.describe import ordinal
+    assert [ordinal(n) for n in (1, 2, 3, 11, 12, 13, 21, 72, 93)] == \
+        ["1st", "2nd", "3rd", "11th", "12th", "13th", "21st", "72nd", "93rd"]
+
+
+def test_long_answers_are_shortened_once():
+    long_answer = "This is a long answer. " * 20
+    calls = []
+
+    class Wordy:
+        async def run(self, prompt):
+            calls.append(prompt)
+            return SimpleNamespace(text=long_answer if len(calls) == 1 else "Short and sweet.")
+
+    stats, timeline = replay([routine_pass(5, 0, "p")])
+    qa = QuestionAnswerer(stats, timeline, {}, use_model=False)
+    qa.agent = Wordy()
+    answer = asyncio.run(qa.answer("Why?", 5, 0, ViewerProfile(level="beginner")))
+    assert answer == "Short and sweet." and len(calls) == 2
+    assert "MAX_WORDS: 40" in calls[0] and "at most 40 words" in calls[1]

@@ -30,11 +30,13 @@ from app.events.models import (
     ShotDetails,
     SubstitutionDetails,
 )
+from app.league.clubs import LEAGUE_NAME
 from app.stats.xg import shot_xg
-from app.synthetic.scenarios import Beat, Scenario
+from app.synthetic.scenarios import Beat, Scenario, Style
 from app.synthetic.squads import FORMATION_433, SQUADS, SquadPlayer, team_info
 
 HALF_SECONDS = 45 * 60
+CHANNEL_Y = {"left": 12.0, "right": 68.0}  # the middle of each flank, in the attacking team's frame
 GK = "Goalkeeper"
 Point = tuple[float, float]
 
@@ -60,6 +62,7 @@ def distance(a: Point, b: Point) -> float:
 class Side:
     name: str
     strength: float  # 0-1, nudges pass completion and finishing
+    style: Style  # a favourite channel, high pressing
     on_pitch: dict[str, SquadPlayer]  # position -> player; a substitute takes the position of who went off
     bench: list[SquadPlayer]
     sub_minutes: list[int]
@@ -86,8 +89,8 @@ class MatchSimulator:
         self.match_id = match_id or f"{scenario.name}-{seed}"
         self.home, self.away = scenario.home, scenario.away
         self.sides = {
-            scenario.home: self._side(scenario.home, scenario.home_strength),
-            scenario.away: self._side(scenario.away, scenario.away_strength),
+            scenario.home: self._side(scenario.home, scenario.home_strength, scenario.home_style),
+            scenario.away: self._side(scenario.away, scenario.away_strength, scenario.away_style),
         }
         self.beats = sorted(scenario.beats, key=lambda b: b.minute)
         # Players the script needs keep their place until their moment.
@@ -104,13 +107,13 @@ class MatchSimulator:
         self.last_pass: MatchEvent | None = None  # for assists
         self.restart: Restart | None = None
 
-    def _side(self, name: str, strength: float) -> Side:
+    def _side(self, name: str, strength: float, style: Style) -> Side:
         squad = SQUADS[name]
         n_subs = self.rng.randint(3, 5)
         minutes = sorted(self.rng.randint(55, 86) for _ in range(n_subs))
         if self.rng.random() < 0.25:
             minutes[0] = 46  # a half-time change
-        return Side(name=name, strength=strength,
+        return Side(name=name, strength=strength, style=style,
                     on_pitch={p.position: p for p in squad if p.starter},
                     bench=[p for p in squad if not p.starter and p.line != "GK"],
                     sub_minutes=minutes)
@@ -140,7 +143,7 @@ class MatchSimulator:
         return Match(
             info=MatchInfo(
                 id=self.match_id, home=team_info(self.home), away=team_info(self.away),
-                competition="Synthetic League", source="synthetic",
+                competition=LEAGUE_NAME, source="synthetic",
                 extra={"scenario": self.scenario.name, "seed": self.seed,
                        "description": self.scenario.description},
             ),
@@ -162,6 +165,14 @@ class MatchSimulator:
         return beat if in_this_half and self.t >= beat.minute * 60 else None
 
     # ---------- helpers ----------
+
+    def _channel_y(self, team: str) -> float | None:
+        """Where a team's favourite channel is (its own left is y 0), or None."""
+        return CHANNEL_Y.get(self.sides[team].style.channel)
+
+    def _pressed(self, team: str) -> bool:
+        """Is this team's opponent pressing high?"""
+        return self.sides[self.other(team)].style.press
 
     def other(self, team: str) -> str:
         return self.away if team == self.home else self.home
@@ -267,7 +278,11 @@ class MatchSimulator:
             dx = self.rng.gauss(5, 13)
         else:
             dx = self.rng.gauss(-2, 10)
-        dy = self.rng.gauss(0, 16) + 0.15 * (40 - y)
+        aim = self._channel_y(self.poss_team) if x >= 45 else None
+        if aim is not None:  # a favourite channel: lean hard towards it
+            dy = self.rng.gauss(0, 10) + 0.55 * (aim - y)
+        else:
+            dy = self.rng.gauss(0, 16) + 0.15 * (40 - y)
         return clamp(x + dx, y + dy), technique, height
 
     def pass_success(self, start: Point, end: Point, technique: str | None, height: str | None) -> float:
@@ -280,6 +295,8 @@ class MatchSimulator:
         if in_box(*end):
             chance -= 0.1
         chance += 0.12 * (self.sides[self.poss_team].strength - 0.5) + (0.06 if self.counter_steps else 0)
+        if start[0] < 50 and self._pressed(self.poss_team):
+            chance -= 0.12
         return min(0.97, max(0.2, chance))
 
     def pass_ball(self, target: Point | None = None, kind: str | None = None, technique: str | None = None,
@@ -336,12 +353,15 @@ class MatchSimulator:
         team, start = self.poss_team, self.ball
         if target is None:
             dx = self.rng.gauss(14 if self.counter_steps else 7, 4)
-            target = (start[0] + dx, start[1] + self.rng.gauss(0, 5))
+            aim = self._channel_y(team) if start[0] >= 45 else None
+            dy = self.rng.gauss(0, 4) + 0.4 * (aim - start[1]) if aim is not None else self.rng.gauss(0, 5)
+            target = (start[0] + dx, start[1] + dy)
         end = clamp(*target)
         self.emit("Carry", team, self.holder, start, duration=max(0.5, distance(start, end) / 4.5),
                   carry=CarryDetails(end_location=end))
         self.ball = end
-        if not safe and self.rng.random() < (0.1 if end[0] > 60 else 0.06):
+        lose = 0.1 if end[0] > 60 else 0.2 if end[0] < 50 and self._pressed(team) else 0.06
+        if not safe and self.rng.random() < lose:
             self.emit("Dispossessed", team, self.holder, end, duration=0.3, gap=0.2)
             self.tackle_won(end)
             return False
@@ -611,7 +631,20 @@ class MatchSimulator:
         if self.poss_team != team:
             self.win_ball(team, flip(self.ball), "Interception")
         self.pattern = "Regular Play" if style != "penalty" else self.pattern
-        if style == "open_play":
+        if style == "open_play" and (aim := self._channel_y(team)) is not None:
+            # Down the favourite side: into the final third there, along the flank, then cut back.
+            if self.ball[0] >= 76:
+                self.pass_ball((rng.gauss(64, 3), aim), success=1.0, offside_ok=False)
+            self.pass_ball((rng.gauss(84, 2), aim + rng.gauss(0, 3)), success=1.0, offside_ok=False)
+            self.carry((rng.uniform(100, 104), aim + (6 if aim < 40 else -6)), safe=True)
+            if beat.kind == "big_miss":
+                self.pass_ball((rng.uniform(110, 113), rng.uniform(37, 43)), success=1.0, recipient=shooter,
+                               offside_ok=False)
+            else:
+                self.pass_ball((rng.uniform(106, 110), rng.uniform(35, 45)), success=1.0, recipient=shooter,
+                               offside_ok=False)
+            self.shoot(forced=outcome, first_time=True)
+        elif style == "open_play":
             self.pass_ball((rng.gauss(78, 4), rng.gauss(40, 15)), success=1.0, offside_ok=False)
             self.pass_ball((rng.gauss(98, 3), rng.gauss(40, 6)), technique=rng.choice(["Through Ball", None]),
                            success=1.0, recipient=shooter, offside_ok=False)
@@ -626,14 +659,15 @@ class MatchSimulator:
             self.carry((rng.uniform(89, 93), rng.uniform(35, 45)), safe=True)
             self.shoot(forced=outcome)
         elif style == "corner":
-            self.pass_ball((rng.gauss(100, 3), rng.choice([12.0, 68.0])), success=1.0, offside_ok=False)
+            side_y = self._channel_y(team) or rng.choice([12.0, 68.0])
+            self.pass_ball((rng.gauss(100, 3), side_y), success=1.0, offside_ok=False)
             self.carry((rng.uniform(104, 108), rng.uniform(26, 32)), safe=True)
             self.shoot(forced="Saved")  # the keeper tips it behind...
             if self.restart and self.restart.kind == "corner":
                 self.restart = None
             else:
                 self.t += rng.uniform(20, 35)
-            corner = (119.5, rng.choice([0.5, 79.5]))
+            corner = (119.5, 79.5 if side_y > 40 else 0.5)
             self.poss_id += 1
             self.poss_team, self.ball, self.pattern = team, corner, "From Corner"
             self.take_corner(scorer=shooter)  # ...and from the corner, a header

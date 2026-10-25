@@ -2,8 +2,8 @@ import { useState } from 'react'
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 
 const VOICES = {
-  caller: { initial: 'G', name: 'Guy', role: 'Play-by-play' },
-  analyst: { initial: 'S', name: 'Sonia', role: 'Analyst' },
+  caller: { name: 'Guy', role: 'Play-by-play' },
+  analyst: { name: 'Sonia', role: 'Analyst' },
 } as const
 
 /**
@@ -77,27 +77,21 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
                 return (
                   <li key={q.id} className={`feed-qa-item ${answer ? 'answered' : 'pending'}`}>
                     <div className="feed-qa-q">
-                      <span className="avatar you" aria-hidden="true">You</span>
-                      <div className="bubble">
-                        <div className="who">
-                          You <span className="role">· asked at {q.clock}</span>
-                          {!answer && <span className="qa-pill-pending">Thinking...</span>}
-                        </div>
-                        <p>{q.text}</p>
+                      <div className="who">
+                        You <span className="role">· asked at {q.clock}</span>
+                        {!answer && <span className="qa-pill-pending">Thinking...</span>}
                       </div>
+                      <p>{q.text}</p>
                     </div>
 
                     {answer ? (
                       <div className="feed-qa-a" data-speaking={isSpeaking}>
-                        <span className="avatar sonia" aria-hidden="true">S</span>
-                        <div className="bubble">
-                          <div className="who">
-                            Sonia <span className="role">· Answering you</span>
-                            <span className="level-tag">{answer.level}</span>
-                            {isSpeaking && <span className="qa-on-air-pill">On Air</span>}
-                          </div>
-                          <p>{answer.text}</p>
+                        <div className="who">
+                          Sonia <span className="role">· Answering you</span>
+                          <span className="level-tag">{answer.level}</span>
+                          {isSpeaking && <span className="qa-on-air-pill">On Air</span>}
                         </div>
+                        <p>{answer.text}</p>
                       </div>
                     ) : (
                       <div className="feed-qa-waiting">
@@ -117,11 +111,8 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
         <ol>
           {pending.map((q) => (
             <li key={q.id} className="line viewer">
-              <span className="avatar" aria-hidden="true">You</span>
-              <div className="bubble">
-                <div className="who">You <span className="role">· asked at {q.clock}</span></div>
-                <p>{q.text}</p>
-              </div>
+              <div className="who">You <span className="role">asked at {q.clock}</span></div>
+              <p>{q.text}</p>
             </li>
           ))}
           {lines.map((line) => {
@@ -130,16 +121,11 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
             return (
               <li key={line.id} className={`line ${line.speaker}`} data-excitement={line.excitement}
                 data-speaking={line.id === speakingId}>
-                <span className="avatar" aria-hidden="true">{voice.initial}</span>
-                <div className="bubble">
-                  <div className="who">
-                    {voice.name} <span className="role">· {question ? 'Answering you' : voice.role}</span>
-                    <span className="level-tag">{line.level}</span>
-                    <span className="source" data-source={line.source}>{line.source === 'model' ? 'AI' : 'Auto'}</span>
-                  </div>
-                  {question && <blockquote>“{question.text}” <span>· {question.clock}</span></blockquote>}
-                  <p>{line.text}</p>
+                <div className="who">
+                  {voice.name} <span className="role">{question ? 'Answering you' : voice.role}</span>
                 </div>
+                {question && <blockquote>“{question.text}”</blockquote>}
+                <p>{line.text}</p>
               </li>
             )
           })}

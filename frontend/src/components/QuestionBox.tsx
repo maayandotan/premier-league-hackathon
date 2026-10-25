@@ -1,7 +1,7 @@
 import { type FormEvent, useRef, useState } from 'react'
 import { MicIcon } from './Icons'
 
-const SUGGESTIONS = ['Why was that a foul?', 'Who has been better?', 'What is offside?']
+const SUGGESTIONS = ['What did I miss?', 'Why was that a foul?', 'Who has been better?']
 const FULL_TIME_SUGGESTIONS = ['Who was the better team?', 'What was the key moment?', 'Was the result deserved?']
 
 type MicState = 'idle' | 'listening' | 'error'

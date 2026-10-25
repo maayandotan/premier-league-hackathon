@@ -6,6 +6,7 @@ from collections import deque
 
 from app.events.models import MatchEvent
 from app.stats.geometry import distance_to_goal, in_box, in_final_third
+from app.stats.patterns import PatternTracker
 from app.stats.xg import shot_xg
 
 WINDOW_SECONDS = 10 * 60  # "recently" = the last 10 minutes of match time
@@ -56,11 +57,13 @@ class StatsEngine:
         self._possessions: deque[tuple[int, int]] = deque()  # (seconds, possession id) changes
         self._last_possession: int | None = None
         self._pass_gains: list[float] = []
+        self.patterns = PatternTracker(home, away)  # tactical patterns (#48)
 
     # ---------- feeding events ----------
 
     def update(self, event: MatchEvent) -> None:
         self.clock, self.minute = max(self.clock, event.match_seconds), event.minute
+        self.patterns.update(event)
         team = event.team
         if team not in self.score:  # unknown team name: ignore rather than crash mid-match
             return
@@ -104,6 +107,14 @@ class StatsEngine:
         if not total:
             return {self.home: 50.0, self.away: 50.0}
         return {team: round(100 * n / total, 1) for team, n in counts.items()}
+
+    def recent_shots(self) -> dict[str, int]:
+        """Shots per team in the last 10 minutes."""
+        counts = {self.home: 0, self.away: 0}
+        for _, team, type_, _ in self._recent:
+            if type_ == "Shot":
+                counts[team] += 1
+        return counts
 
     def momentum(self) -> dict:
         """Who is on top in the last 10 minutes: -1 (away dominating) to +1 (home dominating)."""

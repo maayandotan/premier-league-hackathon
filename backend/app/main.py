@@ -17,6 +17,9 @@ from app.agents.qa import MAX_QUESTION_CHARS, QuestionAnswerer
 from app.agents.viewer import ViewerProfile
 from app.config import REPO_ROOT, settings
 from app.events.models import MatchEvent
+from app.league.clubs import CLUB_BY_NAME
+from app.league.db import league
+from app.league.season import CURRENT_ROUND, FEATURED_SOURCE, summarize
 from app.match.replay import replay
 from app.match.sources import UnknownSource, load_source
 from app.speech.token import speech_token
@@ -36,6 +39,33 @@ app.mount("/static/audio", StaticFiles(directory=REPO_ROOT / "assets" / "audio")
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
+
+
+@app.get("/api/league")
+def league_overview() -> dict:
+    """The Meridian League for the site: today's matchday, the table and the top scorers."""
+    lg = league()
+    return {**lg.summary(), "fixtures": lg.todays_fixtures(), "table": lg.table(),
+            "top_scorers": lg.top_scorers()}
+
+
+@app.get("/api/league/club")
+def league_club(name: str) -> dict:
+    """One club's season: position, points, form, captain, top scorers and assisters."""
+    if name not in CLUB_BY_NAME:
+        raise HTTPException(404, f"no club called {name!r}")
+    return league().club(name)
+
+
+@app.get("/api/match-info")
+def match_info(source: str = "demo") -> dict:
+    """The teams and line-ups for the pre-match screen, before kick-off. No scenario description: it
+    would spoil the story."""
+    try:
+        info = load_source(source).info
+    except UnknownSource as error:
+        raise HTTPException(404, str(error)) from error
+    return info.model_dump(exclude={"extra"}, exclude_none=True)
 
 
 @app.get("/api/speech-token")
@@ -68,7 +98,8 @@ async def match_feed(ws: WebSocket) -> None:
     await ws.accept()
     params = ws.query_params
     try:
-        match = load_source(params.get("source", "demo"))
+        source_name = params.get("source", "demo")
+        match = load_source(source_name)
     except UnknownSource as e:
         await ws.send_json({"type": "error", "message": str(e)})
         await ws.close()
@@ -81,13 +112,13 @@ async def match_feed(ws: WebSocket) -> None:
     viewer.set_level(params.get("level", "fan"))
     pipeline = CommentaryPipeline(stats, caller, analyst, viewer)
     pipeline.qa = QuestionAnswerer(stats, pipeline.timeline, {e.id: e for e in match.events},
-                                   use_model=agents_enabled())
+                                   use_model=agents_enabled(), story=pipeline.storyteller.view)
     speech = Speech() if speech_enabled() else None
     speed = float(params.get("speed", settings.replay_speed))
     start = int(params.get("start", 0))
-    for event in match.events:  # fast-forward: earlier events still count for score and stats
+    for event in match.events:  # fast-forward: earlier events count for the stats and the story
         if event.minute < start:
-            stats.update(event)
+            pipeline.rank(event)
 
     send_lock = asyncio.Lock()  # background tasks and the main loop share one socket
     tasks: set[asyncio.Task] = set()
@@ -119,7 +150,13 @@ async def match_feed(ws: WebSocket) -> None:
         nonlocal questions_asked
         try:
             while True:
-                message = await ws.receive_json()
+                try:
+                    message = await ws.receive_json()
+                except ValueError:  # one bad message: skip it, keep listening for the rest of the match
+                    log.warning("ignored a malformed message from the browser")
+                    continue
+                if not isinstance(message, dict):
+                    continue
                 kind = message.get("type")
                 if kind == "set_level" and viewer.set_level(str(message.get("level"))):
                     await send({"type": "level", "level": viewer.level})
@@ -136,8 +173,6 @@ async def match_feed(ws: WebSocket) -> None:
                     task.add_done_callback(tasks.discard)
         except (WebSocketDisconnect, RuntimeError):
             pass  # the match ended or the viewer left
-        except ValueError:
-            log.warning("ignored a malformed message from the browser")
 
     listener = asyncio.create_task(listen())
     try:
@@ -146,6 +181,10 @@ async def match_feed(ws: WebSocket) -> None:
         await caller.warm_up()
         async for event in replay(match.events, speed=speed, start_minute=start):
             moment = pipeline.rank(event)
+            if (story := pipeline.story_job(event)) is not None:  # background, never delays the match
+                task = asyncio.create_task(story)
+                tasks.add(task)
+                task.add_done_callback(tasks.discard)
             await send({"type": "event", "event": event.model_dump(by_alias=True, exclude_none=True),
                         "moment": moment.model_dump()})
             jobs = []
@@ -161,6 +200,8 @@ async def match_feed(ws: WebSocket) -> None:
         if tasks:  # let the last lines finish
             await asyncio.wait(tasks, timeout=10)
         pipeline.full_time = True
+        if is_league_match(source_name):  # the result goes into the league's table
+            league().record(summarize(match, CURRENT_ROUND))
         await send({"type": "end", "stats": stats.snapshot()})
         # Full time isn't the end of the conversation: viewers can still ask about the match.
         # Keep listening until they leave, or for POST_MATCH_SECONDS.
@@ -176,6 +217,10 @@ async def match_feed(ws: WebSocket) -> None:
             task.cancel()
         if speech:
             await speech.close()
+
+
+def is_league_match(source: str) -> bool:
+    return source.startswith("fixture:") or source == FEATURED_SOURCE
 
 
 # The built website (frontend/dist), served by this same app in production: one container,

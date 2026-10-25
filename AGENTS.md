@@ -31,14 +31,15 @@ Breaking one of these can disqualify the entry. If a task seems to need breaking
 |---|---|
 | `backend/app/main.py` | FastAPI app: `/ws/match` WebSocket, `/api/speech-token`, serves the built frontend |
 | `backend/app/agents/` | The AI agents and the pipeline that decides who speaks (see below) |
-| `backend/app/stats/` | Stats engine (`engine.py`), moment ranker (`ranker.py`), xG (`xg.py`): plain code, exact numbers |
+| `backend/app/stats/` | Stats engine (`engine.py`), moment ranker (`ranker.py`), xG (`xg.py`), tactical patterns (`patterns.py`): plain code, exact numbers |
 | `backend/app/events/` | Event models (`models.py`, the schema's source of truth) and adapters |
 | `backend/app/match/` | Replay and match sources (`demo`, `synthetic:<name>`, `statsbomb:<id>` local only) |
 | `backend/app/speech/` | Azure Speech: TTS with SSML styles, browser STT token |
 | `backend/tests/` | pytest; runs with no Azure access (`conftest.py` turns agents and speech off) |
 | `frontend/src/` | React + Vite + TypeScript: scorebug, SVG pitch, commentary feed, question box, audio engine |
 | `backend/app/synthetic/` | Synthetic match generator: possession-chain simulator, scripted scenarios, fictional squads |
-| `data/synthetic/` | Generated matches (in git): `comeback`, `red_card`, `late_equaliser`, `open` |
+| `backend/app/league/` | The Meridian League: 20 clubs (`clubs.py`), fixtures and the pre-played season (`season.py`, saved by `scripts/build_league.py`), the results database (`db.py`, SQLite in the app) |
+| `data/synthetic/` | Generated matches (in git): `comeback`, `red_card`, `late_equaliser`, `open`, and `league/season.json` |
 | `spikes/` | Throwaway experiments, step by step versions of the agents. Not production code |
 | `scripts/deploy.sh` | Build and deploy to Azure |
 
@@ -48,8 +49,11 @@ Breaking one of these can disqualify the entry. If a task seems to need breaking
 |---|---|
 | `pipeline.py` | The producer: ranks every event, decides when Guy calls, when Sonia analyses (45 s cooldown), answers questions, falls back to templates |
 | `caller.py` | Guy. No tools, must answer within ~2 s, otherwise a template line is used |
-| `analyst.py` | Sonia. 7 stats tools, picks an analysis angle in code, word limits per level |
-| `qa.py` | Answers viewer questions with `get_events_before`, `get_key_moments`, `get_rule`, `get_match_picture` and shot and pass tools |
+| `story.py` | The match log (code) and the Storyteller agent: story every 5 match minutes, recaps, payoffs |
+| `checker.py` | Checks Sonia's lines and Q&A answers before they're spoken (Q&A against what its tools returned) |
+| `analyst.py` | Sonia. Code picks the angle and hands her the facts (grouped by team) in one call; word limits per level |
+| `qa.py` | Answers viewer questions with `get_events_before`, `get_key_moments`, `get_rule`, `get_tactic`, `get_match_picture` and shot and pass tools |
+| `tactics.py` | Loads the tactics playbook ([docs/football_tactics.md](docs/football_tactics.md)) into concepts; code picks the one a moment or question needs |
 | `viewer.py` | Viewer profile (level) |
 | `describe.py` | Turns an event into unambiguous fields for the models (e.g. `fouling_team`, `awarded_to`) |
 | `client.py` | The Foundry chat client (Entra ID auth) |
@@ -127,7 +131,13 @@ These came from real failures. Follow them when changing or adding an agent.
 8. **Questions carry their match time** so the agent can resolve "that" and "just now". After full time, questions are about the whole match.
 9. **Every number comes from a tool** and is checked by a test. The model never computes or recalls a stat.
 10. **Don't hand the model a conclusion to support.** "Show who had been dominating" assumed the team on top also had the ball. When Northbridge had 65% of the ball but Westvale had the chances, Sonia gave Westvale the 65% to fit the story (3 out of 3 times). The code now checks the data first and picks an angle that is true (`angle_for` in `analyst.py`, `SPLIT` vs `CONTRAST`).
-11. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
+11. **Knowledge needs its limits.** Given the playbook's idea of pressing but nothing measuring it, Q&A answered "yes, Northbridge are pressing high" and used possession as proof. Every concept now tells the agent what we can measure in this match, or plainly "nothing yet" (`app/agents/tactics.py`).
+12. **Hand over facts, grouped by team; then check.** Tool round trips made Sonia take ~6 s against a 7 s deadline; code now gathers her facts and she writes in one call (~2-3 s). Listed by topic, she re-paired numbers with the wrong team; grouped by team, much less. Prompts never get it to zero, so `checker.py` checks every line in code (numbers, possession, shots, chance label, scorer): one retry, then silence.
+13. **Check the checker on real answers.** A clause-wide "overall" rule rejected a true answer ("better chances overall and more possession in the last 10 minutes"), which would have told viewers "ask me again" for nothing. Run real questions and read every rejection; every false alarm becomes a test (`tests/test_qa_check.py`).
+14. **Calibrate pattern claims on data with no pattern in it.** At first bars, a match with no tactics "showed" field tilt in a third of checks: random data always looks like something. The thresholds in `patterns.py` were raised until style-less matches stay quiet, and the generator's team styles (`Style` in scenarios) were made strong enough to stand out. Also: say "open play" instead of leaving it out; a gap got filled with "from a corner".
+15. **When it must happen, code does it.** Asked to "begin with As we said at 66'", the model did it 1 time in 5, and once wrote "this goal at 66'". Code now adds the callback sentence itself, with the minute of the remark. And check scorelines whole: "7-0" passed a number-by-number check because a 7 appeared elsewhere.
+16. **Never put example numbers in instructions.** "58 percent of the ball" as a phrasing example came back as a fact. Use placeholders ("N percent").
+17. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
 
 ## Open work
 

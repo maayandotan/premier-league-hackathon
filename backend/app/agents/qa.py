@@ -7,20 +7,27 @@ Built step by step in spikes/agents/qa_step_a.py. What we learned:
   clear" was an invention). "Did they deserve it?" is answered with data.
 - The model takes the shortest path, so make that path complete: one get_match_picture tool
   with who's on top, possession, shots and xG together, instead of five small tools.
-- Rules come from our own glossary (get_rule), not from the model's memory.
+- Rules come from our own glossary (get_rule), not from the model's memory; tactics come from
+  our playbook, docs/football_tactics.md (get_tactic).
 """
 import asyncio
 import logging
-from collections.abc import Sequence
+import re
+from collections.abc import Callable, Sequence
 from typing import Annotated
 
 from agent_framework import Agent
 
 from app.agents.analyst import build_tools as stats_tools
+from app.agents.analyst import fit_to_words
+from app.agents.checker import check_answer, recorded, recording
 from app.agents.client import chat_client
-from app.agents.describe import event_fields
+from app.agents.describe import event_fields, ordinal
+from app.agents.tactics import CONCEPTS, LEVELS, PLAYBOOK_RULES, find_concept
 from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
+from app.league.clubs import CLUB_BY_NAME
+from app.league.db import league
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment
 
@@ -29,6 +36,7 @@ log = logging.getLogger(__name__)
 DEADLINE_SECONDS = 12.0
 MAX_QUESTION_CHARS = 200
 UNAVAILABLE = "Sorry, I can't take questions right now. Keep watching!"
+NOT_SURE = "I want to get that one right with the numbers. Give me a moment and ask me again!"
 
 # Our own plain-words explanations, so the agent explains rules from a source we control.
 RULES = {
@@ -57,6 +65,8 @@ RULES = {
                       "the other team can get back into position.",
     "possession": "Possession is the share of the passes each team made: who has had the ball more.",
 }
+# The playbook's fuller versions win (e.g. offside: level is onside, and only if involved in play).
+RULES |= {name: text for name, text in PLAYBOOK_RULES.items() if name != "yellow and red cards"}
 
 INSTRUCTIONS = """You answer a viewer's question during a live football broadcast, in the analyst's voice.
 
@@ -66,23 +76,50 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   call get_events_before to see what happened right before, and pick the moment that fits.
 - For a question about a rule or a football term, call get_rule and explain it in your own words,
   applied to this moment if there is one.
-- For anything about how the match is going, call get_match_picture: it has who's on top,
-  possession, shots and xG together. No claims beyond what it returns: no "likely", no guessing.
+- For a question about tactics or how a team is playing (counter-attacks, pressing, possession,
+  crosses, set pieces, sitting deep, playing with ten men...), call get_tactic with the
+  VIEWER_LEVEL and explain the idea in your own words. Apply it to this match ONLY through what
+  its what_we_measure_in_this_match says, with numbers from get_patterns and the other tools. If that says we
+  don't measure it, explain the idea and say our match data can't show whether a team is doing
+  it: never use other stats (like possession) as proof. Its example line shows tone only: never
+  repeat its numbers or names. Never claim anything in its do_not_claim.
+- For how good a chance was, find it with get_events_before, then call get_shot_quality with its
+  event_id and use its label: "big chance" = great, "half chance" = decent, "low-probability
+  effort" = hard. Never judge a chance without it.
+- For "what did I miss?", a catch-up, or anything about earlier in the match, call get_match_story
+  (and get_key_moments): tell it as a short story at VIEWER_LEVEL, in order.
+- For the league (points, the table, form, a club's top scorer or captain, the season so far), call
+  get_league_table or get_club_season. Say it's the table before today's match.
+- For anything about how the match is going (including the score), call get_match_picture: it has
+  the score, who's on top, possession, shots and xG together. No claims beyond what it returns:
+  no "likely", no guessing.
 - Every number comes from a tool. Don't invent details that the events don't show.
 - You CANNOT SEE THE VIDEO. Never judge whether a decision was right, a foul was clear, or a
   player was unlucky. "Did they deserve it?" is answered with data: who had been on top and how
   good the chances were (get_match_picture, get_shot_quality for one shot).
 - If you can't tell which moment they mean, say so briefly and answer about the most likely one.
 - If the question isn't about this match or football, say kindly that you can only talk about the match.
-- Answer in 2-3 short spoken sentences at VIEWER_LEVEL:
+- Say when things happened the way the tools say it ("a moment ago", "in the 72nd minute").
+  Never read out a clock time like "72:16" or ASKED_AT.
+- Answer in 2-3 short spoken sentences, at most MAX_WORDS words, at VIEWER_LEVEL:
   beginner = everyday words, explain terms, at most one number said simply;
   fan = clear football language with a number or two, never the word "xG";
   analyst = precise terms and the numbers behind the answer (possession %, shots, xG).
 - Never say tool names or internal scales."""
 
 
+WORD_LIMITS: dict[str, int] = {"beginner": 40, "fan": 40, "analyst": 50}
+
+
+def when(event: MatchEvent, asked: int | None = None) -> str:
+    """When something happened, the way a commentator says it: never a clock like "72:16"."""
+    if asked is not None and 0 <= asked - event.match_seconds < 90:
+        return "a moment ago" if asked - event.match_seconds < 20 else "just before you asked"
+    return f"in the {ordinal(event.minute)} minute"
+
+
 def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Moment]],
-                   events_by_id: dict[str, MatchEvent]) -> list:
+                   events_by_id: dict[str, MatchEvent], story: Callable[[], dict] | None = None) -> list:
     momentum = {t.__name__: t for t in stats_tools(stats, events_by_id)}
 
     def get_events_before(
@@ -98,7 +135,9 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
             fields = event_fields(event, moment, stats)
             fields.pop("score", None)
             fields.pop("minute", None)
-            result.append({"clock": f"{event.minute}:{event.second:02d}", "event_id": event.id, **fields})
+            if event.is_goal and (route := stats.patterns.goal_route(event)):
+                fields["attack_route"] = route
+            result.append({"when": when(event, asked), "event_id": event.id, **fields})
         return result
 
     def get_key_moments(
@@ -112,7 +151,9 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
             fields = event_fields(event, moment, stats)
             fields.pop("score", None)
             fields.pop("minute", None)
-            result.append({"clock": f"{event.minute}:{event.second:02d}", "event_id": event.id, **fields})
+            if event.is_goal and (route := stats.patterns.goal_route(event)):
+                fields["attack_route"] = route
+            result.append({"when": when(event), "event_id": event.id, **fields})
         return result
 
     def get_rule(topic: Annotated[str, "A rule or football term, e.g. offside, penalty"]) -> dict:
@@ -123,27 +164,72 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
                 return {"topic": name, "explanation": text}
         return {"error": f"no explanation for {topic!r}", "known_topics": list(RULES)}
 
-    def get_match_picture() -> dict:
-        """How the match is going: who is on top recently (in words), possession overall and in the
-        last 10 minutes (%), shots and expected goals (xG) per team so far."""
-        return {"on_top_recently": momentum["get_momentum"](), "possession": stats.possession(),
-                "possession_last_10_min": stats.possession(recent=True),
-                "shots": stats.shots, "xg": stats.xg}
+    def get_tactic(
+        topic: Annotated[str, "The tactic or pattern asked about, e.g. counter-attack, pressing"],
+        level: Annotated[str, "VIEWER_LEVEL: beginner, fan or analyst"] = "fan",
+    ) -> dict:
+        """Our playbook's explanation of a tactical idea: the idea, an example line for tone, and what
+        event data can't show (so don't claim it)."""
+        concept = find_concept(topic)
+        if concept is None:
+            return {"error": f"no playbook entry for {topic!r}", "known_topics": list(CONCEPTS)}
+        return concept.brief(level if level in LEVELS else "fan")
 
-    return [get_events_before, get_key_moments, get_rule, get_match_picture,
-            momentum["get_shot_quality"], momentum["get_pass_rarity"]]
+    def get_patterns() -> dict:
+        """Tactical patterns per team: in the last 15 minutes, in words with their counts (the side a
+        team keeps attacking down, high pressing, quick attacks after winning the ball, crosses,
+        territory; "no clear pattern" means there isn't one, so don't claim one), and the team's
+        final-third entries by side over the whole match."""
+        return stats.patterns.summary()
+
+    def get_league_table() -> dict:
+        """The Meridian League table BEFORE this match (it updates at full time): position, points,
+        played, goal difference and form (last 5, oldest first) for every club, and the top scorers."""
+        lg = league()
+        keys = ("position", "team", "played", "points", "goal_difference", "form")
+        return {"table": [{key: row[key] for key in keys} for row in lg.table()],
+                "top_scorers": lg.top_scorers()}
+
+    def get_club_season(team: Annotated[str, "A club's full name, e.g. Northbridge FC"]) -> dict:
+        """A club's league season BEFORE this match: position, points, record, form, captain, its top
+        scorers and assisters this season."""
+        if team not in CLUB_BY_NAME:
+            return {"error": f"no club called {team!r}", "clubs": list(CLUB_BY_NAME)}
+        return league().club(team)
+
+    def get_match_picture() -> dict:
+        """How the match is going: the score and minute, who is on top recently (in words), possession
+        overall and in the last 10 minutes (%), shots overall and in the last 10 minutes, and expected
+        goals (xG) per team so far."""
+        return {"score": stats.score, "minute": stats.minute,
+                "on_top_recently": momentum["get_momentum"](), "possession": stats.possession(),
+                "possession_last_10_min": stats.possession(recent=True),
+                "shots_last_10_min": stats.recent_shots(),
+                "shots": stats.shots, "xg": {team: round(xg, 2) for team, xg in stats.xg.items()}}
+
+    def get_match_story() -> dict:
+        """The story of the match so far and its latest logged moments (goals, red cards, big chances,
+        patterns, what was said on air), with minutes. For catching up and anything about earlier."""
+        return story() if story else {"story": "(no story yet)"}
+
+    tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_patterns, get_match_story,
+             get_league_table, get_club_season, get_match_picture,
+             momentum["get_shot_quality"], momentum["get_pass_rarity"]]
+    return [recorded(tool) for tool in tools]  # so the answer can be checked against what they said
 
 
 class QuestionAnswerer:
     def __init__(self, stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Moment]],
-                 events_by_id: dict[str, MatchEvent], use_model: bool) -> None:
+                 events_by_id: dict[str, MatchEvent], use_model: bool,
+                 story: Callable[[], dict] | None = None) -> None:
         self.agent = Agent(
             chat_client(),
             name="qa",
             instructions=INSTRUCTIONS,
-            tools=build_qa_tools(stats, timeline, events_by_id),
+            tools=build_qa_tools(stats, timeline, events_by_id, story),
             default_options={"temperature": 0.3, "max_tokens": 200},
         ) if use_model else None
+        self.stats = stats
 
     async def answer(self, question: str, minute: int, second: int, viewer: ViewerProfile,
                      full_time: bool = False) -> str:
@@ -151,11 +237,35 @@ class QuestionAnswerer:
         if not self.agent:
             return UNAVAILABLE
         asked_at = "full time (the match is over)" if full_time else f"{minute}:{second:02d}"
+        limit = WORD_LIMITS.get(viewer.level, WORD_LIMITS["fan"])
         prompt = (f"QUESTION: {question[:MAX_QUESTION_CHARS]}\nASKED_AT: {asked_at}\n"
-                  f"VIEWER_LEVEL: {viewer.level}")
+                  f"VIEWER_LEVEL: {viewer.level}\nMAX_WORDS: {limit}")
+        said = {*re.findall(r"\b\d+(?:\.\d+)?\b", question), str(minute), str(second)}
         try:
-            response = await asyncio.wait_for(self.agent.run(prompt), DEADLINE_SECONDS)
-            return response.text.strip() or UNAVAILABLE
+            with recording() as tool_results:
+                return await asyncio.wait_for(self._write(prompt, viewer.level, limit, tool_results, said),
+                                              DEADLINE_SECONDS)
         except Exception as error:
             log.warning("Q&A failed: %s", type(error).__name__)
             return "Sorry, I couldn't work that one out in time. Ask me again in a moment!"
+
+    async def _write(self, prompt: str, level: str, limit: int, tool_results: list, said: set[str]) -> str:
+        """Draft, check against what the tools returned, one retry if wrong, then an honest fallback
+        (the viewer asked, so silence isn't an option; a wrong number is worse than "ask again")."""
+        text = await self._draft(prompt, level, limit)
+        if problems := check_answer(text, tool_results, self.stats, said):
+            text = await self._draft(f"{prompt}\nYOUR LAST ANSWER: {text}\nWRONG: {'; '.join(problems)}.\n"
+                                     "Answer again, with only numbers your tools gave, each with its team.",
+                                     level, limit)
+            if problems := check_answer(text, tool_results, self.stats, said):
+                log.warning("Q&A answer failed the check twice: %s", "; ".join(problems))
+                return NOT_SURE
+        return text
+
+    async def _draft(self, prompt: str, level: str, limit: int) -> str:
+        text = (await self.agent.run(prompt)).text.strip()
+        if len(text.split()) > limit * 1.2:  # the model doesn't count words: ask once to shorten
+            text = (await self.agent.run(
+                f"Rewrite this spoken answer in at most {limit} words for a {level} viewer. Keep the "
+                f"answer to the question and every number exactly as it is. Text: {text}")).text.strip()
+        return fit_to_words(text, limit + 10) or UNAVAILABLE

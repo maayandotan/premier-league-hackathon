@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     use_speech: bool = True  # False = text only, no audio
     allow_real_data: bool = True  # False in production: StatsBomb data is for local testing only
 
+    league_db: str = ":memory:"  # the league's results (SQLite); rebuilt from season.json on every start
+
     frontend_origin: str = "http://localhost:5173"
     replay_speed: float = 1.0  # 1.0 = real time; higher replays the match faster
 

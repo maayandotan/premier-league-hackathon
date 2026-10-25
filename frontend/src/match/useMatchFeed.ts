@@ -28,6 +28,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
   const [audio] = useState(() => new BroadcastAudio(setSpeakingId))
   const [muted, setMuted] = useState(false)
   const [level, setLevelState] = useState(initialLevel)
+  const [connected, setConnected] = useState(false)
   const askedAt = useRef(new Map<string, number>()) // question id -> match clock (s) when asked
   const answerOf = useRef(new Map<string, string>()) // answer line id -> question id
   const bigEvents = useRef(new Set<string>()) // event ids that beat viewers' questions
@@ -49,8 +50,21 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws'
     const query = new URLSearchParams({ source, speed: String(speed), start: String(start), level })
     const ws = new WebSocket(`${protocol}://${location.host}/ws/match?${query}`)
-    ws.onopen = () => setStatus('live')
+    let ended = false
+    ws.onopen = () => {
+      setStatus('live')
+      setConnected(true)
+    }
     ws.onerror = () => setStatus('error')
+    // A dropped connection must show: otherwise the clock freezes and questions go nowhere.
+    ws.onclose = () => {
+      if (socket.current !== ws) return // an old match, closed by Restart
+      setConnected(false)
+      if (!ended) {
+        setError('Lost the connection to the match. Press Kick off to watch again.')
+        setStatus('error')
+      }
+    }
     ws.onmessage = (msg) => {
       const data = JSON.parse(msg.data) as FeedMessage
       switch (data.type) {
@@ -90,6 +104,7 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
           setStats(data.stats)
           break
         case 'end':
+          ended = true
           setStats(data.stats)
           setStatus('ended')
           break
@@ -134,6 +149,6 @@ export function useMatchFeed({ source, speed, start, level: initialLevel }: Feed
 
   return {
     status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask, setListening,
-    toggleMute, start: begin,
+    toggleMute, start: begin, connected,
   }
 }

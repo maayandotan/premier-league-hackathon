@@ -3,6 +3,8 @@
     "id": "open",
     "home": {
       "name": "Northbridge FC",
+      "code": "NOR",
+      "color": "#3b82f6",
       "players": [
         {
           "name": "T. Brannock",
@@ -109,6 +111,8 @@
     },
     "away": {
       "name": "Westvale United",
+      "code": "WEU",
+      "color": "#f43f5e",
       "players": [
         {
           "name": "G. Marrow",
@@ -213,7 +217,7 @@
         }
       ]
     },
-    "competition": "Synthetic League",
+    "competition": "Meridian League",
     "source": "synthetic",
     "extra": {
       "scenario": "open",
