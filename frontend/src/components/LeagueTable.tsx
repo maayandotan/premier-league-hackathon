@@ -1,3 +1,4 @@
+import { useT } from '../i18n'
 import type { League } from '../match/types'
 
 /** The Meridian League table, with the two clubs in this match highlighted. Before today's match it's
@@ -8,12 +9,14 @@ export function LeagueTable({ league, teams, mine, simple }: {
   mine?: string | null
   simple?: boolean // beginner: position, club, points
 }) {
+  const t = useT()
   return (
-    <section className={`card league${simple ? ' simple' : ''}`} aria-label="League table">
-      <h2>{league.league} <span className="league-sub">Matchday {league.matchday}</span></h2>
+    <section className={`card league${simple ? ' simple' : ''}`} aria-label={t('League table')}>
+      <h2>{league.league} <span className="league-sub">{t('Matchday {n}', { n: league.matchday })}</span></h2>
       <table>
         <thead>
-          <tr><th>#</th><th className="team">Club</th><th>P</th><th>GD</th><th>Pts</th><th className="form">Form</th></tr>
+          <tr><th>#</th><th className="team">{t('Club')}</th><th>{t('P')}</th><th>{t('GD')}</th><th>{t('Pts')}</th>
+            <th className="form">{t('Form')}</th></tr>
         </thead>
         <tbody>
           {league.table.map((row) => (
@@ -25,7 +28,7 @@ export function LeagueTable({ league, teams, mine, simple }: {
               <td>{row.goal_difference > 0 ? `+${row.goal_difference}` : row.goal_difference}</td>
               <td className="pts">{row.points}</td>
               <td className="form">
-                {row.form.split('').map((r, i) => <span key={i} className={`form-${r}`}>{r}</span>)}
+                {row.form.split('').map((r, i) => <span key={i} className={`form-${r}`}>{t.form(r)}</span>)}
               </td>
             </tr>
           ))}

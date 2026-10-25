@@ -2,6 +2,7 @@ import type { Club, LeagueFixture, MatchInfo, Player } from '../match/types'
 import { PlayIcon, SpeakerIcon } from './Icons'
 import type { Level } from './LevelPicker'
 import { Crest } from './Scorebug'
+import { useT } from '../i18n'
 
 const POSITIONS = ['Goalkeeper', 'Right Back', 'Right Center Back', 'Left Center Back', 'Left Back',
   'Center Defensive Midfield', 'Right Center Midfield', 'Left Center Midfield', 'Right Wing', 'Left Wing',
@@ -55,46 +56,47 @@ export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, 
   team: string | null
   onTeam: (team: string | null) => void
 }) {
+  const t = useT()
   return (
-    <section className="card prematch" aria-label="Before kick-off">
+    <section className="card prematch" aria-label={t('Before kick-off')}>
       {fixtures && fixtures.length > 0 && (
-        <nav className="pm-fixtures" aria-label={`Matchday ${matchday} fixtures`}>
-          <span className="pm-fixtures-title">Matchday {matchday}: pick a match</span>
+        <nav className="pm-fixtures" aria-label={t('Matchday {n}', { n: matchday ?? '' })}>
+          <span className="pm-fixtures-title">{t('Matchday {n}: pick a match', { n: matchday ?? '' })}</span>
           <div className="pm-fixture-list">
             {fixtures.map((f) => (
               <a key={f.source} href={withSource(f.source)} className={f.source === source ? 'active' : undefined}
                 aria-current={f.source === source ? 'true' : undefined}>
                 <span>{f.home}</span>
-                <span className="pm-fixture-score">{f.result ?? 'v'}</span>
+                <span className="pm-fixture-score">{f.result ?? t('v')}</span>
                 <span>{f.away}</span>
               </a>
             ))}
           </div>
         </nav>
       )}
-      <span className="eyebrow">{info.competition ?? 'Match'}{matchday ? ` · Matchday ${matchday}` : ''} · Kick-off</span>
+      <span className="eyebrow">{info.competition ?? t('Match')}{matchday ? ` · ${t('Matchday {n}', { n: matchday })}` : ''} · {t('Kick-off')}</span>
       <div className="pm-teams">
         <div className="pm-team home">
           <Crest name={info.home.name} side="home" code={info.home.code} color={info.home.color} />
           <span>{info.home.name}</span>
         </div>
-        <span className="pm-vs">vs</span>
+        <span className="pm-vs">{t('vs')}</span>
         <div className="pm-team away">
           <span>{info.away.name}</span>
           <Crest name={info.away.name} side="away" code={info.away.code} color={info.away.color} />
         </div>
       </div>
-      <div className="pm-lineups" aria-label="Starting line-ups">
+      <div className="pm-lineups" aria-label={t('Starting line-ups')}>
         <Lineup players={info.home.players ?? []} side="home" />
         <Lineup players={info.away.players ?? []} side="away" />
       </div>
       <p className="pm-voices">
-        Your commentators: <strong>Davis</strong> calls the action, <strong>Roy</strong> explains why it matters.
-        Ask them anything while the match goes on.
+        {t('Your commentators:')} <strong>Davis</strong> {t('calls the action,')} <strong>Roy</strong>{' '}
+        {t('explains why it matters.')} {t('Ask them anything while the match goes on.')}
       </p>
       {clubs && clubs.length > 0 && (
         <fieldset className="pm-club">
-          <legend>Your club <span>(optional)</span></legend>
+          <legend>{t('Your club')} <span>{t('(optional)')}</span></legend>
           <div className="pm-club-list">
             {clubs.map((c) => (
               <button key={c.name} type="button" className={team === c.name ? 'active' : undefined}
@@ -104,25 +106,25 @@ export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, 
               </button>
             ))}
           </div>
-          <span className="pm-club-name">{team ?? 'Neutral: no club picked'}</span>
+          <span className="pm-club-name">{team ?? t('Neutral: no club picked')}</span>
         </fieldset>
       )}
       <fieldset className="pm-level">
-        <legend>How well do you know football?</legend>
+        <legend>{t('How well do you know football?')}</legend>
         <div className="pm-choices">
           {CHOICES.map((c) => (
             <label key={c.id} className={level === c.id ? 'active' : ''} data-level={c.id}>
               <input type="radio" name="level" value={c.id} checked={level === c.id} onChange={() => onLevel(c.id)} />
-              <span className="pm-choice-level">{c.label}</span>
-              <span className="pm-choice-title">{c.title}</span>
-              <span className="pm-choice-hint">{c.hint}</span>
+              <span className="pm-choice-level">{t(c.label)}</span>
+              <span className="pm-choice-title">{t(c.title)}</span>
+              <span className="pm-choice-hint">{t(c.hint)}</span>
             </label>
           ))}
         </div>
       </fieldset>
       <div className="pm-go">
-        <button className="kickoff big" onClick={onKickOff}><PlayIcon size={20} /> Kick off</button>
-        <span className="hint"><SpeakerIcon size={16} /> Turn your sound on</span>
+        <button className="kickoff big" onClick={onKickOff}><PlayIcon size={20} /> {t('Kick off')}</button>
+        <span className="hint"><SpeakerIcon size={16} /> {t('Turn your sound on')}</span>
       </div>
     </section>
   )

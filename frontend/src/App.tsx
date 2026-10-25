@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AnalystQATable } from './components/AnalystQATable'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
@@ -20,6 +20,7 @@ import { PreMatch } from './components/PreMatch'
 import { Pitch } from './match/Pitch'
 import type { ClubSeason, League, MatchInfo } from './match/types'
 import { useMatchFeed } from './match/useMatchFeed'
+import { type Lang, LangContext, translator } from './i18n'
 
 // Pick the match from the URL, e.g. ?source=synthetic:red_card&speed=20&start=60 (default: the comeback)
 const params = new URLSearchParams(location.search)
@@ -73,6 +74,23 @@ function useFavourite(): [string | null, (team: string | null) => void] {
   return [team, choose]
 }
 
+const LANG_KEY = 'your-call.lang'
+
+/** English or Spanish: from ?lang= or remembered from last time (English if storage fails). */
+function useLanguage(): [Lang, (lang: Lang) => void] {
+  const [lang, setLang] = useState<Lang>(() => {
+    try {
+      const saved = params.get('lang') ?? localStorage.getItem(LANG_KEY)
+      return saved === 'es' ? 'es' : 'en'
+    } catch { return 'en' }
+  })
+  const choose = (next: Lang) => {
+    setLang(next)
+    try { localStorage.setItem(LANG_KEY, next) } catch { /* fine */ }
+  }
+  return [lang, choose]
+}
+
 /** The viewer's club's season (refetched at full time, when the result is in). */
 function useClubSeason(team: string | null, refresh: boolean): ClubSeason | null {
   const [season, setSeason] = useState<ClubSeason | null>(null)
@@ -101,8 +119,11 @@ function inkFor(hex: string): string {
 
 export default function App() {
   const [team, setTeam] = useFavourite()
+  const [lang, setLang] = useLanguage()
+  const t = useMemo(() => translator(lang), [lang])
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
   const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask,
-    setListening, toggleMute, start, connected, xgHistory } = useMatchFeed({ ...feedOptions, team })
+    setListening, toggleMute, start, connected, xgHistory } = useMatchFeed({ ...feedOptions, team, lang })
   const preInfo = usePreMatchInfo(feedOptions.source)
   const league = useLeague(status === 'ended') // fetched again at full time: the result is in the table
   const club = league?.clubs?.find((c) => c.name === team) ?? null
@@ -128,34 +149,43 @@ export default function App() {
   const scoreText = info && stats ? `${stats.score[info.home.name]}–${stats.score[info.away.name]}` : ''
 
   return (
+    <LangContext.Provider value={t}>
     <div className={`app level-${level}${info ? '' : ' pre-match'}${club ? ' themed' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true"><Logo size={34} /></span>
           <div>
             <h1>Your Call</h1>
-            <p>The match, explained your way</p>
+            <p>{t('The match, explained your way')}</p>
           </div>
         </div>
         <div className="controls">
           {club && (
-            <span className="club-badge" title={`Supporting ${club.name}`}>
+            <span className="club-badge" title={t('Supporting {club}', { club: club.name })}>
               <Crest name={club.name} side="home" code={club.code} color={club.color} />
               <span>{club.name}</span>
             </span>
           )}
           <LevelPicker value={level as Level} onChange={setLevel} />
-          <button className="icon-button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}
-            title={muted ? 'Sound off' : 'Sound on'}>
+          <div className="level-picker lang-picker" role="radiogroup" aria-label={t('Language')}>
+            {(['en', 'es'] as const).map((code) => (
+              <button key={code} role="radio" aria-checked={lang === code} className={lang === code ? 'active' : ''}
+                lang={code} title={code === 'en' ? 'English' : 'Español'} onClick={() => setLang(code)}>
+                {code.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <button className="icon-button" onClick={toggleMute} aria-label={t(muted ? 'Unmute' : 'Mute')}
+            title={t(muted ? 'Sound off' : 'Sound on')}>
             <SpeakerIcon muted={muted} />
           </button>
           <button className="kickoff" onClick={start}>
-            {live ? <RestartIcon size={16} /> : <PlayIcon size={16} />} {live ? 'Restart' : 'Kick off'}
+            {live ? <RestartIcon size={16} /> : <PlayIcon size={16} />} {t(live ? 'Restart' : 'Kick off')}
           </button>
         </div>
       </header>
 
-      {error && <p className="error" role="alert">{error}</p>}
+      {error && <p className="error" role="alert">{t(error)}</p>}
 
       <main className="broadcast">
         <div className="stage">
@@ -179,12 +209,11 @@ export default function App() {
           ) : (
             <section className="card hero">
               <div className="hero-text">
-                <span className="eyebrow">Live · AI broadcast</span>
-                <h2>Two AI commentators.<br />Your level.</h2>
-                <p>A caller for the action, an analyst for the why, and a crowd that roars on every goal.
-                  Ask them anything, by voice, while the match goes on.</p>
-                <button className="kickoff big" onClick={start}><PlayIcon size={20} /> Kick off</button>
-                <p className="hint"><SpeakerIcon size={16} /> Turn your sound on</p>
+                <span className="eyebrow">{t('Live · AI broadcast')}</span>
+                <h2>{t('Two AI commentators.')}<br />{t('Your level.')}</h2>
+                <p>{t('A caller for the action, an analyst for the why, and a crowd that roars on every goal. Ask them anything, by voice, while the match goes on.')}</p>
+                <button className="kickoff big" onClick={start}><PlayIcon size={20} /> {t('Kick off')}</button>
+                <p className="hint"><SpeakerIcon size={16} /> {t('Turn your sound on')}</p>
               </div>
             </section>
           )}
@@ -217,8 +246,9 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <span>Fictional teams and players · Crowd audio: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0</span>
+        <span>{t('Fictional teams and players · Crowd audio: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0')}</span>
       </footer>
     </div>
+    </LangContext.Provider>
   )
 }

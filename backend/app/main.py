@@ -88,10 +88,11 @@ async def match_feed(ws: WebSocket) -> None:
     match (info) -> per event: event (+ ranked moment), stats -> commentary (text) -> audio (MP3)
     -> end. Commentary and audio come from background tasks, so the match never waits for them.
     Query params: source (see app.match.sources), speed (1 = real time), start (minute),
-    level (beginner | fan | analyst).
+    level (beginner | fan | analyst), team (the viewer's club), lang (en | es).
 
     The browser can send {"type": "set_level", "level": ...} at any time; the server answers
-    {"type": "level", "level": ...} and the next line follows the new level.
+    {"type": "level", "level": ...} and the next line follows the new level. set_team and
+    set_language work the same way.
     It can also send {"type": "question", "text": ...}: the server echoes {"type": "question"} and
     the answer arrives later as a commentary line with reply_to, while the match keeps going.
     Questions stay open after full time ("end") until the viewer leaves or POST_MATCH_SECONDS.
@@ -112,6 +113,7 @@ async def match_feed(ws: WebSocket) -> None:
     viewer = ViewerProfile()
     viewer.set_level(params.get("level", "fan"))
     viewer.set_team(params.get("team"))
+    viewer.set_language(params.get("lang"))
     pipeline = CommentaryPipeline(stats, caller, analyst, viewer)
     pipeline.qa = QuestionAnswerer(stats, pipeline.timeline, {e.id: e for e in match.events},
                                    use_model=agents_enabled(), story=pipeline.storyteller.view)
@@ -137,7 +139,8 @@ async def match_feed(ws: WebSocket) -> None:
             if line is None:  # e.g. the Analyst chose silence
                 return
             await send({"type": "commentary", "line": line.model_dump()})
-            if speech and (audio := await speech.synthesize(line.speaker, line.text, line.excitement)):
+            if speech and (audio := await speech.synthesize(line.speaker, line.text, line.excitement,
+                                                                line.language)):
                 await send({"type": "audio", "line_id": line.id, "excitement": line.excitement,
                             "mp3": base64.b64encode(audio).decode()})
         except WebSocketDisconnect:
@@ -164,6 +167,8 @@ async def match_feed(ws: WebSocket) -> None:
                     await send({"type": "level", "level": viewer.level})
                 elif kind == "set_team" and viewer.set_team(message.get("team")):
                     await send({"type": "team", "team": viewer.team})
+                elif kind == "set_language" and viewer.set_language(message.get("language")):
+                    await send({"type": "language", "language": viewer.language})
                 elif kind == "question" and (text := str(message.get("text", "")).strip()):
                     # The match keeps going: the answer is a background task like any other line.
                     questions_asked += 1

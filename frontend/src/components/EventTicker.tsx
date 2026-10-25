@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import type { MatchEvent, Moment, RankedEvent } from '../match/types'
+import { useT } from '../i18n'
 import { BallIcon, CardIcon, ClockIcon, FlagIcon, SwapIcon, TargetIcon, WhistleIcon } from './Icons'
 
 function icon(e: MatchEvent, m: Moment): ReactNode {
@@ -22,12 +23,13 @@ function isKeyMoment({ event, moment }: RankedEvent): boolean {
 
 /** The match's key moments, newest first, with the reason each mattered. */
 export function EventTicker({ events, homeTeam }: { events: RankedEvent[]; homeTeam: string }) {
+  const t = useT()
   const key = events.filter(isKeyMoment).slice(0, 10)
   return (
-    <section className="card ticker" aria-label="Key moments">
-      <h2>Key moments</h2>
+    <section className="card ticker" aria-label={t('Key moments')}>
+      <h2>{t('Key moments')}</h2>
       {key.length === 0 ? (
-        <p className="empty">Goals, cards and big chances will appear here.</p>
+        <p className="empty">{t('Goals, cards and big chances will appear here.')}</p>
       ) : (
         <ol>
           {key.map(({ event: e, moment }) => (
@@ -37,7 +39,7 @@ export function EventTicker({ events, homeTeam }: { events: RankedEvent[]; homeT
               <span className="icon" aria-hidden="true">{icon(e, moment)}</span>
               <span className="what">
                 <strong>{e.player?.split(' ').slice(-1)[0] ?? e.team}</strong>
-                <span className="reason">{moment.reason}</span>
+                <span className="reason">{t.reason(moment.reason)}</span>
               </span>
             </li>
           ))}

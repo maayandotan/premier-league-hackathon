@@ -1,8 +1,10 @@
 import type { RankedEvent } from '../match/types'
 import { BallIcon, CardIcon } from './Icons'
+import { useT } from '../i18n'
 
 /** 0' to 90' (or 120' in extra time) with goals and cards marked: home above the line, away below. */
 export function MatchTimeline({ events, homeTeam, minute }: { events: RankedEvent[]; homeTeam: string; minute: number }) {
+  const t = useT()
   const extraTime = events.some(({ event }) => event.period >= 3)
   const end = extraTime ? 120 : 90
   const marks = events
@@ -13,7 +15,7 @@ export function MatchTimeline({ events, homeTeam, minute }: { events: RankedEven
       at: Math.min(100, (event.minute / end) * 100),
       goal: moment.kind === 'goal',
       red: /red|second/i.test(event.card ?? event.foul?.card ?? ''),
-      label: `${event.minute}' ${moment.kind === 'goal' ? 'Goal' : 'Card'}: ${event.player ?? event.team}`,
+      label: `${event.minute}' ${t(moment.kind === 'goal' ? 'Goal' : 'Card')}: ${event.player ?? event.team}`,
     }))
   const now = Math.min(100, (minute / end) * 100)
 

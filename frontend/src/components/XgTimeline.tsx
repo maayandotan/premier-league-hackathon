@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { MatchInfo, XgPoint } from '../match/types'
+import { useT } from '../i18n'
 
 const W = 560
 const H = 200
@@ -28,6 +29,7 @@ function deltaE(a: string, b: string): number {
  * and when. Two lines on one axis; the away line is dashed and both are labelled at their ends, so
  * colour is never the only way to tell them apart. */
 export function XgTimeline({ info, history }: { info: MatchInfo; history: XgPoint[] }) {
+  const t = useT()
   const [hover, setHover] = useState<XgPoint | null>(null)
   const home = { name: info.home.name, code: info.home.code ?? info.home.name.slice(0, 3).toUpperCase(),
     color: info.home.color ?? '#3b82f6' }
@@ -51,14 +53,14 @@ export function XgTimeline({ info, history }: { info: MatchInfo; history: XgPoin
   }
 
   return (
-    <section className="card xg-timeline" aria-label="Expected goals over the match">
-      <h2>Expected goals <span className="league-sub">adding up over the match</span></h2>
+    <section className="card xg-timeline" aria-label={t('Expected goals')}>
+      <h2>{t('Expected goals')} <span className="league-sub">{t('adding up over the match')}</span></h2>
       <div className="xg-legend" aria-hidden="true">
         <span><i style={{ background: home.color }} />{home.name}</span>
         <span><i className="dashed" style={{ borderColor: away.color }} />{away.name}</span>
       </div>
       {history.length < 2 ? (
-        <p className="empty">The chart fills in as the match goes on.</p>
+        <p className="empty">{t('The chart fills in as the match goes on.')}</p>
       ) : (
         <div className="xg-plot">
           <svg viewBox={`0 0 ${W} ${H}`} role="img"

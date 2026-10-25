@@ -1,6 +1,7 @@
 """The viewer's profile (#15): who the commentary is for. Every AI agent reads it.
 
-One per WebSocket connection. The level can change mid-match: the next line follows it. The team
+One per WebSocket connection. The level and the language can change mid-match: the next line
+follows them. The team
 is the viewer's favourite club (or None): the analyst speaks a little from that fan's side, and Q&A
 reads "we" and "my team" as that club.
 """
@@ -26,6 +27,15 @@ class ViewerProfile:
         if team == self.team:
             return False
         self.team = team
+        return True
+
+    def set_language(self, language: str | None) -> bool:
+        """English or Spanish (app.agents.language). Returns whether it changed."""
+        from app.agents.language import LANGUAGES
+
+        if language not in LANGUAGES or language == self.language:
+            return False
+        self.language = language
         return True
 
     def set_level(self, level: str) -> bool:

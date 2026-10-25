@@ -1,3 +1,5 @@
+import { BASICS_ES, useT } from '../i18n'
+
 /** For beginners: the handful of things worth knowing to follow a match. Our own words. */
 const BASICS = [
   ['Goal', 'The whole ball crosses the line between the posts. The team with more goals at the end wins.'],
@@ -9,15 +11,16 @@ const BASICS = [
 ]
 
 export function BeginnerGuide() {
+  const t = useT()
   return (
-    <section className="card guide" aria-label="Football basics">
-      <h2>Football basics</h2>
+    <section className="card guide" aria-label={t('Football basics')}>
+      <h2>{t('Football basics')}</h2>
       <dl>
-        {BASICS.map(([term, text]) => (
+        {(t.lang === 'es' ? BASICS_ES : BASICS).map(([term, text]) => (
           <div key={term}><dt>{term}</dt><dd>{text}</dd></div>
         ))}
       </dl>
-      <p className="stat-note">Ask Roy about anything else, any time: the match keeps going.</p>
+      <p className="stat-note">{t('Ask Roy about anything else, any time: the match keeps going.')}</p>
     </section>
   )
 }
