@@ -108,6 +108,20 @@ def captain(club_name: str) -> str:
     return next(p.name for p in SQUADS[club_name] if p.position == CAPTAIN_POSITION)
 
 
+def find_player(name: str, preferred: tuple[str, ...] = ()) -> tuple[str, SquadPlayer] | None:
+    """A player by full name or surname ("Ferro", "M. Ferro"), searching the clubs in `preferred`
+    first (the two teams playing), then the whole league."""
+    wanted = name.strip().lower().rstrip(".?!")
+    clubs = list(preferred) + [club for club in SQUADS if club not in preferred]
+    for exact in (True, False):
+        for club in clubs:
+            for player in SQUADS.get(club, []):
+                full = player.name.lower()
+                if full == wanted if exact else (full.split(". ")[-1] == wanted.split()[-1]):
+                    return club, player
+    return None
+
+
 def team_info(name: str) -> Team:
     """The squad as it appears in the match file's info."""
     club = CLUB_BY_NAME.get(name)
