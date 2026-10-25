@@ -3,12 +3,18 @@ import { teamCode } from '../match/teams'
 import type { MatchInfo, MatchStats } from '../match/types'
 
 /** A plain shield with the team code: our own design, no real club badge. */
-export function Crest({ name, side }: { name: string; side: 'home' | 'away' }) {
+export function Crest({ name, side, code, color }: {
+  name: string
+  side: 'home' | 'away'
+  code?: string // the club's own code and colour, when the match data has them
+  color?: string
+}) {
   return (
     <svg className={`crest ${side}`} viewBox="0 0 40 46" aria-hidden="true">
       <path d="M20 2 L37 8 V22 C37 33 29 40 20 44 C11 40 3 33 3 22 V8 Z" className="crest-shield" />
-      <path d="M20 6 L33 10.5 V22 C33 31 27 36.5 20 40 C13 36.5 7 31 7 22 V10.5 Z" className="crest-inner" />
-      <text x="20" y="27" textAnchor="middle">{teamCode(name)}</text>
+      <path d="M20 6 L33 10.5 V22 C33 31 27 36.5 20 40 C13 36.5 7 31 7 22 V10.5 Z" className="crest-inner"
+        style={color ? { fill: color } : undefined} />
+      <text x="20" y="27" textAnchor="middle">{code ?? teamCode(name)}</text>
     </svg>
   )
 }
@@ -33,7 +39,7 @@ export function Scorebug({ info, stats, status, period }: {
         <span className="phase">{phase}</span>
       </div>
       <div className="team home">
-        <Crest name={home} side="home" />
+        <Crest name={home} side="home" code={info.home.code} color={info.home.color} />
         <span className="name">{home}</span>
       </div>
       <div className="score">
@@ -43,7 +49,7 @@ export function Scorebug({ info, stats, status, period }: {
       </div>
       <div className="team away">
         <span className="name">{away}</span>
-        <Crest name={away} side="away" />
+        <Crest name={away} side="away" code={info.away.code} color={info.away.color} />
       </div>
       <div className="clock">
         {status === 'live' && <span className="live-dot" aria-hidden="true" />}

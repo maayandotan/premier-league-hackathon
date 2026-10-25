@@ -129,7 +129,7 @@ def test_tools_say_when_in_words_not_clock_times():
 
 
 def test_ordinals():
-    from app.agents.qa import ordinal
+    from app.agents.describe import ordinal
     assert [ordinal(n) for n in (1, 2, 3, 11, 12, 13, 21, 72, 93)] == \
         ["1st", "2nd", "3rd", "11th", "12th", "13th", "21st", "72nd", "93rd"]
 

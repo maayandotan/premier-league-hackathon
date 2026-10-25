@@ -8,9 +8,10 @@ import { GoalBanner, LowerThird } from './components/PitchOverlays'
 import { QuestionBox } from './components/QuestionBox'
 import { Scorebug } from './components/Scorebug'
 import { MomentumBar, StatBars } from './components/StatBars'
+import { LeagueTable } from './components/LeagueTable'
 import { PreMatch } from './components/PreMatch'
 import { Pitch } from './match/Pitch'
-import type { MatchInfo } from './match/types'
+import type { League, MatchInfo } from './match/types'
 import { useMatchFeed } from './match/useMatchFeed'
 
 // Pick the match from the URL, e.g. ?source=synthetic:red_card&speed=20&start=60 (default: the comeback)
@@ -37,10 +38,25 @@ function usePreMatchInfo(source: string): MatchInfo | null {
   return info
 }
 
+/** The Meridian League: today's fixtures, the table and the top scorers (null if unavailable). */
+function useLeague(refresh: boolean): League | null {
+  const [league, setLeague] = useState<League | null>(null)
+  useEffect(() => {
+    let current = true
+    fetch('/api/league')
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => { if (current) setLeague(data) })
+      .catch(() => {})
+    return () => { current = false }
+  }, [refresh])
+  return league
+}
+
 export default function App() {
   const { status, error, info, events, lines, questions, stats, muted, speakingId, level, setLevel, ask,
     setListening, toggleMute, start, connected } = useMatchFeed(feedOptions)
   const preInfo = usePreMatchInfo(feedOptions.source)
+  const league = useLeague(status === 'ended') // fetched again at full time: the result is in the table
   const answered = new Set(lines.map((l) => l.reply_to))
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
@@ -88,7 +104,8 @@ export default function App() {
               </section>
             </>
           ) : preInfo ? (
-            <PreMatch info={preInfo} level={level as Level} onLevel={setLevel} onKickOff={start} />
+            <PreMatch info={preInfo} level={level as Level} onLevel={setLevel} onKickOff={start}
+              fixtures={league?.fixtures} matchday={league?.matchday} source={feedOptions.source} />
           ) : (
             <section className="card hero">
               <div className="hero-text">
@@ -109,12 +126,12 @@ export default function App() {
             onListening={setListening} />
         </aside>
 
-        {info && stats && (
-          <div className="lower">
-            <StatBars info={info} stats={stats} />
-            <EventTicker events={events} homeTeam={info.home.name} />
-          </div>
-        )}
+        <div className="lower">
+          {info && stats && <StatBars info={info} stats={stats} />}
+          {info && stats && <EventTicker events={events} homeTeam={info.home.name} />}
+          {league && <LeagueTable league={league}
+            teams={[(info ?? preInfo)?.home.name, (info ?? preInfo)?.away.name].filter((t): t is string => !!t)} />}
+        </div>
       </main>
 
       <footer className="footer">

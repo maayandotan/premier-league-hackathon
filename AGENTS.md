@@ -38,7 +38,8 @@ Breaking one of these can disqualify the entry. If a task seems to need breaking
 | `backend/tests/` | pytest; runs with no Azure access (`conftest.py` turns agents and speech off) |
 | `frontend/src/` | React + Vite + TypeScript: scorebug, SVG pitch, commentary feed, question box, audio engine |
 | `backend/app/synthetic/` | Synthetic match generator: possession-chain simulator, scripted scenarios, fictional squads |
-| `data/synthetic/` | Generated matches (in git): `comeback`, `red_card`, `late_equaliser`, `open` |
+| `backend/app/league/` | The Meridian League: 20 clubs (`clubs.py`), fixtures and the pre-played season (`season.py`, saved by `scripts/build_league.py`), the results database (`db.py`, SQLite in the app) |
+| `data/synthetic/` | Generated matches (in git): `comeback`, `red_card`, `late_equaliser`, `open`, and `league/season.json` |
 | `spikes/` | Throwaway experiments, step by step versions of the agents. Not production code |
 | `scripts/deploy.sh` | Build and deploy to Azure |
 

@@ -1,12 +1,17 @@
-"""Our two fictional clubs and their squads (DATA_POLICY.md rule 4: nothing real).
+"""The squads of the Meridian League's 20 fictional clubs (DATA_POLICY.md rule 4: nothing real).
+
+Northbridge and Westvale were written by hand for the demo story; the other 18 are generated from
+invented surname syllables (seeded, so every run gives the same squads), with a captain each.
 
 Both play a 4-3-3. Each position has a home spot on the pitch, in the team's own attacking
 frame (x 0 = own goal line, 120 = opponent's; y 0 = left touchline, 80 = right), so the
 simulator can pick the players near the ball.
 """
+import random
 from dataclasses import dataclass
 
 from app.events.models import Player, Team
+from app.league.clubs import CLUB_BY_NAME, CLUBS
 
 NORTHBRIDGE = "Northbridge FC"
 WESTVALE = "Westvale United"
@@ -66,9 +71,47 @@ SQUADS: dict[str, list[SquadPlayer]] = {
 }
 
 
+# Invented surname syllables: the combinations aren't real players.
+_STARTS = ["Ash", "Brin", "Cal", "Dar", "El", "Fen", "Gar", "Hal", "Ivo", "Jas", "Kel", "Lor", "Mor", "Nor",
+           "Ol", "Pen", "Quil", "Ral", "Sor", "Tam", "Ul", "Ver", "Wyn", "Yar", "Zel", "Bre", "Cor", "Dun",
+           "Fal", "Gil", "Hast", "Kirr", "Lund", "Marr", "Nev", "Orr", "Pell", "Rook", "Stav", "Tor"]
+_ENDS = ["ley", "wick", "more", "ford", "ton", "ridge", "dale", "lowe", "sby", "worth", "ard", "ell",
+         "ings", "ock", "ett", "ian", "ova", "ez", "ini", "ski", "ani", "berg", "ssen", "oyle", "ane"]
+_INITIALS = "ABCDEFGHIJKLMNOPRSTVWY"
+_BENCH_LINES = [(13, "GK"), (15, "DEF"), (22, "DEF"), (16, "MID"), (18, "MID"), (19, "FWD"), (21, "FWD")]
+_STARTER_NUMBERS = [1, 2, 5, 6, 3, 4, 8, 10, 7, 11, 9]  # in FORMATION_433 order
+
+
+def _generated_squad(club_name: str, taken: set[str]) -> list[SquadPlayer]:
+    rng = random.Random(club_name)
+    names: list[str] = []
+    while len(names) < 18:
+        name = f"{rng.choice(_INITIALS)}. {rng.choice(_STARTS)}{rng.choice(_ENDS)}"
+        if name not in taken:
+            taken.add(name)
+            names.append(name)
+    return _squad(list(zip(_STARTER_NUMBERS, names[:11], strict=True)),
+                  [(number, name, line)
+                   for (number, line), name in zip(_BENCH_LINES, names[11:], strict=True)])
+
+
+_taken = {p.name for squad in SQUADS.values() for p in squad}
+for _club in CLUBS:
+    if _club.name not in SQUADS:
+        SQUADS[_club.name] = _generated_squad(_club.name, _taken)
+
+CAPTAIN_POSITION = "Center Defensive Midfield"
+
+
+def captain(club_name: str) -> str:
+    """The captain: the holding midfielder, a classic choice (R. Ashdown at Northbridge)."""
+    return next(p.name for p in SQUADS[club_name] if p.position == CAPTAIN_POSITION)
+
+
 def team_info(name: str) -> Team:
     """The squad as it appears in the match file's info."""
-    return Team(name=name, players=[
+    club = CLUB_BY_NAME.get(name)
+    return Team(name=name, code=club.code if club else None, color=club.primary if club else None, players=[
         Player(name=p.name, jersey_number=p.number, position=p.position if p.starter else None,
                starter=p.starter)
         for p in SQUADS[name]
