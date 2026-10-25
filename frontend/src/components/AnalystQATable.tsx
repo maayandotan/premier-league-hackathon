@@ -27,7 +27,7 @@ export function AnalystQATable({
   const [filter, setFilter] = useState<'all' | 'answered' | 'pending'>('all')
   const [search, setSearch] = useState('')
 
-  // Map reply_to -> CommentaryLine (Sonia's answer)
+  // Map reply_to -> CommentaryLine (Roy's answer)
   const answersByQuestionId = useMemo(() => {
     const map = new Map<string, CommentaryLine>()
     for (const line of lines) {
@@ -77,7 +77,7 @@ export function AnalystQATable({
           <div>
             <h2>Analyst Q&A</h2>
             <p className="qa-subtitle">
-              Viewer questions and Sonia's real-time personalized analysis
+              Viewer questions and Roy's real-time personalized analysis
             </p>
           </div>
         </div>
@@ -157,8 +157,8 @@ export function AnalystQATable({
           <div className="qa-empty-icon" aria-hidden="true">🎙️</div>
           <h3>No questions asked yet</h3>
           <p>
-            Ask Sonia about fouls, tactics, key moments, or rules using the question box or microphone.
-            Her answers will appear here in real time!
+            Ask Roy about fouls, tactics, key moments, or rules using the question box or microphone.
+            His answers will appear here in real time!
           </p>
           {onAsk && canAsk && (
             <div className="qa-empty-suggestions">
@@ -192,7 +192,7 @@ export function AnalystQATable({
               <tr>
                 <th className="col-clock">Time</th>
                 <th className="col-question">Question (You)</th>
-                <th className="col-answer">Sonia's Analysis</th>
+                <th className="col-answer">Roy's Analysis</th>
                 <th className="col-status">Status</th>
               </tr>
             </thead>
@@ -227,10 +227,10 @@ export function AnalystQATable({
                     <td className="col-answer">
                       {isAnswered && answer ? (
                         <div className="qa-answer-content">
-                          <span className="qa-avatar sonia" aria-hidden="true">S</span>
+                          <span className="qa-avatar roy" aria-hidden="true">R</span>
                           <div className="qa-answer-body">
                             <div className="qa-answer-meta">
-                              <span className="qa-speaker-name">Sonia (Analyst)</span>
+                              <span className="qa-speaker-name">Roy (Analyst)</span>
                               <span className="level-tag">{answer.level}</span>
                               {isSpeaking && (
                                 <span className="on-air qa-on-air-badge">
@@ -244,7 +244,7 @@ export function AnalystQATable({
                       ) : (
                         <div className="qa-thinking-indicator">
                           <span className="qa-spinner" aria-hidden="true" />
-                          <span className="qa-thinking-text">Sonia is analyzing match data and formulating an answer...</span>
+                          <span className="qa-thinking-text">Roy is analyzing match data and formulating an answer...</span>
                         </div>
                       )}
                     </td>

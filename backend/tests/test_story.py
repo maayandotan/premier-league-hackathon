@@ -43,7 +43,7 @@ def test_each_pattern_is_logged_when_it_appears_not_every_flicker():
     assert len(patterns) < 15
 
 
-def test_earlier_line_finds_what_sonia_really_said():
+def test_earlier_line_finds_what_roy_really_said():
     match_log = comeback_log(until_minute=30)
     match_log.said(16, "Northbridge keep going down the right: 4 of 6 entries there.")
     match_log.said(20, "Westvale have been pressing high.")
@@ -92,23 +92,23 @@ def foul(i, minute):
 
 
 def test_a_new_pattern_is_flagged_at_the_next_stoppage():
-    sonia = Scripted("Northbridge keep going down the right.")
-    pipeline = pipeline_with(analyst_agent=sonia)
+    roy = Scripted("Northbridge keep going down the right.")
+    pipeline = pipeline_with(analyst_agent=roy)
     for i in range(6):
         pipeline.rank(entry(i, 10 + i))
     stoppage = foul(50, 16)
     assert pipeline.should_analyse(stoppage, pipeline.rank(stoppage))
     line = asyncio.run(pipeline.analyse(stoppage, pipeline.timeline[-1][1]))
     assert line.text == "Northbridge keep going down the right."
-    assert "PATTERN" in sonia.inputs[0] and "down the right" in sonia.inputs[0]
+    assert "PATTERN" in roy.inputs[0] and "down the right" in roy.inputs[0]
     assert pipeline.match_log.entries[-1].kind == "said"
     second = foul(51, 17)
     assert not pipeline.should_analyse(second, pipeline.rank(second))  # flagged once, and cooling down
 
 
 def test_a_goal_down_that_side_gets_the_line_she_said():
-    sonia = Scripted("Northbridge go ahead from their usual side.")
-    pipeline = pipeline_with(analyst_agent=sonia)
+    roy = Scripted("Northbridge go ahead from their usual side.")
+    pipeline = pipeline_with(analyst_agent=roy)
     for i in range(6):
         pipeline.rank(entry(i, 10 + i))
     pipeline.match_log.said(16, "Northbridge keep going down the right.")
@@ -119,9 +119,9 @@ def test_a_goal_down_that_side_gets_the_line_she_said():
     moment = pipeline.rank(goal)
     line = asyncio.run(pipeline.analyse(goal, moment))
     assert line.text == "We flagged that right side at 16'. Northbridge go ahead from their usual side."
-    assert "YOU SAID EARLIER: at 16': Sonia said" in sonia.inputs[0]
-    assert "CALLBACK: As we said at 16'," in sonia.inputs[0]
-    assert "Begin your line with CALLBACK" in sonia.inputs[0]
+    assert "YOU SAID EARLIER: at 16': Roy said" in roy.inputs[0]
+    assert "CALLBACK: As we said at 16'," in roy.inputs[0]
+    assert "Begin your line with CALLBACK" in roy.inputs[0]
 
 
 def test_half_time_is_the_storytellers_recap():
@@ -133,7 +133,7 @@ def test_half_time_is_the_storytellers_recap():
 
 
 def test_no_analysis_at_kick_off():
-    """At 0' there's nothing to analyse yet: Sonia said "Northbridge have controlled all the possession"."""
+    """At 0' there's nothing to analyse yet: Roy said "Northbridge have controlled all the possession"."""
     pipeline = pipeline_with(analyst_agent=Scripted("anything"))
     kick_off = MatchEvent(id="k", index=1, period=1, minute=0, second=0, type="Half Start", team=HOME)
     assert not pipeline.should_analyse(kick_off, pipeline.rank(kick_off))

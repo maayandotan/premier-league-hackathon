@@ -57,7 +57,7 @@ def test_speech_sends_ssml_and_returns_mp3(monkeypatch):
     audio = asyncio.run(speech_with(handler).synthesize("caller", "GOAL!", 2))
     assert audio == b"ID3-mp3"
     assert seen[0].headers["Ocp-Apim-Subscription-Key"] == "test-key"
-    assert b'style="shouting"' in seen[0].content and b"en-US-GuyNeural" in seen[0].content
+    assert b'style="shouting"' in seen[0].content and b"en-US-DavisNeural" in seen[0].content
 
 
 @pytest.mark.parametrize("failure", [

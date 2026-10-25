@@ -1,8 +1,9 @@
 """Text to speech with Azure AI Speech (#19), moved from the spike in spikes/speech/.
 
-- Caller: en-US-GuyNeural, using the voice's own styles: excited for build-up, shouting for
+- Caller: en-US-DavisNeural, using the voice's own styles: excited for build-up, shouting for
   big moments. We never speed voices up (it sounded bad).
-- Analyst: en-GB-SoniaNeural, calm.
+- Analyst: en-GB-Ryan HD, a British voice that takes its tone from the text (no styles), calm.
+Both were picked by ear from samples of the voices our Speech tier offers (Oct 2026).
 Returns MP3 bytes: small enough to send to the browser over the WebSocket.
 """
 import logging
@@ -14,9 +15,9 @@ from app.config import settings
 
 log = logging.getLogger(__name__)
 
-VOICES = {"caller": "en-US-GuyNeural", "analyst": "en-GB-SoniaNeural"}
+VOICES = {"caller": "en-US-DavisNeural", "analyst": "en-GB-Ryan:DragonHDLatestNeural"}
 LOCALES = {"caller": "en-US", "analyst": "en-GB"}
-CALLER_STYLES = {1: "excited", 2: "shouting"}  # excitement level -> Guy's built-in style
+CALLER_STYLES = {1: "excited", 2: "shouting"}  # excitement level -> Davis's built-in style
 OUTPUT_FORMAT = "audio-24khz-48kbitrate-mono-mp3"
 
 

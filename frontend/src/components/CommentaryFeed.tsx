@@ -2,13 +2,13 @@ import { useState } from 'react'
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 
 const VOICES = {
-  caller: { name: 'Guy', role: 'Play-by-play' },
-  analyst: { name: 'Sonia', role: 'Analyst' },
+  caller: { name: 'Davis', role: 'Play-by-play' },
+  analyst: { name: 'Roy', role: 'Analyst' },
 } as const
 
 /**
  * The commentary as a live feed: newest on top, the line being spoken highlighted.
- * Viewer questions show as "You" bubbles until Sonia answers; her answer quotes the question.
+ * Viewer questions show as "You" bubbles until Roy answers; his answer quotes the question.
  * Also provides a toggle to view only Questions & Answers right in the sidebar.
  */
 export function CommentaryFeed({ lines, questions, speakingId }: {
@@ -22,7 +22,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
   const pending = questions.filter((q) => !answered.has(q.id)).reverse()
   const byId = new Map(questions.map((q) => [q.id, q]))
 
-  // All Q&A pairs (questions + answers from Sonia)
+  // All Q&A pairs (questions + answers from Roy)
   const answersByQuestionId = new Map<string, CommentaryLine>()
   for (const line of lines) {
     if (line.reply_to) {
@@ -69,7 +69,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
       {tab === 'qa' ? (
         <div className="feed-qa-view">
           {qaList.length === 0 ? (
-            <p className="empty">No questions asked yet. Ask Sonia below!</p>
+            <p className="empty">No questions asked yet. Ask Roy below!</p>
           ) : (
             <ol className="feed-qa-list">
               {qaList.map(({ question: q, answer }) => {
@@ -87,7 +87,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
                     {answer ? (
                       <div className="feed-qa-a" data-speaking={isSpeaking}>
                         <div className="who">
-                          Sonia <span className="role">· Answering you</span>
+                          Roy <span className="role">· Answering you</span>
                           <span className="level-tag">{answer.level}</span>
                           {isSpeaking && <span className="qa-on-air-pill">On Air</span>}
                         </div>
@@ -96,7 +96,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
                     ) : (
                       <div className="feed-qa-waiting">
                         <span className="qa-spinner" aria-hidden="true" />
-                        <span>Sonia is analyzing match data...</span>
+                        <span>Roy is analyzing match data...</span>
                       </div>
                     )}
                   </li>

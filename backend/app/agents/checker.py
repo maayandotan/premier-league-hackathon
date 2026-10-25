@@ -1,11 +1,11 @@
 """Checks the Analyst's line against the stats before it's spoken: the first piece of the
 Fact-Checker (#17).
 
-Better prompts made mistakes rarer but never zero: with every fact grouped by team, Sonia still
+Better prompts made mistakes rarer but never zero: with every fact grouped by team, Roy still
 said "Westvale had more of the ball" (they had 35%) or called a half chance "a big chance" about
-one line in three at beginner level, where she rephrases numbers in words. So code checks:
+one line in three at beginner level, where he rephrases numbers in words. So code checks:
 
-- every number she says is one we gave her (no invented xG)
+- every number he says is one we gave him (no invented xG)
 - "more of the ball" / "more shots" / "fewer shots" sit with the right team
 - the chance label matches the shot's real label
 - on a goal, "X's goal" / "X scored" names the team that scored
@@ -13,7 +13,7 @@ one line in three at beginner level, where she rephrases numbers in words. So co
 Q&A picks its own tools, so code can't know its numbers in advance: every tool records what it
 returned for the current question (recorded / recording), and the answer is checked against that:
 
-- every number she says came from a tool (allowing normal rounding: 64.6 -> 65%, 0.188 -> 19%)
+- every number he says came from a tool (allowing normal rounding: 64.6 -> 65%, 0.188 -> 19%)
 - a percentage or xG sits with the team the tool gave it to
 - "more shots" / "more of the ball" (whole match or last 10 minutes) name the right team
 - a chance is judged only from get_shot_quality, with its label

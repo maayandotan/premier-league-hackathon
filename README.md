@@ -10,19 +10,19 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 
 1. Open the live demo, turn the sound on and press **Kick off**. You're watching a full, fictional 90-minute match (a comeback) with a crowd, a caller and an analyst.
 2. Switch the level (**Beginner / Fan / Analyst**) at any time: the next line follows it.
-3. Ask a question: type it, press the mic, or tap a suggestion. The match keeps going while Sonia answers. Questions stay open after full time too.
+3. Ask a question: type it, press the mic, or tap a suggestion. The match keeps going while Roy answers. Questions stay open after full time too.
 4. To jump to the drama, add `?start=85` to the link (the winner comes at 88'). Other matches: `?source=synthetic:red_card`, `?source=synthetic:late_equaliser`.
 
 ## What it does
 
-- **Two voices with different jobs.** **Guy** is the play-by-play caller: short, live, louder as moments get bigger. **Sonia** is the analyst: in the quiet moments she explains *why* a moment mattered.
+- **Two voices with different jobs.** **Davis** is the play-by-play caller: short, live, louder as moments get bigger. **Roy** is the analyst: in the quiet moments he explains *why* a moment mattered.
 - **Adapts to the viewer.** The same goal gets plain words and at most one simple number for a beginner, and xG, possession and the run of play for an analyst.
 - **Explainable by design.** Numbers (xG, possession, momentum, pass value) come from a stats engine written in code. The agents ask for them through tools and put them into words; they never compute or invent a statistic.
 - **Questions mid-match.** Voice or text, answered in the analyst's voice in a few seconds. "That" and "just now" are resolved from the moment the question was asked.
-- **It reads the game, not just the events.** Tactical detectors in code find patterns as they build (the side a team keeps attacking down, high pressing, quick counters, crossing, territory) and only claim one when there's enough of it. When a goal comes down a team's usual side, Sonia connects them: "25 of their 31 final-third entries this match came down the right".
-- **It remembers the match.** A match log in code (goals, red cards, big chances, each pattern as it appears, and what was said on air) feeds a Storyteller agent that keeps the story so far. When a goal pays off something Sonia said earlier, she says so with the real minute ("We flagged that right side at 66'"). She reads recaps at half-time and full time, and "What did I miss?" catches up a viewer who just joined.
+- **It reads the game, not just the events.** Tactical detectors in code find patterns as they build (the side a team keeps attacking down, high pressing, quick counters, crossing, territory) and only claim one when there's enough of it. When a goal comes down a team's usual side, Roy connects them: "25 of their 31 final-third entries this match came down the right".
+- **It remembers the match.** A match log in code (goals, red cards, big chances, each pattern as it appears, and what was said on air) feeds a Storyteller agent that keeps the story so far. When a goal pays off something Roy said earlier, he says so with the real minute ("We flagged that right side at 66'"). He reads recaps at half-time and full time, and "What did I miss?" catches up a viewer who just joined.
 - **A whole league, not one match.** The Meridian League: 20 fictional clubs with their own squads, captains, colours and styles of play, a full fixture list, and ten matchdays already played. Pick any of today's ten fixtures; the result goes into the table at full time. Ask "where are they in the table?" or "who's their top scorer?" and the answer comes from the league's results.
-- **Your club.** Pick a favourite club and the page takes its colours, a panel follows its season (position, form, captain, top scorers and assisters), Sonia tells you what a moment means for your club, and "how are we doing?" just works.
+- **Your club.** Pick a favourite club and the page takes its colours, a panel follows its season (position, form, captain, top scorers and assisters), Roy tells you what a moment means for your club, and "how are we doing?" just works.
 - **A broadcast, not a chatbot.** A ranker scores every event 0–10 so the commentators know when to speak and when to stay quiet, a goal cuts in over whatever is playing, and the crowd roars before the caller does.
 
 ## How it works
@@ -32,9 +32,9 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 1. **Match feed.** Events (passes, shots, fouls...) arrive one at a time, as from a live data provider, in a StatsBomb-style schema ([docs/event-schema.md](docs/event-schema.md)). For the demo the feed replays matches from our own synthetic generator.
 2. **Stats engine (code).** Score, xG, possession, momentum, tempo, pass progression, and tactical patterns from event locations and timing: always exact, and exposed to the agents as tools.
 3. **Moment ranker (code).** Scores each event with a reason ("late go-ahead goal, against the run of play"), so most of the match is rightly left alone.
-4. **Producer (code).** Decides who speaks and when: Guy on live moments, Sonia in the quiet after, the Q&A agent when a viewer asks. Every model call has a deadline and a fallback, so the broadcast never waits.
+4. **Producer (code).** Decides who speaks and when: Davis on live moments, Roy in the quiet after, the Q&A agent when a viewer asks. Every model call has a deadline and a fallback, so the broadcast never waits.
 5. **AI agents** on Microsoft Foundry (`gpt-4.1-mini`) with the Microsoft Agent Framework: the **Storyteller** (the match story and recaps, in the background), the **Caller**, the **Analyst** (code hands it the facts for the moment, grouped by team) and **Q&A** (tools for match events, rules, tactics and the match picture). Both are checked before they speak.
-6. **Voice.** Azure AI Speech turns each line into speech (Guy with built-in excited and shouting styles, Sonia calm), mixed over the crowd in the browser.
+6. **Voice.** Azure AI Speech turns each line into speech (Davis with built-in excited and shouting styles, Roy calm), mixed over the crowd in the browser.
 
 Design notes: [docs/agents.md](docs/agents.md), [docs/architecture.md](docs/architecture.md), and the lessons we learned building the agents in [AGENTS.md](AGENTS.md).
 

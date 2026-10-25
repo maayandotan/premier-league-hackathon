@@ -12,8 +12,8 @@ server runs them in the background and the match never waits for them. The Analy
 lands after the Caller, so the audio queue plays them in the right order.
 
 The match story (#30, story.py): every ranked event goes into a match log. When a tactical pattern
-first appears, the Analyst flags it at the next stoppage; when a goal pays it off, she gets the line
-she really said. At the end of each half she reads the Storyteller's recap.
+first appears, the Analyst flags it at the next stoppage; when a goal pays it off, he gets the line
+he really said. At the end of each half he reads the Storyteller's recap.
 """
 from collections.abc import Coroutine
 
@@ -108,7 +108,7 @@ class CommentaryPipeline:
         return True
 
     def _context(self, event: MatchEvent) -> dict[str, str]:
-        """What the Analyst should remember: the story, and for a goal, what she said that it pays off."""
+        """What the Analyst should remember: the story, and for a goal, what he said that it pays off."""
         context = {"STORY_SO_FAR": self.storyteller.story} if self.storyteller.story else {}
         if event.is_goal and (payoff := self._payoff(event)):
             said, what = payoff
@@ -117,7 +117,7 @@ class CommentaryPipeline:
         return context
 
     def _payoff(self, event: MatchEvent) -> tuple[Entry, str] | None:
-        """For a goal: the line Sonia really said that it pays off, and what it was about."""
+        """For a goal: the line Roy really said that it pays off, and what it was about."""
         route = self.stats.patterns.goal_route(event) or ""
         if "most-used side" in route:
             side = route.split("down the ")[1].split(",")[0]

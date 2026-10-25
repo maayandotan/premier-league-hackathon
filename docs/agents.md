@@ -20,7 +20,7 @@ The numbers match the black badges in the graph.
 
 **⑤ The Fact-Checker verifies every number.** Before anything the Analyst or Q&A says is spoken, each number in it is checked against the Stats Engine. A wrong number means the line is dropped or rewritten. The Caller skips this step: it describes and doesn't quote numbers, and it has to be fast.
 
-**⑥ Voice speaks it.** The line becomes speech (Guy calls, Sonia analyses), mixed over the crowd, and plays in the viewer's browser.
+**⑥ Voice speaks it.** The line becomes speech (Davis calls, Roy analyses), mixed over the crowd, and plays in the viewer's browser.
 
 In the background, the **Viewer Profile** (level, language) and the **Storyteller** (the match story so far) feed every AI agent, so the commentary fits the viewer and has memory.
 
@@ -46,7 +46,7 @@ Stores the viewer's level (beginner, fan, analyst), language, and which concepts
 
 **🔊 Voice** ([#19](https://github.com/maayandotan/premier-league-hackathon/issues/19), [#20](https://github.com/maayandotan/premier-league-hackathon/issues/20))
 *Purpose: turn text into a broadcast.*
-Azure Speech with two voices (Guy for the Caller, excited on big moments; Sonia for the Analyst), the crowd bed and the goal roar, and a playback queue that can cut a line mid-sentence when something urgent happens.
+Azure Speech with two voices (Davis for the Caller, excited on big moments; Roy for the Analyst), the crowd bed and the goal roar, and a playback queue that can cut a line mid-sentence when something urgent happens.
 
 ### AI agents (Microsoft Foundry, gpt-4.1-mini)
 
@@ -99,7 +99,7 @@ The Producer gives every line a priority and an expiry:
 | ④ | Producer: the restart is a quiet moment, so it asks the Analyst about the goal |
 | | Analyst calls `get_momentum`, `get_shot_quality`, `get_pass_rarity`, then: "That came against the run of play: Westvale had 68% of the ball, and the shot was only a 9% chance." |
 | ⑤ | Fact-Checker: 68% ✓, 9% ✓ |
-| ⑥ | Voice: Sonia reads it, the crowd still buzzing underneath |
+| ⑥ | Voice: Roy reads it, the crowd still buzzing underneath |
 
 ## Agent contracts
 

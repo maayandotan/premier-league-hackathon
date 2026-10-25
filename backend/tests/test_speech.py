@@ -8,12 +8,12 @@ def test_caller_voice_style_follows_excitement():
     assert 'style="shouting"' in ssml("caller", "GOAL!", 2)
     assert 'style="excited"' in ssml("caller", "Ferro... into the box...", 1)
     calm = ssml("caller", "Foul in midfield.", 0)
-    assert "express-as" not in calm and "en-US-GuyNeural" in calm
+    assert "express-as" not in calm and "en-US-DavisNeural" in calm
 
 
-def test_analyst_is_sonia_and_always_calm():
+def test_analyst_is_roy_and_always_calm():
     analyst = ssml("analyst", "That came against the run of play.", 2)
-    assert "en-GB-SoniaNeural" in analyst and "express-as" not in analyst
+    assert "en-GB-Ryan:DragonHDLatestNeural" in analyst and "express-as" not in analyst
 
 
 def test_text_is_escaped_for_ssml():

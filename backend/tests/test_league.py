@@ -99,7 +99,7 @@ def test_a_viewer_follows_a_league_club_or_none():
                                                            "color": "#3b82f6", "secondary": "#f8fafc"}
 
 
-def test_sonia_and_qa_know_the_viewers_club():
+def test_roy_and_qa_know_the_viewers_club():
     import asyncio
     from types import SimpleNamespace
 

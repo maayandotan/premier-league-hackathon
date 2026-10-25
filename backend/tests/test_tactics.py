@@ -65,7 +65,7 @@ def test_code_picks_the_concept_from_the_moment():
     assert concept_for(cross, attack, stats).name == "Crosses and cut-backs"
 
 
-def test_sonia_gets_the_concept_at_the_viewers_level():
+def test_roy_gets_the_concept_at_the_viewers_level():
     class Recorder:
         inputs: list[str] = []
 

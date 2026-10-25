@@ -89,7 +89,7 @@ export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, 
         <Lineup players={info.away.players ?? []} side="away" />
       </div>
       <p className="pm-voices">
-        Your commentators: <strong>Guy</strong> calls the action, <strong>Sonia</strong> explains why it matters.
+        Your commentators: <strong>Davis</strong> calls the action, <strong>Roy</strong> explains why it matters.
         Ask them anything while the match goes on.
       </p>
       {clubs && clubs.length > 0 && (

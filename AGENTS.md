@@ -6,9 +6,9 @@ Instructions for AI coding agents (GitHub Copilot agent mode, Claude Code, other
 
 **Match Intelligence**: live AI football commentary that adapts to the viewer, built for the Microsoft × Premier League [Inside the Game](https://github.com/microsoft/insidethegamehackathon) hackathon.
 
-- Two AI commentators: **Guy** (the caller, play-by-play) and **Sonia** (the analyst, explains why a moment mattered).
+- Two AI commentators: **Davis** (the caller, play-by-play) and **Roy** (the analyst, explains why a moment mattered).
 - Three viewer levels: **beginner**, **fan**, **analyst**. The same moment is explained differently for each.
-- Viewers ask questions by voice or text mid-match ("why was that a foul?"). **The match never pauses** while Sonia answers.
+- Viewers ask questions by voice or text mid-match ("why was that a foul?"). **The match never pauses** while Roy answers.
 - Every number is computed by code (the stats engine) and given to the agents as tools. Agents never invent numbers.
 - Team: Maayan (`maayandotan`, repo owner, Azure subscription owner) and Dean (`deanbazak-eng`).
 - **Submission due 2026-10-27, 11:59 PM PT.** The live site must stay up until judging ends on 2026-11-10.
@@ -47,11 +47,11 @@ Breaking one of these can disqualify the entry. If a task seems to need breaking
 
 | File | Role |
 |---|---|
-| `pipeline.py` | The producer: ranks every event, decides when Guy calls, when Sonia analyses (45 s cooldown), answers questions, falls back to templates |
-| `caller.py` | Guy. No tools, must answer within ~2 s, otherwise a template line is used |
+| `pipeline.py` | The producer: ranks every event, decides when Davis calls, when Roy analyses (45 s cooldown), answers questions, falls back to templates |
+| `caller.py` | Davis. No tools, must answer within ~2 s, otherwise a template line is used |
 | `story.py` | The match log (code) and the Storyteller agent: story every 5 match minutes, recaps, payoffs |
-| `checker.py` | Checks Sonia's lines and Q&A answers before they're spoken (Q&A against what its tools returned) |
-| `analyst.py` | Sonia. Code picks the angle and hands her the facts (grouped by team) in one call; word limits per level |
+| `checker.py` | Checks Roy's lines and Q&A answers before they're spoken (Q&A against what its tools returned) |
+| `analyst.py` | Roy. Code picks the angle and hands him the facts (grouped by team) in one call; word limits per level |
 | `qa.py` | Answers viewer questions with `get_events_before`, `get_key_moments`, `get_rule`, `get_tactic`, `get_match_picture` and shot and pass tools |
 | `tactics.py` | Loads the tactics playbook ([docs/football_tactics.md](docs/football_tactics.md)) into concepts; code picks the one a moment or question needs |
 | `viewer.py` | Viewer profile (level) |
@@ -122,17 +122,17 @@ Details in [docs/deploy.md](docs/deploy.md). Things that will bite you:
 These came from real failures. Follow them when changing or adding an agent.
 
 1. **Code decides, the model writes.** Excitement level, the analysis angle, who speaks and when are decided in Python. The model only turns a decision into words.
-2. **Give the model structured, unambiguous input.** Labelled fields, not prose. Sonia once said a penalty helped the wrong team because "team" was ambiguous on a foul; now events say `fouling_team` and `awarded_to`.
+2. **Give the model structured, unambiguous input.** Labelled fields, not prose. Roy once said a penalty helped the wrong team because "team" was ambiguous on a foul; now events say `fouling_team` and `awarded_to`.
 3. **Tools return words, not numbers we don't want spoken.** A tool returning `momentum: -0.3` got read out as "momentum value minus zero point three". Return "Westvale on top" instead, and only the numbers the viewer should hear.
 4. **One complete tool beats five partial ones.** The Q&A agent made unsupported claims when it had to combine several tools; `get_match_picture` gives the whole picture in one call.
 5. **The model can't see the video.** It must never judge a referee's decision, whether a foul was clear or whether a player was unlucky. "Was it deserved?" is answered with data (who was on top, chance quality).
 6. **Ask the model to shorten, don't cut its text.** Cutting to a word limit lost the punchline. If a line is too long, ask once to shorten it.
-7. **Every model call has a deadline and a fallback.** Live commentary can't wait: Guy falls back to a template after ~2 s, with retries on connection errors. A viewer who asked a question always hears an answer.
+7. **Every model call has a deadline and a fallback.** Live commentary can't wait: Davis falls back to a template after ~2 s, with retries on connection errors. A viewer who asked a question always hears an answer.
 8. **Questions carry their match time** so the agent can resolve "that" and "just now". After full time, questions are about the whole match.
 9. **Every number comes from a tool** and is checked by a test. The model never computes or recalls a stat.
-10. **Don't hand the model a conclusion to support.** "Show who had been dominating" assumed the team on top also had the ball. When Northbridge had 65% of the ball but Westvale had the chances, Sonia gave Westvale the 65% to fit the story (3 out of 3 times). The code now checks the data first and picks an angle that is true (`angle_for` in `analyst.py`, `SPLIT` vs `CONTRAST`).
+10. **Don't hand the model a conclusion to support.** "Show who had been dominating" assumed the team on top also had the ball. When Northbridge had 65% of the ball but Westvale had the chances, Roy gave Westvale the 65% to fit the story (3 out of 3 times). The code now checks the data first and picks an angle that is true (`angle_for` in `analyst.py`, `SPLIT` vs `CONTRAST`).
 11. **Knowledge needs its limits.** Given the playbook's idea of pressing but nothing measuring it, Q&A answered "yes, Northbridge are pressing high" and used possession as proof. Every concept now tells the agent what we can measure in this match, or plainly "nothing yet" (`app/agents/tactics.py`).
-12. **Hand over facts, grouped by team; then check.** Tool round trips made Sonia take ~6 s against a 7 s deadline; code now gathers her facts and she writes in one call (~2-3 s). Listed by topic, she re-paired numbers with the wrong team; grouped by team, much less. Prompts never get it to zero, so `checker.py` checks every line in code (numbers, possession, shots, chance label, scorer): one retry, then silence.
+12. **Hand over facts, grouped by team; then check.** Tool round trips made Roy take ~6 s against a 7 s deadline; code now gathers his facts and he writes in one call (~2-3 s). Listed by topic, he re-paired numbers with the wrong team; grouped by team, much less. Prompts never get it to zero, so `checker.py` checks every line in code (numbers, possession, shots, chance label, scorer): one retry, then silence.
 13. **Check the checker on real answers.** A clause-wide "overall" rule rejected a true answer ("better chances overall and more possession in the last 10 minutes"), which would have told viewers "ask me again" for nothing. Run real questions and read every rejection; every false alarm becomes a test (`tests/test_qa_check.py`).
 14. **Calibrate pattern claims on data with no pattern in it.** At first bars, a match with no tactics "showed" field tilt in a third of checks: random data always looks like something. The thresholds in `patterns.py` were raised until style-less matches stay quiet, and the generator's team styles (`Style` in scenarios) were made strong enough to stand out. Also: say "open play" instead of leaving it out; a gap got filled with "from a corner".
 15. **When it must happen, code does it.** Asked to "begin with As we said at 66'", the model did it 1 time in 5, and once wrote "this goal at 66'". Code now adds the callback sentence itself, with the minute of the remark. And check scorelines whole: "7-0" passed a number-by-number check because a 7 appeared elsewhere.
@@ -145,7 +145,7 @@ These came from real failures. Follow them when changing or adding an agent.
 Open issues: `gh issue list`. Current owners and priorities:
 
 - **Synthetic generator v1 (#9) is done**: see [docs/event-schema.md](docs/event-schema.md#the-synthetic-generator-9). Regenerate with `.venv/bin/python -m scripts.generate_match` after changing it.
-- **Dean: the demo match scenario (#25).** Pick or tune the scenario the video tells (`backend/app/synthetic/scenarios.py`): which moments, at what minutes, so 2 minutes of video show goals, Sonia explaining, and a viewer question.
+- **Dean: the demo match scenario (#25).** Pick or tune the scenario the video tells (`backend/app/synthetic/scenarios.py`): which moments, at what minutes, so 2 minutes of video show goals, Roy explaining, and a viewer question.
 - Demo video under 2 minutes (#26), submission package with the repo made public (#27).
 - Before 2026-10-27: set the live app to `--min-replicas 1` so judges never hit a cold start.
 - Optional if time allows: Fact-Checker (#17), Storyteller (#30), Hebrew commentary (#23), xG trained on synthetic data with SHAP (#11), a fuller Producer (#16), tracing agent runs to Application Insights.
