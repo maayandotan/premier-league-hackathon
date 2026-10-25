@@ -74,3 +74,12 @@ def test_level_from_the_url_and_changed_mid_match():
             if msg["type"] == "level" or msg["type"] == "end":
                 break
     assert seen[-1] == {"type": "level", "level": "analyst"}
+
+
+def test_match_info_for_the_pre_match_screen_has_no_spoilers():
+    info = client.get("/api/match-info?source=synthetic:comeback").json()
+    assert info["home"]["name"] == "Northbridge FC" and info["away"]["name"] == "Westvale United"
+    starters = [p for p in info["home"]["players"] if p["starter"]]
+    assert len(starters) == 11 and starters[0]["position"] == "Goalkeeper"
+    assert "extra" not in info  # the scenario's description would give the story away
+    assert client.get("/api/match-info?source=statsbomb:nope").status_code == 404
