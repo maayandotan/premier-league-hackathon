@@ -1,4 +1,4 @@
-import { type CSSProperties, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AnalystQATable } from './components/AnalystQATable'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
@@ -10,6 +10,7 @@ import { QuestionBox } from './components/QuestionBox'
 import { Scorebug } from './components/Scorebug'
 import { MomentumBar, StatBars } from './components/StatBars'
 import { ClubPanel } from './components/ClubPanel'
+import { Crest } from './components/Scorebug'
 import { LeagueTable } from './components/LeagueTable'
 import { PreMatch } from './components/PreMatch'
 import { Pitch } from './match/Pitch'
@@ -85,9 +86,13 @@ function useClubSeason(team: string | null, refresh: boolean): ClubSeason | null
 }
 
 /** Text that reads on a club colour: dark on light colours (Elmsworth yellow), white on dark ones. */
-function inkFor(hex: string): string {
+function luminance(hex: string): number {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? '#0b1220' : '#ffffff'
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function inkFor(hex: string): string {
+  return luminance(hex) > 0.55 ? '#0b1220' : '#ffffff'
 }
 
 export default function App() {
@@ -98,7 +103,19 @@ export default function App() {
   const league = useLeague(status === 'ended') // fetched again at full time: the result is in the table
   const club = league?.clubs.find((c) => c.name === team) ?? null
   const clubSeason = useClubSeason(club ? team : null, status === 'ended')
-  const theme = club ? { '--accent': club.color, '--accent-ink': inkFor(club.color) } as CSSProperties : undefined
+  // The club colour goes on the whole page (html), not just the app box, so the background takes it too.
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle('themed', !!club)
+    if (club) {
+      root.style.setProperty('--accent', club.color)
+      root.style.setProperty('--accent-ink', inkFor(club.color))
+      // A near-white club (Whitecliff) tints the page with its second colour: white on dark is just grey.
+      root.style.setProperty('--tint', luminance(club.color) > 0.8 ? club.secondary : club.color)
+    } else {
+      for (const name of ['--accent', '--accent-ink', '--tint']) root.style.removeProperty(name)
+    }
+  }, [club])
   const answered = new Set(lines.map((l) => l.reply_to))
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
@@ -107,7 +124,7 @@ export default function App() {
   const scoreText = info && stats ? `${stats.score[info.home.name]}–${stats.score[info.away.name]}` : ''
 
   return (
-    <div className={`app${info ? '' : ' pre-match'}${club ? ' themed' : ''}`} style={theme}>
+    <div className={`app${info ? '' : ' pre-match'}${club ? ' themed' : ''}`}>
       <header className="topbar">
         <div className="brand">
           <span className="brand-mark" aria-hidden="true"><BallIcon size={24} /></span>
@@ -117,6 +134,12 @@ export default function App() {
           </div>
         </div>
         <div className="controls">
+          {club && (
+            <span className="club-badge" title={`Supporting ${club.name}`}>
+              <Crest name={club.name} side="home" code={club.code} color={club.color} />
+              <span>{club.name}</span>
+            </span>
+          )}
           <LevelPicker value={level as Level} onChange={setLevel} />
           <button className="icon-button" onClick={toggleMute} aria-label={muted ? 'Unmute' : 'Mute'}
             title={muted ? 'Sound off' : 'Sound on'}>
