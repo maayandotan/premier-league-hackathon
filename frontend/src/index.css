@@ -487,3 +487,35 @@ html.themed body::before {
 .club-lists li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 8px; border-radius: 6px;
   background: rgba(255, 255, 255, 0.03); }
 .club-lists b { font-variant-numeric: tabular-nums; }
+
+/* ---------- Layouts per level ---------- */
+.stat-hint { grid-column: 1 / -1; margin: 2px 0 6px; color: var(--muted); font-size: 0.82rem; }
+.stat-note { margin: 10px 0 0; color: var(--muted); font-size: 0.8rem; }
+.stats.beginner .stat-row .value { font-size: 1.7rem; }
+.stats.beginner .stat-row .label { font-size: 0.95rem; text-transform: none; letter-spacing: 0; color: var(--text); }
+.stats.beginner .stat-row .bar { height: 10px; }
+.league.simple th:nth-child(3), .league.simple td:nth-child(3),
+.league.simple th:nth-child(4), .league.simple td:nth-child(4),
+.league.simple th:nth-child(6), .league.simple td:nth-child(6) { display: none; }
+.guide dl { margin: 0; display: grid; gap: 10px; }
+.guide dt { font-weight: 700; }
+.guide dd { margin: 2px 0 0; color: #d4ddea; font-size: 0.9rem; line-height: 1.4; }
+.patterns h3 { margin: 10px 0 4px; font-size: 0.9rem; }
+.patterns ul { margin: 0; padding-left: 18px; color: #d4ddea; font-size: 0.86rem; display: grid; gap: 3px; }
+.channels { display: flex; gap: 2px; margin-top: 8px; font-size: 0.72rem; color: var(--muted); }
+.channels span { background: var(--well); border-radius: 4px; padding: 3px 6px; white-space: nowrap; overflow: hidden;
+  text-align: center; }
+.xg-timeline .xg-legend { display: flex; gap: 16px; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; }
+.xg-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.xg-legend i { width: 18px; height: 2px; border-radius: 1px; display: inline-block; }
+.xg-legend i.dashed { height: 0; border-top: 2px dashed; background: none; }
+.xg-plot { position: relative; }
+.xg-plot svg { width: 100%; height: auto; display: block; }
+.xg-grid { stroke: rgba(255, 255, 255, 0.07); stroke-width: 1; }
+.xg-axis { fill: var(--muted); font-size: 10px; }
+.xg-label { fill: var(--text); font-size: 11px; font-weight: 700; }
+.xg-cross { stroke: rgba(255, 255, 255, 0.35); stroke-width: 1; }
+.xg-dot { stroke: var(--panel); stroke-width: 2; }
+.xg-tip { position: absolute; top: 4px; transform: translateX(-50%); display: grid; gap: 1px; padding: 6px 9px;
+  background: var(--panel-2); border: 1px solid var(--line); border-radius: 8px; font-size: 0.78rem; pointer-events: none;
+  white-space: nowrap; }
