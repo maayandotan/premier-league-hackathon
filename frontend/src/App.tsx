@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AnalystQATable } from './components/AnalystQATable'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
 import { PlayIcon, RestartIcon, SpeakerIcon } from './components/Icons'
@@ -224,14 +223,6 @@ export default function App() {
           <CommentaryFeed lines={lines} questions={questions} speakingId={speakingId} />
           <QuestionBox open={canAsk} fullTime={status === 'ended'} waiting={waiting}
             level={level as Level} onAsk={ask} onListening={setListening} />
-          <AnalystQATable
-            questions={questions}
-            lines={lines}
-            speakingId={speakingId}
-            level={level as Level}
-            onAsk={ask}
-            canAsk={canAsk}
-          />
         </aside>
 
         <div className="lower">

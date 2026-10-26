@@ -30,8 +30,9 @@ export function LowerThird({ lines, speakingId }: { lines: CommentaryLine[]; spe
   if (!line) return null
   return (
     <div key={line.id} className={`lower-third ${line.speaker}`} aria-hidden="true">
-      <span className="lt-name">{line.reply_to ? `Roy · ${t('Answering you')}`
-        : VOICE_NAMES[line.speaker] ? `${VOICE_NAMES[line.speaker][0]} · ${t(VOICE_NAMES[line.speaker][1])}` : line.speaker}</span>
+      <span className="lt-name">{line.reply_to ? `${t.voice('Roy')} · ${t('Answering you')}`
+        : VOICE_NAMES[line.speaker] ? `${t.voice(VOICE_NAMES[line.speaker][0])} · ${t(VOICE_NAMES[line.speaker][1])}`
+        : line.speaker}</span>
       <span className="lt-text">{line.text}</span>
     </div>
   )

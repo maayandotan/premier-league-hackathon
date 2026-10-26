@@ -91,7 +91,7 @@ export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, 
         <Lineup players={info.away.players ?? []} side="away" />
       </div>
       <p className="pm-voices">
-        {t('Your commentators:')} <strong>Davis</strong> {t('calls the action,')} <strong>Roy</strong>{' '}
+        {t('Your commentators:')} <strong>{t.voice('Davis')}</strong> {t('calls the action,')} <strong>{t.voice('Roy')}</strong>{' '}
         {t('explains why it matters.')} {t('Ask them anything while the match goes on.')}
       </p>
       {clubs && clubs.length > 0 && (

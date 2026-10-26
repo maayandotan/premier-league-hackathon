@@ -28,8 +28,7 @@ const ES: Record<string, string> = {
   'Turn your sound on': 'Activa el sonido', Match: 'Partido', 'Before kick-off': 'Antes del partido',
   'Live · AI broadcast': 'En vivo · transmisión con IA',
   'Two AI commentators.': 'Dos comentaristas con IA.', 'Your level.': 'A tu nivel.',
-  'A caller for the action, an analyst for the why, and a crowd that roars on every goal. Ask them anything, by voice, while the match goes on.':
-    'Un narrador para la acción, un analista para el porqué y un público que ruge en cada gol. Pregúntales lo que quieras, por voz, mientras sigue el partido.',
+  'A caller for the action, an analyst for the why, and a crowd that roars on every goal. Ask them anything, by voice, while the match goes on.': 'Un narrador para la acción, un analista para el porqué y un público que ruge en cada gol. Pregúntales lo que quieras, por voz, mientras sigue el partido.',
   // scorebug and timeline
   '1st half': '1er tiempo', '2nd half': '2do tiempo', 'Extra time': 'Tiempo extra', Penalties: 'Penales',
   'Full time': 'Final', 'Pre-match': 'Previa', FT: 'FIN', Goal: 'Gol', Card: 'Tarjeta',
@@ -37,8 +36,8 @@ const ES: Record<string, string> = {
   // commentary feed
   Commentary: 'Comentarios', Questions: 'Preguntas', Question: 'Pregunta', 'On air': 'Al aire', 'On Air': 'Al aire',
   'Play-by-play': 'Narrador', 'Answering you': 'Te responde', You: 'Tú', 'asked at {clock}': 'preguntó al {clock}',
-  'Thinking...': 'Pensando...', 'Roy is analyzing match data...': 'Roy está analizando los datos...',
-  'No questions asked yet. Ask Roy below!': 'Aún no hay preguntas. ¡Pregúntale a Roy abajo!',
+  'Thinking...': 'Pensando...', 'Roy is analyzing match data...': 'Ricardo está analizando los datos...',
+  'No questions asked yet. Ask Roy below!': 'Aún no hay preguntas. ¡Pregúntale a Ricardo abajo!',
   'The commentators are ready. Kick off to hear them.': 'Los comentaristas están listos. Comienza para escucharlos.',
   AI: 'IA', Auto: 'Auto', 'Speaking now': 'Hablando ahora',
   beginner: 'principiante', fan: 'aficionado', analyst: 'analista',
@@ -48,25 +47,23 @@ const ES: Record<string, string> = {
   'What is offside?': '¿Qué es el fuera de lugar?', 'What was the key tactical change?': '¿Cuál fue el cambio táctico clave?', 'Who was the better team?': '¿Quién fue mejor equipo?',
   'What was the key moment?': '¿Cuál fue el momento clave?', 'Was the result deserved?': '¿Fue justo el resultado?',
   "Didn't catch that. Try again?": 'No te entendí. ¿Lo intentas otra vez?',
-  'Microphone blocked. Allow it in the browser to ask by voice.':
-    'Micrófono bloqueado. Permítelo en el navegador para preguntar por voz.',
+  'Microphone blocked. Allow it in the browser to ask by voice.': 'Micrófono bloqueado. Permítelo en el navegador para preguntar por voz.',
   'The microphone did not work.': 'El micrófono no funcionó.',
   'Ask the analyst': 'Pregúntale al analista', 'Stop and send': 'Detener y enviar', 'Ask by voice': 'Preguntar por voz',
   'Listening… press the mic again to send': 'Escuchando… pulsa el micrófono otra vez para enviar',
-  'Full time: ask Roy about the match…': 'Final: pregúntale a Roy sobre el partido…',
-  'Ask Roy about the match…': 'Pregúntale a Roy sobre el partido…', 'Kick off to ask questions': 'Comienza para hacer preguntas',
+  'Full time: ask Roy about the match…': 'Final: pregúntale a Ricardo sobre el partido…',
+  'Ask Roy about the match…': 'Pregúntale a Ricardo sobre el partido…', 'Kick off to ask questions': 'Comienza para hacer preguntas',
   'Your question': 'Tu pregunta', Ask: 'Preguntar',
   "Listening… press the mic again when you're done": 'Escuchando… pulsa el micrófono otra vez al terminar',
-  'Roy is thinking… the match goes on': 'Roy está pensando… el partido sigue',
+  'Roy is thinking… the match goes on': 'Ricardo está pensando… el partido sigue',
   // questions table
-  "Your questions and Roy's real-time personalized analysis": 'Tus preguntas y el análisis personalizado de Roy en vivo',
+  "Your questions and Roy's real-time personalized analysis": 'Tus preguntas y el análisis personalizado de Ricardo en vivo',
   'Search questions...': 'Buscar preguntas...', 'Search questions': 'Buscar preguntas', 'Clear search': 'Borrar búsqueda',
   'No questions asked yet': 'Aún no hay preguntas',
-  'Ask Roy about fouls, tactics, key moments, or rules using the question box or microphone.':
-    'Pregúntale a Roy sobre faltas, táctica, momentos clave o reglas con la caja de preguntas o el micrófono.',
+  'Ask Roy about fouls, tactics, key moments, or rules using the question box or microphone.': 'Pregúntale a Ricardo sobre faltas, táctica, momentos clave o reglas con la caja de preguntas o el micrófono.',
   'His answers will appear here in real time!': '¡Sus respuestas aparecerán aquí en vivo!',
   'Try asking:': 'Prueba a preguntar:', 'No questions match "{q}".': 'Ninguna pregunta coincide con "{q}".',
-  Time: 'Minuto', 'Question (You)': 'Pregunta (tú)', "Roy's Analysis": 'Análisis de Roy', 'Roy (Analyst)': 'Roy (analista)',
+  Time: 'Minuto', 'Question (You)': 'Pregunta (tú)', "Roy's Analysis": 'Análisis de Ricardo', 'Roy (Analyst)': 'Ricardo (analista)',
   'Asked at {clock}': 'Preguntado al {clock}', 'Questions Table': 'Tabla de preguntas',
   // lower cards
   'Your club this season': 'Tu club esta temporada', '{n} in the league': '{n}º en la liga',
@@ -79,23 +76,19 @@ const ES: Record<string, string> = {
   'Every attempt to score, whether it went in, was saved or missed.': 'Cada intento de gol: dentro, atajado o fuera.',
   Possession: 'Posesión', 'Last 10 min': 'Últimos 10 min', Shots: 'Tiros', 'Expected goals': 'Goles esperados',
   'Progressive passes': 'Pases progresivos',
-  'Tempo: {label} ({n} possession changes a minute) · Momentum {m} (home +1, away −1)':
-    'Ritmo: {label} ({n} cambios de posesión por minuto) · Dominio {m} (local +1, visitante −1)',
+  'Tempo: {label} ({n} possession changes a minute) · Momentum {m} (home +1, away −1)': 'Ritmo: {label} ({n} cambios de posesión por minuto) · Dominio {m} (local +1, visitante −1)',
   chaotic: 'caótico', controlled: 'controlado', balanced: 'equilibrado',
   'adding up over the match': 'acumulados en el partido', 'The chart fills in as the match goes on.': 'El gráfico se llena a medida que avanza el partido.',
   'Tactical patterns': 'Patrones tácticos', 'last 15 minutes': 'últimos 15 minutos', 'no data yet': 'aún sin datos',
   'Final-third entries this match: {n}': 'Llegadas al último tercio en el partido: {n}',
-  "Final-third entries this match by side, from each team's own attacking view.":
-    'Llegadas al último tercio por banda, vistas desde el ataque de cada equipo.',
+  "Final-third entries this match by side, from each team's own attacking view.": 'Llegadas al último tercio por banda, vistas desde el ataque de cada equipo.',
   left: 'izquierda', centre: 'centro', right: 'derecha',
   'Football basics': 'Lo básico del fútbol',
-  'Ask Roy about anything else, any time: the match keeps going.': 'Pregúntale a Roy lo que sea, cuando quieras: el partido sigue.',
+  'Ask Roy about anything else, any time: the match keeps going.': 'Pregúntale a Ricardo lo que sea, cuando quieras: el partido sigue.',
   'Key moments': 'Momentos clave', 'Goals, cards and big chances will appear here.': 'Aquí aparecerán goles, tarjetas y ocasiones claras.',
   'League table': 'Tabla', Club: 'Club', P: 'PJ', GD: 'DG', Pts: 'Pts', Form: 'Forma',
-  'Fictional teams and players · Crowd audio: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0':
-    'Equipos y jugadores ficticios · Audio del público: “Free Crowd Cheering Sounds” de Gregor Quendel, CC BY 4.0',
-  'Lost the connection to the match. Press Kick off to watch again.':
-    'Se perdió la conexión con el partido. Pulsa Comenzar para verlo de nuevo.',
+  'Fictional teams and players · Crowd audio: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0': 'Equipos y jugadores ficticios · Audio del público: “Free Crowd Cheering Sounds” de Gregor Quendel, CC BY 4.0',
+  'Lost the connection to the match. Press Kick off to watch again.': 'Se perdió la conexión con el partido. Pulsa Comenzar para verlo de nuevo.',
 }
 
 // The football basics for beginners, in Spanish (our own words, like the English ones).
@@ -163,7 +156,10 @@ export type T = ((text: string, vars?: Record<string, string | number>) => strin
   reason: (reason: string) => string
   pattern: (line: string) => string
   form: (result: string) => string // W/D/L -> G/E/P
+  voice: (commentator: string) => string // Davis and Roy are Juan and Ricardo in Spanish
 }
+
+const NAMES_ES: Record<string, string> = { Davis: 'Juan', Roy: 'Ricardo' }
 
 const FORM_ES: Record<string, string> = { W: 'G', D: 'E', L: 'P' }
 
@@ -176,6 +172,7 @@ export function translator(lang: Lang): T {
   t.lang = lang
   t.reason = (reason) => (lang === 'es' ? reasonEs(reason) : reason)
   t.pattern = (line) => (lang === 'es' ? patternEs(line) : line)
+  t.voice = (commentator) => (lang === 'es' ? NAMES_ES[commentator] ?? commentator : commentator)
   t.form = (result) => (lang === 'es' ? FORM_ES[result] ?? result : result)
   return t
 }

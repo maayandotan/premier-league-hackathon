@@ -31,3 +31,11 @@ describe('the page in Spanish', () => {
     expect(es.form('W')).toBe('G')
   })
 })
+
+describe('the commentators in Spanish', () => {
+  it('are Juan and Ricardo', () => {
+    expect(translator('es').voice('Davis')).toBe('Juan')
+    expect(translator('es').voice('Roy')).toBe('Ricardo')
+    expect(translator('en').voice('Roy')).toBe('Roy')
+  })
+})
