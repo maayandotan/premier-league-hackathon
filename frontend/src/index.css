@@ -164,7 +164,8 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
 .pitch-wrap { perspective: 1200px; }
 .pitch {
   /* capped in height so the Ask Roy dock below stays on screen */
-  width: 100%; max-height: 40vh; display: block; margin: 0 auto; overflow: visible;
+  /* overflow hidden: the camera moves the picture inside its frame, like a TV screen */
+  width: 100%; max-height: 40vh; display: block; margin: 0 auto; overflow: hidden; border-radius: 10px;
   transform: rotateX(16deg); transform-origin: 50% 100%;
   filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.45));
 }
