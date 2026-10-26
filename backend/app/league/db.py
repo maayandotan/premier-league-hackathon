@@ -131,9 +131,12 @@ class League:
                 "WHERE home = ? OR away = ? ORDER BY round DESC LIMIT ?",
                 (team, team, limit)
             ).fetchall()
-            goals_count = self._db.execute("SELECT COUNT(*) FROM goals WHERE scorer = ?", (player.name,)).fetchone()[0]
-            assists_count = self._db.execute("SELECT COUNT(*) FROM goals WHERE assister = ?", (player.name,)).fetchone()[0]
-            cards_count = self._db.execute("SELECT COUNT(*) FROM cards WHERE player = ?", (player.name,)).fetchone()[0]
+            def count(sql: str) -> int:
+                return self._db.execute(sql, (player.name,)).fetchone()[0]
+
+            goals_count = count("SELECT COUNT(*) FROM goals WHERE scorer = ?")
+            assists_count = count("SELECT COUNT(*) FROM goals WHERE assister = ?")
+            cards_count = count("SELECT COUNT(*) FROM cards WHERE player = ?")
 
         last_games = []
         for m_id, rnd, home, away, hg, ag in matches:
