@@ -1,16 +1,19 @@
 import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
+import { AnswerChart } from './AnswerChart'
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 
 const SHOW_AFTER_ANSWER_MS = 14000 // the answer stays up this long (or while it's being spoken)
+const SHOW_CHART_MS = 30000 // a chart takes longer to read
 
 /** The viewer's latest question, on the pitch: "Roy is looking at the data" while the match goes on,
  * then his answer, while it's spoken and a little after. The question is the show here: it's what
  * makes this broadcast yours. */
-export function AnswerCard({ questions, lines, speakingId }: {
+export function AnswerCard({ questions, lines, speakingId, colors }: {
   questions: ViewerQuestion[]
   lines: CommentaryLine[]
   speakingId: string | null
+  colors?: Record<string, string> // team name -> colour, for charts about this match
 }) {
   const t = useT()
   const question = questions[questions.length - 1]
@@ -18,12 +21,13 @@ export function AnswerCard({ questions, lines, speakingId }: {
   const [closed, setClosed] = useState<string | null>(null)
   const [expired, setExpired] = useState<string | null>(null) // the answer whose time on screen is up
   const answerId = answer?.id
+  const hasChart = !!answer?.chart
 
   useEffect(() => {
     if (!answerId) return
-    const timer = setTimeout(() => setExpired(answerId), SHOW_AFTER_ANSWER_MS)
+    const timer = setTimeout(() => setExpired(answerId), hasChart ? SHOW_CHART_MS : SHOW_AFTER_ANSWER_MS)
     return () => clearTimeout(timer)
-  }, [answerId])
+  }, [answerId, hasChart])
 
   if (!question || closed === question.id) return null
   const speaking = !!answer && speakingId === answer.id
@@ -41,6 +45,7 @@ export function AnswerCard({ questions, lines, speakingId }: {
         <div className="answer-a" data-speaking={speaking}>
           <span className="answer-who">{t.voice('Roy')} · {t('Answering you')}</span>
           <p>{answer.text}</p>
+          {answer.chart && <AnswerChart chart={answer.chart} colors={colors} />}
         </div>
       ) : (
         <div className="answer-wait">

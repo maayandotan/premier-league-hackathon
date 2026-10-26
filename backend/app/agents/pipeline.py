@@ -51,6 +51,7 @@ class CommentaryLine(BaseModel):
     level: str = "fan"  # the viewer level it was written for
     reply_to: str | None = None  # the viewer's question this line answers (Q&A)
     language: str = "en"  # the language of the text, which picks the voice ("en" or "es")
+    chart: dict | None = None  # a chart that comes with a Q&A answer (charts.py)
 
 
 class CommentaryPipeline:
@@ -191,12 +192,14 @@ class CommentaryPipeline:
         """Answer a viewer's question about the match so far, in the analyst's voice."""
         minute, second = divmod(self.stats.clock, 60)  # the match clock when they asked
         level = self.viewer.level
+        chart = None
         if self.qa:
-            text = await self.qa.answer(question, minute, second, self.viewer, self.full_time)
+            text, chart = await self.qa.answer_with_chart(question, minute, second, self.viewer,
+                                                          self.full_time)
             source = "model" if self.qa.agent else "template"
         else:
             text, source = "Sorry, I can't take questions right now. Keep watching!", "template"
         text, language = await self._in_language(text)
         return CommentaryLine(id=f"{question_id}-answer", speaker="analyst", excitement=0, text=text,
                               event_id="", source=source, level=level, reply_to=question_id,
-                              language=language)
+                              language=language, chart=chart)

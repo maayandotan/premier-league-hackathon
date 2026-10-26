@@ -3,6 +3,7 @@ from collections import Counter
 
 from fastapi.testclient import TestClient
 
+from app.agents.describe import ordinal
 from app.league.clubs import CLUBS
 from app.league.db import League
 from app.league.season import (
@@ -129,7 +130,8 @@ def test_roy_and_qa_know_the_viewers_club():
     asyncio.run(analyst.analyse(goal, moment, viewer))
     sent = analyst.agent.inputs[0]
     assert "VIEWER_SUPPORTS: Northbridge FC" in sent and "Speak to the Northbridge FC fan" in sent
-    assert "good news" in sent and "Northbridge FC, league before today: 14th of 20" in sent
+    position = next(row["position"] for row in League().table() if row["team"] == "Northbridge FC")
+    assert "good news" in sent and f"Northbridge FC, league before today: {ordinal(position)} of 20" in sent
 
     qa = QuestionAnswerer(stats, [], {}, use_model=False)
     qa.agent = Recorder()

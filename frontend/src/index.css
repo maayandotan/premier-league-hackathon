@@ -1719,3 +1719,42 @@ html.themed body::before {
   .ask-sub { display: none; }
   .ask.dock .mic { width: 50px; height: 50px; }
 }
+
+/* ---------- Charts that come with an answer ---------- */
+.answer-chart { --ac-shots: #334155; --ac-goals: var(--accent, var(--grass)); margin: 10px 0 0; display: grid; gap: 6px; }
+.answer-chart figcaption { display: grid; gap: 1px; }
+.answer-chart figcaption strong { font-size: 0.85rem; color: #fff; }
+.answer-chart figcaption span { font-size: 0.75rem; color: var(--muted); }
+.answer-chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.ac-rows { display: grid; gap: 5px; }
+.ac-row { display: grid; grid-template-columns: 70px 1fr; align-items: center; gap: 8px; }
+.ac-label { font-size: 0.75rem; color: #cbd5e1; }
+.ac-track { display: flex; gap: 2px; height: 18px; }
+.ac-seg {
+  display: grid; place-items: center; min-width: 16px; border-radius: 4px; font-size: 0.72rem; font-weight: 700;
+  color: #0b1220;
+}
+.ac-none { font-size: 0.72rem; color: var(--muted); align-self: center; }
+.ac-shots { fill: var(--ac-shots); }
+.ac-goals { fill: var(--ac-goals); }
+.ac-value { fill: #e2e8f0; font-size: 11px; font-weight: 700; }
+.ac-axis { fill: var(--muted); font-size: 10px; }
+.ac-base { stroke: rgba(255, 255, 255, 0.2); stroke-width: 1; }
+.ac-pen-in { fill: var(--ac-goals); stroke: #0b1220; stroke-width: 1.5; }
+.ac-pen-out { fill: none; stroke: #f43f5e; stroke-width: 2; }
+.ac-goal-dot { stroke: #0b1220; stroke-width: 2; }
+.ac-legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 0.72rem; color: #cbd5e1; }
+.ac-legend span { display: inline-flex; align-items: center; gap: 5px; }
+.ac-key { width: 10px; height: 10px; border-radius: 2px; border: 0 solid; }
+.ac-key.dot { border-radius: 50%; }
+.ac-key.line { height: 3px; width: 14px; border-radius: 2px; }
+.ac-key.dashed { height: 0; width: 14px; border-top: 2px dashed; border-radius: 0; background: none; }
+.answer-card:has(.answer-chart) { width: min(480px, calc(100% - 24px)); }
+@media (max-width: 560px) {
+  .answer-card:has(.answer-chart) { width: auto; } /* the phone rule above: full width of the pitch */
+}
+
+/* A wide table inside a lower card (the player investigation) scrolls inside its card on a phone
+   instead of widening the whole page. */
+.lower > * { min-width: 0; }
+.pi-table-wrapper { overflow-x: auto; max-width: 100%; }

@@ -199,7 +199,8 @@ export default function App() {
                   <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} />
                   <GoalBanner events={events} score={scoreText} />
                   <LowerThird lines={lines} speakingId={speakingId} />
-                  <AnswerCard questions={questions} lines={lines} speakingId={speakingId} />
+                  <AnswerCard questions={questions} lines={lines} speakingId={speakingId}
+                    colors={{ [info.home.name]: info.home.color ?? '#3b82f6', [info.away.name]: info.away.color ?? '#f43f5e' }} />
                 </div>
                 {stats && <MomentumBar stats={stats} />}
               </section>

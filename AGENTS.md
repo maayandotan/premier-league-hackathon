@@ -55,6 +55,7 @@ Breaking one of these can disqualify the entry. If a task seems to need breaking
 | `qa.py` | Answers viewer questions with `get_events_before`, `get_key_moments`, `get_rule`, `get_tactic`, `get_match_picture` and shot and pass tools |
 | `tactics.py` | Loads the tactics playbook ([docs/football_tactics.md](docs/football_tactics.md)) into concepts; code picks the one a moment or question needs |
 | `viewer.py` | Viewer profile (level, club, language) |
+| `charts.py` | Charts that come with a Q&A answer: code builds them from the data (a club's results by goals scored, a player's scoring by match time, this match's xG race); the agent only calls a `show_` tool |
 | `language.py` | Spanish: Davis writes it himself; Roy and Q&A are checked in English, then translated, and the translation is checked (numbers, names) |
 | `describe.py` | Turns an event into unambiguous fields for the models (e.g. `fouling_team`, `awarded_to`) |
 | `client.py` | The Foundry chat client (Entra ID auth) |
@@ -140,7 +141,8 @@ These came from real failures. Follow them when changing or adding an agent.
 16. **Keep the conversation in code, and resolve "he" in code.** Q&A gets the last 6 questions and answers the viewer heard (not the framework's thread, which would also hold our retry and shorten calls). Told that "he" is the player mentioned last, the model still went back to the conversation's first player 2 times in 2; code now finds the last player named and passes `MOST_RECENT_PLAYER`.
 17. **Never put example numbers in instructions.** "58 percent of the ball" as a phrasing example came back as a fact. Use placeholders ("N percent").
 18. **Check first, then translate.** The checker understands English ("big chance", "last 10 minutes"), so Roy and Q&A still write English; code checks it, then a translator writes the Spanish and code checks that the numbers and names came through. If not, the viewer hears the checked English. Davis has no checker and only ~2 s, so he writes Spanish directly.
-19. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
+19. **The model picks a chart; code draws it.** Q&A's `show_` tools return the chart's numbers in words (with the sample size, "a small sample, say so") and hand the page a data-only spec. A chart only appears with an answer that passed the checker. Running real questions caught one false alarm: "the last 15 minutes" was rejected because 15 was only in a field name, so the tool now says its window size as data.
+20. **Test prompts by running them.** Look at real outputs at all three levels before calling an agent done. Reproduce a bad line with a spike that asks the real agent several times and counts failures (`spikes/agents/possession_step_a.py`), then rerun it after the fix. The step by step versions in `spikes/agents/` show how each agent was built.
 
 ## Open work
 

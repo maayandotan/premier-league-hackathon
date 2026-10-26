@@ -41,6 +41,17 @@ GK = "Goalkeeper"
 Point = tuple[float, float]
 
 
+def goal_chance(xg: float, strength: float, shot_type: str) -> float:
+    """How likely a shot is to go in. Open play is tuned down (finishing is hard, and stronger teams
+    finish better); a penalty goes in about as often as its xG says, about three in four."""
+    if shot_type == "Penalty":
+        return xg * (1 + 0.1 * (strength - 0.5))
+    return xg * (0.6 + 0.4 * (strength - 0.5))
+
+
+PENALTY_SHARE = 0.3  # share of fouls in the box given as penalties: about 0.3 a match, as in real football
+
+
 def in_box(x: float, y: float) -> bool:
     return x >= 102 and 18 <= y <= 62
 
@@ -421,7 +432,7 @@ class MatchSimulator:
         strength = self.sides[team].strength
         if forced:
             outcome = forced
-        elif not self.scenario.scripted and self.rng.random() < xg * (0.6 + 0.4 * (strength - 0.5)):
+        elif not self.scenario.scripted and self.rng.random() < goal_chance(xg, strength, shot_type):
             outcome = "Goal"
         elif shot_type == "Penalty":
             outcome = self.rng.choices(["Saved", "Off T", "Post"], [7, 2, 1])[0]
@@ -486,7 +497,9 @@ class MatchSimulator:
         x, y = self.ball
         if penalty is None:
             penalty = in_box(x, y)
-            if penalty and self.scenario.scripted:  # only the script gives penalties
+            # Only the script gives penalties in a scripted match; otherwise most contact in the box is
+            # not a penalty, and the free kick is given just outside it.
+            if penalty and (self.scenario.scripted or self.rng.random() > PENALTY_SHARE):
                 penalty, x = False, 100.0
                 self.ball = (x, y)
         fouler = fouler or self.near(fouling_team, flip(self.ball))

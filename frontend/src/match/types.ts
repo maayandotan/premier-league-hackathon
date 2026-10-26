@@ -133,7 +133,16 @@ export interface CommentaryLine {
   level: string // the viewer level it was written for
   reply_to?: string | null // the viewer question it answers
   language?: string // "en" | "es": the language of the text
+  chart?: AnswerChartSpec | null // a chart that comes with a Q&A answer (built by code, backend charts.py)
 }
+
+/** Charts that come with an answer: data only; the page writes the labels in the viewer's language. */
+export type AnswerChartSpec =
+  | { type: 'team_by_goals'; team: string; matches: number; groups: string[]; won: number[]; drawn: number[]; lost: number[] }
+  | { type: 'player_by_time'; player: string; windows: string[]; shots: number[]; goals: number[];
+      penalties: { minute: number; scored: boolean }[] }
+  | { type: 'xg_race'; home: string; away: string; points: Record<string, [number, number][]>;
+      goals: { team: string; minute: number }[]; minute: number }
 
 export interface ViewerQuestion {
   id: string

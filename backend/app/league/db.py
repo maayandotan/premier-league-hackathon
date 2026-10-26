@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS results (id TEXT PRIMARY KEY, round INTEGER, home TEX
 CREATE TABLE IF NOT EXISTS goals (match_id TEXT, minute INTEGER, team TEXT, scorer TEXT, assister TEXT,
                                   penalty INTEGER);
 CREATE TABLE IF NOT EXISTS cards (match_id TEXT, minute INTEGER, team TEXT, player TEXT, card TEXT);
+CREATE TABLE IF NOT EXISTS shots (match_id TEXT, minute INTEGER, team TEXT, player TEXT, goal INTEGER,
+                                  penalty INTEGER, xg REAL);
 """
 
 
@@ -47,6 +49,9 @@ class League:
                     for g in result["goals"]])
                 self._db.executemany("INSERT INTO cards VALUES (?, ?, ?, ?, ?)", [
                     (result["id"], c["minute"], c["team"], c["player"], c["card"]) for c in result["cards"]])
+                self._db.executemany("INSERT INTO shots VALUES (?, ?, ?, ?, ?, ?, ?)", [
+                    (result["id"], s["minute"], s["team"], s["player"], s["goal"], s["penalty"], s["xg"])
+                    for s in result.get("shots", [])])
         return bool(added)
 
     # ---------- what fans ask ----------
@@ -90,6 +95,20 @@ class League:
     def player_goals(self, player: str) -> int:
         with self._lock:
             return self._db.execute("SELECT COUNT(*) FROM goals WHERE scorer = ?", (player,)).fetchone()[0]
+
+    def team_scores(self, team: str) -> list[tuple[int, int]]:
+        """Every league match of a club so far: (goals scored, goals conceded)."""
+        with self._lock:
+            rows = self._db.execute("SELECT home, home_goals, away_goals FROM results "
+                                    "WHERE home = ? OR away = ?", (team, team)).fetchall()
+        return [(hg, ag) if home == team else (ag, hg) for home, hg, ag in rows]
+
+    def player_shots(self, player: str) -> list[tuple[int, bool, bool]]:
+        """Every league shot of a player so far: (minute, scored, penalty)."""
+        with self._lock:
+            rows = self._db.execute(
+                "SELECT minute, goal, penalty FROM shots WHERE player = ?", (player,)).fetchall()
+        return [(minute, bool(goal), bool(penalty)) for minute, goal, penalty in rows]
 
     def player_season(self, player: str) -> dict:
         """A player's league goals and assists so far."""

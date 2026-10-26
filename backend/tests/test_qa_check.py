@@ -43,8 +43,8 @@ def test_wrapped_tools_keep_their_names_for_the_model():
     names = [t.__name__ for t in build_qa_tools(stats(), [], {})]
     assert {"get_events_before", "get_key_moments", "get_rule", "get_tactic", "get_patterns",
             "get_match_story", "get_league_table", "get_club_season", "get_player", "get_match_picture",
-            "get_shot_quality",
-            "get_pass_rarity"} == set(names)
+            "get_shot_quality", "get_pass_rarity",
+            "show_team_results_by_goals", "show_player_scoring_by_time", "show_xg_race"} == set(names)
 
 
 @pytest.mark.parametrize("answer", [
