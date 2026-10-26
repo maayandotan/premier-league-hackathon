@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Three viewers</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Barlow:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  /* Opening scene, 12 s: an analyst, a fan and a beginner side by side on the subs' bench, all
+     watching the same match (their heads follow the play together). Each lights up as the narrator
+     introduces him, then all three, under the line that sets up the problem. Our own drawings, our
+     own league: no real clubs. Timed to narration lines 01-04 (at 0.4, 3.1, 5.8 and 8.3 s). */
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: #050b16; }
+  svg { position: absolute; inset: 0; width: 1920px; height: 1080px; }
+  text { font-family: 'Barlow Condensed', sans-serif; }
+
+  /* everyone watches the same play: heads follow the ball left and right, together */
+  .head { transform-box: fill-box; transform-origin: 50% 90%; animation: follow 2.6s ease-in-out infinite alternate; }
+  @keyframes follow { from { transform: translateX(-7px) rotate(-5deg); } to { transform: translateX(7px) rotate(5deg); } }
+  .eyes { animation: look 2.6s ease-in-out infinite alternate; }
+  @keyframes look { from { transform: translateX(-3px); } to { transform: translateX(3px); } }
+  .blink { transform-box: fill-box; transform-origin: center; animation: blink 3.4s infinite; }
+  @keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 96% { transform: scaleY(0.1); } }
+
+  /* the spotlight: each viewer lights up as he's introduced, all three at the end */
+  .viewer { opacity: 0.32; }
+  .analyst { animation: lit-analyst 12s linear forwards; }
+  .fan { animation: lit-fan 12s linear forwards; }
+  .beginner { animation: lit-beginner 12s linear forwards; }
+  @keyframes lit-analyst { 0% { opacity: 0.32; } 3% { opacity: 1; } 24% { opacity: 1; } 26.5% { opacity: 0.32; } 68% { opacity: 0.32; } 70% { opacity: 1; } 100% { opacity: 1; } }
+  @keyframes lit-fan { 0%, 25% { opacity: 0.32; } 27.5% { opacity: 1; } 46.5% { opacity: 1; } 49% { opacity: 0.32; } 68% { opacity: 0.32; } 70% { opacity: 1; } 100% { opacity: 1; } }
+  @keyframes lit-beginner { 0%, 47.5% { opacity: 0.32; } 50% { opacity: 1; } 100% { opacity: 1; } }
+  .label { opacity: 0; }
+  .analyst .label { animation: show 0.4s ease-out 0.5s forwards; }
+  .fan .label { animation: show 0.4s ease-out 3.2s forwards; }
+  .beginner .label { animation: show 0.4s ease-out 5.9s forwards; }
+  @keyframes show { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  /* the analyst: types, his laptop's bars grow */
+  .hands { animation: type 0.26s ease-in-out infinite alternate; }
+  @keyframes type { to { transform: translateY(-5px); } }
+  .bar { transform-box: fill-box; transform-origin: bottom; animation: grow 2.2s ease-in-out infinite alternate; }
+  .bar.b2 { animation-delay: 0.4s; } .bar.b3 { animation-delay: 0.8s; } .bar.b4 { animation-delay: 1.2s; }
+  @keyframes grow { from { transform: scaleY(0.3); } to { transform: scaleY(1); } }
+
+  /* the fan: jumps up from the bench, arms up, when he's introduced and again at the end */
+  .fan-body { animation: stand 12s linear forwards; }
+  @keyframes stand {
+    0%, 26% { transform: translateY(0); } 29% { transform: translateY(-42px); } 31% { transform: translateY(-26px); }
+    33% { transform: translateY(-42px); } 35% { transform: translateY(-26px); } 37% { transform: translateY(-42px); }
+    39% { transform: translateY(-26px); } 41% { transform: translateY(-42px); } 46% { transform: translateY(0); }
+    70% { transform: translateY(0); } 73% { transform: translateY(-36px); } 100% { transform: translateY(-36px); }
+  }
+  .arm-l { transform-box: view-box; transform-origin: 900px 482px; animation: arm-l 12s linear forwards; }
+  .arm-r { transform-box: view-box; transform-origin: 1020px 482px; animation: arm-r 12s linear forwards; }
+  @keyframes arm-l { 0%, 26% { transform: rotate(0); } 29%, 44% { transform: rotate(150deg); } 47%, 70% { transform: rotate(0); } 73%, 100% { transform: rotate(150deg); } }
+  @keyframes arm-r { 0%, 26% { transform: rotate(0); } 29%, 44% { transform: rotate(-150deg); } 47%, 70% { transform: rotate(0); } 73%, 100% { transform: rotate(-150deg); } }
+  .scarf-end { transform-box: view-box; transform-origin: 985px 470px; animation: flutter 0.45s ease-in-out infinite alternate; }
+  @keyframes flutter { from { transform: rotate(-10deg); } to { transform: rotate(14deg); } }
+
+  /* the beginner: tilts his head, the ball turns, a question pops */
+  .ball { transform-box: fill-box; transform-origin: center; animation: spin 5s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .question { opacity: 0; transform-box: fill-box; transform-origin: bottom left; animation: pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) 6.3s forwards; }
+  @keyframes pop { from { opacity: 0; transform: scale(0.2); } to { opacity: 1; transform: scale(1); } }
+
+  .tagline { opacity: 0; animation: show 0.8s ease-out 8.6s forwards; }
+  .flood { animation: flicker 4s ease-in-out infinite alternate; }
+  @keyframes flicker { to { opacity: 0.75; } }
+</style>
+</head>
+<body>
+<svg viewBox="0 0 1920 1080" aria-hidden="true">
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="0%" r="80%"><stop offset="0%" stop-color="#1e3a2f" /><stop offset="100%" stop-color="#050b16" /></radialGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1f7a3a" /><stop offset="100%" stop-color="#0f4d23" /></linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="rgba(203,213,225,0.55)" /><stop offset="100%" stop-color="rgba(148,163,184,0.15)" /></linearGradient>
+  </defs>
+  <!-- night, floodlights -->
+  <rect width="1920" height="1080" fill="url(#glow)" />
+  <g class="flood"><circle cx="240" cy="40" r="10" fill="#fff" /><circle cx="1680" cy="40" r="10" fill="#fff" />
+    <path d="M240 40 L60 400 L460 400 Z M1680 40 L1460 400 L1860 400 Z" fill="rgba(255,255,255,0.05)" /></g>
+
+  <!-- the dugout: back wall, roof, the bench -->
+  <rect x="190" y="250" width="1540" height="530" rx="30" fill="#0e1a2e" stroke="#1f3150" stroke-width="4" />
+  <path d="M220 330 H1700" stroke="#1f3150" stroke-width="3" />
+  <text x="260" y="312" font-size="30" font-weight="800" letter-spacing="8" fill="#22c55e">SUBSTITUTES</text>
+  <text x="1660" y="312" text-anchor="end" font-size="30" font-weight="800" letter-spacing="8" fill="#22c55e">YOUR CALL</text>
+  <path d="M160 290 Q960 140 1760 290 L1760 318 Q960 172 160 318 Z" fill="url(#roof)" stroke="rgba(226,232,240,0.6)" stroke-width="3" />
+  <rect x="235" y="560" width="1450" height="30" rx="10" fill="#1e293b" />
+
+  <!-- THE ANALYST -->
+  <g class="viewer analyst">
+    <path d="M440 690 v150 M500 690 v150" stroke="#1f2937" stroke-width="38" stroke-linecap="round" />
+    <path d="M420 850 h45 M482 850 h45" stroke="#0b1220" stroke-width="22" stroke-linecap="round" />
+    <path d="M390 700 V560 Q390 492 470 488 Q550 492 550 560 V700 Z" fill="#334155" />
+    <g class="head">
+      <rect x="456" y="456" width="28" height="36" rx="8" fill="#c68863" />
+      <circle cx="470" cy="408" r="60" fill="#d9a07a" />
+      <path d="M412 398 Q414 340 470 338 Q528 340 530 396 Q516 368 470 366 Q426 368 412 398 Z" fill="#1f2937" />
+      <g class="eyes"><g class="blink"><circle cx="448" cy="412" r="6" fill="#0f172a" /><circle cx="492" cy="412" r="6" fill="#0f172a" /></g></g>
+      <circle cx="448" cy="412" r="17" fill="none" stroke="#0f172a" stroke-width="4" />
+      <circle cx="492" cy="412" r="17" fill="none" stroke="#0f172a" stroke-width="4" />
+      <path d="M465 412 H475" stroke="#0f172a" stroke-width="4" />
+      <path d="M455 440 Q470 448 485 440" fill="none" stroke="#7c2d12" stroke-width="4" stroke-linecap="round" />
+      <path d="M406 402 Q408 330 470 328 Q532 330 534 402" fill="none" stroke="#a78bfa" stroke-width="8" stroke-linecap="round" />
+      <rect x="397" y="392" width="18" height="34" rx="7" fill="#a78bfa" /><rect x="525" y="392" width="18" height="34" rx="7" fill="#a78bfa" />
+    </g>
+    <!-- laptop on his lap -->
+    <rect x="370" y="560" width="200" height="118" rx="8" fill="#0b1220" stroke="#64748b" stroke-width="4" />
+    <rect class="bar b1" x="390" y="612" width="20" height="52" rx="3" fill="#a78bfa" />
+    <rect class="bar b2" x="420" y="592" width="20" height="72" rx="3" fill="#60a5fa" />
+    <rect class="bar b3" x="450" y="620" width="20" height="44" rx="3" fill="#a78bfa" />
+    <rect class="bar b4" x="480" y="584" width="20" height="80" rx="3" fill="#60a5fa" />
+    <path d="M512 650 L528 630 L540 638 L556 600" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M352 692 L588 692 L574 676 L366 676 Z" fill="#94a3b8" />
+    <g class="hands"><ellipse cx="420" cy="682" rx="20" ry="11" fill="#d9a07a" /><ellipse cx="520" cy="682" rx="20" ry="11" fill="#d9a07a" /></g>
+    <g class="label"><rect x="388" y="890" width="164" height="50" rx="10" fill="#a78bfa" />
+      <text x="470" y="926" text-anchor="middle" font-size="34" font-weight="800" letter-spacing="4" fill="#0b1220">ANALYST</text>
+      <text x="470" y="975" text-anchor="middle" font-size="30" font-family="Barlow" font-weight="600" fill="#cbd5e1">wants the data</text></g>
+  </g>
+
+  <!-- THE FAN (Westvale red) -->
+  <g class="viewer fan">
+    <g class="fan-body">
+      <path d="M930 690 v150 M990 690 v150" stroke="#111827" stroke-width="38" stroke-linecap="round" />
+      <path d="M910 850 h45 M972 850 h45" stroke="#0b1220" stroke-width="22" stroke-linecap="round" />
+      <g class="arm-l"><path d="M900 482 L880 600" stroke="#e11d48" stroke-width="30" stroke-linecap="round" /><circle cx="878" cy="612" r="17" fill="#8d5524" /></g>
+      <g class="arm-r"><path d="M1020 482 L1040 600" stroke="#e11d48" stroke-width="30" stroke-linecap="round" /><circle cx="1042" cy="612" r="17" fill="#8d5524" /></g>
+      <path d="M880 700 V560 Q880 492 960 488 Q1040 492 1040 560 V700 Z" fill="#e11d48" />
+      <path d="M940 490 L960 518 L980 490" fill="none" stroke="#f8fafc" stroke-width="7" />
+      <g class="head">
+        <rect x="946" y="456" width="28" height="36" rx="8" fill="#7a4a1f" />
+        <circle cx="960" cy="408" r="60" fill="#8d5524" />
+        <path d="M902 392 Q908 342 960 342 Q1014 342 1020 394 Q1000 370 960 368 Q920 370 902 392 Z" fill="#111827" />
+        <g class="eyes"><g class="blink"><circle cx="938" cy="408" r="7" fill="#0f172a" /><circle cx="982" cy="408" r="7" fill="#0f172a" /></g></g>
+        <ellipse cx="960" cy="442" rx="17" ry="13" fill="#3f1d0b" /><ellipse cx="960" cy="448" rx="9" ry="5" fill="#ef4444" />
+      </g>
+      <path d="M918 478 Q960 500 1002 478 L1004 494 Q960 518 916 494 Z" fill="#f8fafc" />
+      <path d="M930 484 l9 4 -1 15 -9 -4 Z M954 491 h11 v15 h-11 Z M978 489 l10 -3 1 15 -10 3 Z" fill="#e11d48" />
+      <g class="scarf-end"><rect x="978" y="482" width="22" height="86" rx="4" fill="#f8fafc" />
+        <rect x="978" y="500" width="22" height="12" fill="#e11d48" /><rect x="978" y="526" width="22" height="12" fill="#e11d48" /></g>
+    </g>
+    <g class="label"><rect x="910" y="890" width="100" height="50" rx="10" fill="#fb7185" />
+      <text x="960" y="926" text-anchor="middle" font-size="34" font-weight="800" letter-spacing="4" fill="#0b1220">FAN</text>
+      <text x="960" y="975" text-anchor="middle" font-size="30" font-family="Barlow" font-weight="600" fill="#cbd5e1">lives for his club</text></g>
+  </g>
+
+  <!-- THE BEGINNER -->
+  <g class="viewer beginner">
+    <path d="M1420 690 v150 M1480 690 v150" stroke="#1e3a8a" stroke-width="38" stroke-linecap="round" />
+    <path d="M1400 850 h45 M1462 850 h45" stroke="#0b1220" stroke-width="22" stroke-linecap="round" />
+    <path d="M1370 700 V560 Q1370 492 1450 488 Q1530 492 1530 560 V700 Z" fill="#10b981" />
+    <g class="head">
+      <rect x="1436" y="456" width="28" height="36" rx="8" fill="#e8b98f" />
+      <circle cx="1450" cy="408" r="60" fill="#f1c9a5" />
+      <path d="M1390 400 Q1384 342 1446 336 Q1508 334 1512 392 Q1500 364 1462 362 Q1476 378 1462 382 Q1440 358 1410 372 Q1398 382 1390 400 Z" fill="#b45309" />
+      <g class="eyes"><g class="blink"><circle cx="1428" cy="410" r="7" fill="#0f172a" /><circle cx="1472" cy="410" r="7" fill="#0f172a" /></g></g>
+      <path d="M1416 388 Q1428 381 1440 388" fill="none" stroke="#7c2d12" stroke-width="4" stroke-linecap="round" />
+      <path d="M1462 382 Q1474 371 1486 380" fill="none" stroke="#7c2d12" stroke-width="4" stroke-linecap="round" />
+      <path d="M1438 444 Q1450 439 1462 446" fill="none" stroke="#7c2d12" stroke-width="4" stroke-linecap="round" />
+    </g>
+    <g class="ball"><circle cx="1450" cy="640" r="42" fill="#f8fafc" stroke="#0f172a" stroke-width="4" />
+      <polygon points="1450,622 1467,634 1461,654 1439,654 1433,634" fill="#0f172a" /></g>
+    <ellipse cx="1404" cy="650" rx="18" ry="24" fill="#f1c9a5" /><ellipse cx="1496" cy="650" rx="18" ry="24" fill="#f1c9a5" />
+    <g class="question"><circle cx="1560" cy="330" r="40" fill="#f8fafc" /><path d="M1528 360 L1518 384 L1544 366 Z" fill="#f8fafc" />
+      <text x="1560" y="350" text-anchor="middle" font-size="56" font-weight="800" fill="#10b981">?</text></g>
+    <g class="label"><rect x="1352" y="890" width="196" height="50" rx="10" fill="#34d399" />
+      <text x="1450" y="926" text-anchor="middle" font-size="34" font-weight="800" letter-spacing="4" fill="#0b1220">BEGINNER</text>
+      <text x="1450" y="975" text-anchor="middle" font-size="30" font-family="Barlow" font-weight="600" fill="#cbd5e1">first match</text></g>
+  </g>
+
+  <!-- the bench seat in front of them, and the touchline -->
+  <rect x="220" y="690" width="1480" height="30" rx="10" fill="#334155" />
+  <rect x="0" y="1010" width="1920" height="70" fill="url(#grass)" />
+  <path d="M0 1012 H1920" stroke="rgba(255,255,255,0.7)" stroke-width="4" />
+
+  <g class="tagline">
+    <rect x="360" y="34" width="1200" height="84" rx="16" fill="rgba(5,11,22,0.9)" />
+    <text x="960" y="94" text-anchor="middle" font-size="58" font-weight="800" fill="#f8fafc">Three viewers. <tspan fill="#fbbf24">One commentary that fits none of them.</tspan></text>
+  </g>
+</svg>
+</body>
+</html>
