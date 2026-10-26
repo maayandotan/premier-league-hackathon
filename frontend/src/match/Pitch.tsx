@@ -31,6 +31,7 @@ interface Move {
   to: Point | null
   complete: boolean
   goal: boolean
+  high: boolean // a lofted pass or a cross: the ball goes through the air
   player?: string
   recipient?: string
 }
@@ -45,17 +46,18 @@ function toMove(e: MatchEvent, homeTeam: string): Move | null {
   if (e.shot) {
     const target = e.shot.end_location ? view(e.shot.end_location.slice(0, 2)) : view([120, 40])
     return { id: e.id, home, kind: 'shot', from, to: target, complete: e.shot.outcome === 'Goal',
-             goal: e.shot.outcome === 'Goal', player: e.player }
+             goal: e.shot.outcome === 'Goal', high: false, player: e.player }
   }
   if (e.pass?.end_location) {
     return { id: e.id, home, kind: 'pass', from, to: view(e.pass.end_location),
-             complete: e.pass.outcome === 'Complete', goal: false, player: e.player, recipient: e.pass.recipient }
+             complete: e.pass.outcome === 'Complete', goal: false, player: e.player, recipient: e.pass.recipient,
+             high: e.pass.height === 'High Pass' || !!e.pass.cross }
   }
   if (e.carry?.end_location) {
     return { id: e.id, home, kind: 'carry', from, to: view(e.carry.end_location), complete: true, goal: false,
-             player: e.player }
+             high: false, player: e.player }
   }
-  return { id: e.id, home, kind: 'touch', from, to: null, complete: true, goal: false, player: e.player }
+  return { id: e.id, home, kind: 'touch', from, to: null, complete: true, goal: false, high: false, player: e.player }
 }
 
 const BOARDS = 'YOUR CALL · MERIDIAN LEAGUE · '
@@ -149,10 +151,61 @@ function Lanes({ stats, homeTeam, awayTeam, colors }: {
           <g key={team}>
             <rect x={home ? 80 : 0} y={top} width={40} height={y1 - y0} className="lane"
               style={{ fill: `url(#lane-${home ? 'home' : 'away'})`, color: colors[team] }} />
-            <text x={home ? 100 : 20} y={top + (y1 - y0) / 2 + 1.5} className="lane-label">{m[1]}/{m[2]}</text>
+            <clipPath id={`lane-clip-${home ? 'home' : 'away'}`}>
+              <rect x={home ? 80 : 0} y={top} width={40} height={y1 - y0} />
+            </clipPath>
+            {/* arrows flowing towards goal: the direction of the attacks */}
+            <g clipPath={`url(#lane-clip-${home ? 'home' : 'away'})`}>
+              <g className={`lane-flow ${home ? 'right' : 'left'}`}>
+                {[-10, 0, 10, 20, 30, 40].map((dx) => {
+                  const x = (home ? 80 : 0) + dx
+                  const mid = top + (y1 - y0) / 2
+                  const d = home ? `M${x} ${mid - 3} L${x + 3} ${mid} L${x} ${mid + 3}`
+                    : `M${x + 3} ${mid - 3} L${x} ${mid} L${x + 3} ${mid + 3}`
+                  return <path key={dx} d={d} className="lane-arrow" style={{ color: colors[team] }} />
+                })}
+              </g>
+            </g>
+            <text x={home ? 100 : 20} y={top + 3.6} className="lane-label">{m[1]}/{m[2]}</text>
           </g>
         )
       })}
+    </g>
+  )
+}
+
+const VIEW = { x: -7, y: -12, w: 134, h: 98 } // the svg's viewBox: the pitch and its apron
+const ZOOM = { play: 1.22, focus: 1.5, goal: 1.65 }
+const FLIGHT: Record<Move['kind'], number> = { shot: 0.32, pass: 0.62, carry: 0.95, touch: 0.4 } // seconds
+
+const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
+
+/** The TV camera: zoomed in a little and centred on `target`, never showing past the stadium's edge. */
+function camera([x, y]: Point, zoom: number): string {
+  const halfW = VIEW.w / (2 * zoom)
+  const halfH = VIEW.h / (2 * zoom)
+  const cx = clamp(x, VIEW.x + halfW, VIEW.x + VIEW.w - halfW)
+  const cy = clamp(y, VIEW.y + halfH, VIEW.y + VIEW.h - halfH)
+  return `translate(${VIEW.x + VIEW.w / 2 - zoom * cx}px, ${VIEW.y + VIEW.h / 2 - zoom * cy}px) scale(${zoom})`
+}
+
+/** A move's path: a lofted pass or a cross curves through the air, everything else is straight. */
+function path(m: Move): string {
+  const [x1, y1] = m.from
+  const [x2, y2] = m.to!
+  if (!m.high) return `M${x1} ${y1} L${x2} ${y2}`
+  const length = Math.hypot(x2 - x1, y2 - y1)
+  return `M${x1} ${y1} Q${(x1 + x2) / 2} ${(y1 + y2) / 2 - length * 0.28} ${x2} ${y2}`
+}
+
+function Shirt({ at, color, number, className, delay }: {
+  at: Point; color: string; number?: number; className?: string; delay?: number
+}) {
+  return (
+    <g className={`shirt-pos ${className ?? ''}`} style={{ transform: `translate(${at[0]}px, ${at[1]}px)`,
+      animationDelay: delay ? `${delay}s` : undefined }}>
+      <path d={SHIRT} style={{ fill: color }} className="shirt-body" />
+      {number !== undefined && <text y={1.6} className="shirt-number" style={{ fill: inkOn(color) }}>{number}</text>}
     </g>
   )
 }
@@ -178,6 +231,8 @@ export function Pitch({ events, homeTeam, awayTeam, info, stats, level = 'fan', 
     [homeTeam]: info?.home.color ?? '#3b82f6', [awayTeam]: info?.away.color ?? '#f43f5e',
   }
   const drawn = (team: string, [x, y]: number[]): Point => (team === homeTeam ? [x, y] : [120 - x, 80 - y])
+  const numberOf = (home: boolean, player?: string) =>
+    (home ? info?.home : info?.away)?.players?.find((p) => p.name === player)?.jersey_number
   // events arrive newest first; collect the latest moves, oldest first for drawing
   const moves: Move[] = []
   for (const { event } of events) {
@@ -195,12 +250,12 @@ export function Pitch({ events, homeTeam, awayTeam, info, stats, level = 'fan', 
   const goal = [...moves].reverse().find((m) => m.goal)
   const ballInNet = goal && moves.indexOf(goal) >= moves.length - 2
   const ball = ballInNet ? goal.to! : latest ? latest.to ?? latest.from : ([60, 40] as Point)
-  // The player on the ball wears his club's shirt, with his number (the line-ups have both).
-  const side = latest?.home ? info?.home : info?.away
-  const shirt = {
-    color: side?.color ?? (latest?.home ? '#3b82f6' : '#f43f5e'),
-    number: side?.players?.find((p) => p.name === latest?.player)?.jersey_number,
-  }
+  const flight = latest ? FLIGHT[latest.kind] : 0.6
+  const focusOn = focus && focusId && focusDone !== focusId ? drawn(focus.team, focus.location) : null
+  // The camera follows the ball, pushes in on a goal, and goes to what Roy is talking about.
+  const view = focusOn ? camera(focusOn, ZOOM.focus) : ballInNet ? camera(goal.to!, ZOOM.goal) : camera(ball, ZOOM.play)
+  const runner = latest?.kind === 'carry' // a dribble: the shirt runs with the ball
+  const color = (home: boolean) => colors[home ? homeTeam : awayTeam]
 
   return (
     <div className="pitch-wrap">
@@ -208,76 +263,101 @@ export function Pitch({ events, homeTeam, awayTeam, info, stats, level = 'fan', 
         <span className="team home">{homeTeam} →</span>
         <span className="team away">← {awayTeam}</span>
       </div>
-      <svg viewBox="-7 -12 134 98" className="pitch" role="img" aria-label="Live pitch: where the ball is">
-        <PitchMarkings />
-        <defs>
-          {(['home', 'away'] as const).map((side) => (
-            <linearGradient key={side} id={`lane-${side}`} x1={side === 'home' ? 0 : 1} x2={side === 'home' ? 1 : 0}>
-              <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
-              <stop offset="100%" stopColor="currentColor" stopOpacity="0.55" />
-            </linearGradient>
-          ))}
-        </defs>
-        <Lanes stats={stats} homeTeam={homeTeam} awayTeam={awayTeam} colors={colors} />
-        {showShot && (() => {
-          const shot = showShot
-          const [x, y] = drawn(shot.event.team, shot.event.location!)
-          const xg = shot.moment.xg ?? 0
-          const label = level === 'analyst' ? `xG ${xg.toFixed(2)}`
-            : t(xg >= 0.3 ? 'big chance' : xg >= 0.1 ? 'half chance' : 'hard chance')
-          return (
-            <g key={shot.event.id} className="shot-quality" style={{ color: colors[shot.event.team] }}>
-              <circle cx={x} cy={y} r={1.5 + 9 * Math.sqrt(xg)} />
-              <text x={x} y={y + 2.4 + 9 * Math.sqrt(xg) + 1.5} className="shot-label">{label}</text>
+      <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} className="pitch" role="img"
+        aria-label="Live pitch: where the ball is">
+        <g className="camera" style={{ transform: view }}>
+          <PitchMarkings />
+          <defs>
+            {(['home', 'away'] as const).map((side) => (
+              <linearGradient key={side} id={`lane-${side}`} x1={side === 'home' ? 0 : 1} x2={side === 'home' ? 1 : 0}>
+                <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
+                <stop offset="100%" stopColor="currentColor" stopOpacity="0.55" />
+              </linearGradient>
+            ))}
+            <radialGradient id="spot-fade">
+              <stop offset="55%" stopColor="#000" />
+              <stop offset="100%" stopColor="#fff" />
+            </radialGradient>
+          </defs>
+          <Lanes stats={stats} homeTeam={homeTeam} awayTeam={awayTeam} colors={colors} />
+          {showShot && (() => {
+            const shot = showShot
+            const [x, y] = drawn(shot.event.team, shot.event.location!)
+            const xg = shot.moment.xg ?? 0
+            const label = level === 'analyst' ? `xG ${xg.toFixed(2)}`
+              : t(xg >= 0.3 ? 'big chance' : xg >= 0.1 ? 'half chance' : 'hard chance')
+            const r = 1.5 + 9 * Math.sqrt(xg)
+            return (
+              <g key={`shot-${shot.event.id}`} className="shot-quality" style={{ color: colors[shot.event.team] }}>
+                <circle cx={x} cy={y} r={r} />
+                <text x={x} y={y + r + 3.6} className="shot-label">{label}</text>
+              </g>
+            )
+          })()}
+
+          {moves.map((m, i) => {
+            if (!m.to) return null
+            const age = (moves.length - 1 - i) / TRAIL
+            const fresh = i === moves.length - 1 && m.kind !== 'carry' && m.complete
+            return (
+              <path key={`trail-${m.id}`} d={path(m)} pathLength={1}
+                className={`trail ${m.home ? 'home' : 'away'} ${m.kind} ${m.complete ? '' : 'failed'} ${fresh ? 'fresh' : ''}`}
+                style={{ opacity: 1 - age * 0.8, animationDuration: fresh ? `${FLIGHT[m.kind]}s` : undefined }} />
+            )
+          })}
+
+          {goal && (
+            <g key={`goal-${goal.id}`}>
+              <rect x={goal.home ? 118 : 0} y={30} width={2} height={20} className="goal-flash" />
+              <rect x={goal.home ? 120 : -2.4} y={36} width={2.4} height={8} fill="url(#net)"
+                className={`net-bulge ${goal.home ? 'right' : 'left'}`} />
             </g>
-          )
-        })()}
+          )}
 
-        {moves.map((m, i) => {
-          if (!m.to) return null
-          const age = (moves.length - 1 - i) / TRAIL
-          return (
-            <line key={m.id} x1={m.from[0]} y1={m.from[1]} x2={m.to[0]} y2={m.to[1]}
-              className={`trail ${m.home ? 'home' : 'away'} ${m.kind} ${m.complete ? '' : 'failed'}`}
-              style={{ opacity: 1 - age * 0.8 }} />
-          )
-        })}
-
-        {goal && (
-          <rect key={goal.id} x={goal.home ? 118 : 0} y={30} width={2} height={20} className="goal-flash" />
-        )}
-
-        {latest && (
-          <g className={`player ${latest.home ? 'home' : 'away'}`}>
-            <g transform={`translate(${latest.from[0]} ${latest.from[1]})`} className="shirt">
-              <path d={SHIRT} style={{ fill: shirt.color }} />
-              {shirt.number !== undefined && (
-                <text y={1.6} className="shirt-number" style={{ fill: inkOn(shirt.color) }}>{shirt.number}</text>
+          {latest && (
+            <g className="player">
+              {/* the passer, or the dribbler running with the ball */}
+              <Shirt key={`${latest.player}-${latest.home}`} at={runner ? ball : latest.from}
+                color={color(latest.home)} number={numberOf(latest.home, latest.player)} />
+              <text x={latest.from[0]} y={latest.from[1] - 4.2} key={`n-${latest.id}`}>{surname(latest.player)}</text>
+              {/* the receiver, there when the ball arrives */}
+              {latest.kind === 'pass' && latest.complete && latest.recipient && latest.to && (
+                <g key={`r-${latest.id}`}>
+                  <Shirt at={latest.to} color={color(latest.home)} number={numberOf(latest.home, latest.recipient)}
+                    className="arriving" delay={flight * 0.75} />
+                  <text x={latest.to[0]} y={latest.to[1] + 6.4} className="recipient arriving"
+                    style={{ animationDelay: `${flight * 0.75}s` }}>{surname(latest.recipient)}</text>
+                </g>
               )}
             </g>
-            <text x={latest.from[0]} y={latest.from[1] - 4.2}>{surname(latest.player)}</text>
-            {latest.recipient && latest.to && (
-              <text x={latest.to[0]} y={latest.to[1] + 6} className="recipient">{surname(latest.recipient)}</text>
-            )}
-          </g>
-        )}
+          )}
 
-        {focus && focusId && focusDone !== focusId && (() => {
-          const [x, y] = drawn(focus.team, focus.location)
-          return (
-            <g key={focusId} className="focus">
-              <circle cx={x} cy={y} r={3} className="focus-ring" />
-              <circle cx={x} cy={y} r={3} className="focus-ring late" />
-              <circle cx={x} cy={y} r={0.9} className="focus-dot" />
-              <text x={x} y={y - 5} className="focus-label">{t.voice('Roy')} · {focus.minute}'</text>
+          <g className="ball" style={{ transform: `translate(${ball[0]}px, ${ball[1]}px)`, transitionDuration: `${flight}s` }}>
+            <ellipse cx={0.5} cy={1.1} rx={1.4} ry={0.6} className="ball-shadow" />
+            <g key={latest?.id} className={latest?.high ? 'ball-body lofted' : 'ball-body'}
+              style={{ animationDuration: `${flight}s` }}>
+              <circle r={2.2} className="ball-halo" filter="url(#ball-glow)" />
+              <circle r={1.3} className="ball-core" />
             </g>
-          )
-        })()}
+          </g>
 
-        <g className="ball" style={{ transform: `translate(${ball[0]}px, ${ball[1]}px)` }}>
-          <ellipse cx={0.5} cy={1.1} rx={1.4} ry={0.6} className="ball-shadow" />
-          <circle r={2.2} className="ball-halo" filter="url(#ball-glow)" />
-          <circle r={1.3} />
+          {focusOn && focus && (
+            <g key={focusId} className="focus">
+              {/* a telestrator spotlight: the rest of the pitch dims */}
+              <mask id={`spot-${focusId}`}>
+                <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h} fill="#fff" />
+                <circle cx={focusOn[0]} cy={focusOn[1]} r={11} fill="url(#spot-fade)" />
+              </mask>
+              <rect x={VIEW.x} y={VIEW.y} width={VIEW.w} height={VIEW.h} className="spot-dim"
+                mask={`url(#spot-${focusId})`} />
+              <circle cx={focusOn[0]} cy={focusOn[1]} r={4.2} className="focus-ring" />
+              <circle cx={focusOn[0]} cy={focusOn[1]} r={0.9} className="focus-dot" />
+              <g className="focus-tag" style={{ transform: `translate(${focusOn[0]}px, ${focusOn[1] - 8.5}px)` }}>
+                <rect x={-9} y={-2.6} width={18} height={4.4} rx={2.2} />
+                <text y={0.7}>{t.voice('Roy')} · {focus.minute}'</text>
+              </g>
+            </g>
+          )}
         </g>
       </svg>
     </div>

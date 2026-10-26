@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import type { Club, PlayerProfile, TeamInfo } from '../match/types'
 import { Crest } from './Scorebug'
+import { useT } from '../i18n'
 
 interface PlayerInvestigationProps {
   homeTeam?: TeamInfo
@@ -15,6 +16,7 @@ export function PlayerInvestigation({
   clubs,
   onAskRoy,
 }: PlayerInvestigationProps) {
+  const t = useT()
   // Available players from the current match teams
   const availablePlayers = useMemo(() => {
     const list: { name: string; number?: number; position?: string; teamName: string }[] = []
@@ -91,36 +93,36 @@ export function PlayerInvestigation({
   // Quick prompt triggers to ask Roy
   const askAboutForm = () => {
     if (!profile) return
-    onAskRoy?.(`How has ${profile.name} performed in his last 5 games?`)
+    onAskRoy?.(t('How has {name} performed in his last 5 games?', { name: profile.name }))
   }
 
   const askAboutTactics = () => {
     if (!profile) return
-    onAskRoy?.(`What is ${profile.name}'s key tactical role today?`)
+    onAskRoy?.(t("What is {name}'s key tactical role today?", { name: profile.name }))
   }
 
   const askAboutClinical = () => {
     if (!profile) return
-    onAskRoy?.(`Is ${profile.name} clinical in front of goal based on his form?`)
+    onAskRoy?.(t('Is {name} clinical in front of goal based on his form?', { name: profile.name }))
   }
 
   const clubInfo = clubs?.find((c) => c.name === profile?.team)
 
   return (
-    <section className="card player-investigation" aria-label="Investigate player: last games data">
+    <section className="card player-investigation" aria-label={t('Investigate Player')}>
       <div className="pi-header">
         <div className="pi-title-row">
-          <span className="pi-badge" aria-hidden="true">🔬 ANALYST SCOUT</span>
-          <h2>Investigate Player</h2>
+          <span className="pi-badge" aria-hidden="true">🔬 {t('ANALYST SCOUT')}</span>
+          <h2>{t('Investigate Player')}</h2>
         </div>
         <p className="pi-subtitle">
-          Detailed match performance, rating, and form across the last games
+          {t('Detailed match performance, rating, and form across the last games')}
         </p>
       </div>
 
       {/* Quick Player Picker Chips */}
       <div className="pi-selector-section">
-        <div className="pi-player-chips" role="group" aria-label="Select player to investigate">
+        <div className="pi-player-chips" role="group" aria-label={t('Select player to investigate')}>
           {availablePlayers.slice(0, 10).map((p) => {
             const isSelected = selectedPlayer.toLowerCase() === p.name.toLowerCase()
             return (
@@ -145,11 +147,11 @@ export function PlayerInvestigation({
             type="text"
             value={customSearch}
             onChange={(e) => setCustomSearch(e.target.value)}
-            placeholder="Search any player in league..."
-            aria-label="Search any player in league"
+            placeholder={t('Search any player in league...')}
+            aria-label={t('Search any player in league...')}
           />
           <button type="submit" disabled={!customSearch.trim()}>
-            Inspect
+            {t('Inspect')}
           </button>
         </form>
       </div>
@@ -157,7 +159,7 @@ export function PlayerInvestigation({
       {loading && (
         <div className="pi-loading">
           <span className="qa-spinner" aria-hidden="true" />
-          <span>Analyzing player match reports and tactical data...</span>
+          <span>{t('Analyzing player match reports and tactical data...')}</span>
         </div>
       )}
 
@@ -178,7 +180,7 @@ export function PlayerInvestigation({
               <div className="pi-info">
                 <div className="pi-name-row">
                   <h3 className="pi-player-name">{profile.name}</h3>
-                  {profile.is_captain && <span className="pi-cap-badge">CAPTAIN</span>}
+                  {profile.is_captain && <span className="pi-cap-badge">{t('CAPTAIN')}</span>}
                 </div>
                 <div className="pi-sub-row">
                   {clubInfo && (
@@ -195,19 +197,19 @@ export function PlayerInvestigation({
             <div className="pi-kpis">
               <div className="pi-kpi">
                 <span className="pi-kpi-val">{profile.season.goals}</span>
-                <span className="pi-kpi-label">Goals</span>
+                <span className="pi-kpi-label">{t('Goals')}</span>
               </div>
               <div className="pi-kpi">
                 <span className="pi-kpi-val">{profile.season.assists}</span>
-                <span className="pi-kpi-label">Assists</span>
+                <span className="pi-kpi-label">{t('Assists')}</span>
               </div>
               <div className="pi-kpi">
                 <span className="pi-kpi-val">{profile.season.played}</span>
-                <span className="pi-kpi-label">Games</span>
+                <span className="pi-kpi-label">{t('Games')}</span>
               </div>
               <div className="pi-kpi">
                 <span className="pi-kpi-val pi-rating">{profile.season.avg_rating}</span>
-                <span className="pi-kpi-label">Avg Rating</span>
+                <span className="pi-kpi-label">{t('Avg Rating')}</span>
               </div>
             </div>
           </div>
@@ -215,7 +217,7 @@ export function PlayerInvestigation({
           {/* Last Games Data Table */}
           <div className="pi-last-games">
             <div className="pi-section-head">
-              <h4>Last 5 Matches Performance</h4>
+              <h4>{t('Last 5 Matches Performance')}</h4>
               <div className="pi-form-pills">
                 {profile.last_games.map((g, idx) => (
                   <span key={idx} className={`pi-form-pill res-${g.result}`}>
@@ -229,13 +231,13 @@ export function PlayerInvestigation({
               <table className="pi-table">
                 <thead>
                   <tr>
-                    <th>Match</th>
-                    <th>Opponent</th>
-                    <th>Result</th>
-                    <th>Goals</th>
-                    <th>Assists</th>
-                    <th>Cards</th>
-                    <th>Rating</th>
+                    <th>{t('Match')}</th>
+                    <th>{t('Opponent')}</th>
+                    <th>{t('Result')}</th>
+                    <th>{t('Goals')}</th>
+                    <th>{t('Assists')}</th>
+                    <th>{t('Cards')}</th>
+                    <th>{t('Rating')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -287,16 +289,16 @@ export function PlayerInvestigation({
           {/* Quick Roy Action Prompts */}
           {onAskRoy && (
             <div className="pi-prompts">
-              <span className="pi-prompts-label">Ask Roy about {profile.name}:</span>
+              <span className="pi-prompts-label">{t('Ask Roy about {name}:', { name: profile.name })}</span>
               <div className="pi-prompts-list">
                 <button type="button" className="chip pi-prompt-btn" onClick={askAboutForm}>
-                  💬 How has {profile.name} performed in his last 5 games?
+                  💬 {t('How has {name} performed in his last 5 games?', { name: profile.name })}
                 </button>
                 <button type="button" className="chip pi-prompt-btn" onClick={askAboutTactics}>
-                  💬 What is {profile.name}'s key tactical role today?
+                  💬 {t("What is {name}'s key tactical role today?", { name: profile.name })}
                 </button>
                 <button type="button" className="chip pi-prompt-btn" onClick={askAboutClinical}>
-                  💬 Is {profile.name} clinical in front of goal?
+                  💬 {t('Is {name} clinical in front of goal?', { name: profile.name })}
                 </button>
               </div>
             </div>
