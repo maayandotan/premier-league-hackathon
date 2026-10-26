@@ -175,7 +175,11 @@ function Lanes({ stats, homeTeam, awayTeam, colors }: {
 }
 
 const VIEW = { x: -7, y: -12, w: 134, h: 98 } // the svg's viewBox: the pitch and its apron
-const ZOOM = { play: 1.22, focus: 1.5, goal: 1.65 }
+const ZOOM = { play: 1.1, focus: 1.5, goal: 1.65 }
+// During play the camera follows the ball only partway (and less up and down): a calm picture that
+// drifts towards the action, not one that chases every pass.
+const FOLLOW = { x: 0.4, y: 0.25 }
+const CENTRE: Point = [60, 40]
 const FLIGHT: Record<Move['kind'], number> = { shot: 0.32, pass: 0.62, carry: 0.95, touch: 0.4 } // seconds
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
@@ -253,7 +257,9 @@ export function Pitch({ events, homeTeam, awayTeam, info, stats, level = 'fan', 
   const flight = latest ? FLIGHT[latest.kind] : 0.6
   const focusOn = focus && focusId && focusDone !== focusId ? drawn(focus.team, focus.location) : null
   // The camera follows the ball, pushes in on a goal, and goes to what Roy is talking about.
-  const view = focusOn ? camera(focusOn, ZOOM.focus) : ballInNet ? camera(goal.to!, ZOOM.goal) : camera(ball, ZOOM.play)
+  const drift: Point = [CENTRE[0] + (ball[0] - CENTRE[0]) * FOLLOW.x, CENTRE[1] + (ball[1] - CENTRE[1]) * FOLLOW.y]
+  const view = focusOn ? camera(focusOn, ZOOM.focus) : ballInNet ? camera(goal.to!, ZOOM.goal) : camera(drift, ZOOM.play)
+  const moment = !!focusOn || !!ballInNet // the camera moves quickly to a moment, slowly during play
   const runner = latest?.kind === 'carry' // a dribble: the shirt runs with the ball
   const color = (home: boolean) => colors[home ? homeTeam : awayTeam]
 
@@ -265,7 +271,7 @@ export function Pitch({ events, homeTeam, awayTeam, info, stats, level = 'fan', 
       </div>
       <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} className="pitch" role="img"
         aria-label="Live pitch: where the ball is">
-        <g className="camera" style={{ transform: view }}>
+        <g className="camera" style={{ transform: view, transitionDuration: moment ? '1.1s' : '2.4s' }}>
           <PitchMarkings />
           <defs>
             {(['home', 'away'] as const).map((side) => (
