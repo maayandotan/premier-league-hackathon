@@ -146,10 +146,6 @@ These came from real failures. Follow them when changing or adding an agent.
 
 ## Open work
 
-Open issues: `gh issue list`. Current owners and priorities:
+Open issues: `gh issue list`. Done for the submission: the synthetic generator and the Meridian League, the demo video (made by code from the live app: `video/`, see "How the demo video was made" in the README), the live site at the Your Call link with one warm replica for judging.
 
-- **Synthetic generator v1 (#9) is done**: see [docs/event-schema.md](docs/event-schema.md#the-synthetic-generator-9). Regenerate with `.venv/bin/python -m scripts.generate_match` after changing it.
-- **Dean: the demo match scenario (#25).** Pick or tune the scenario the video tells (`backend/app/synthetic/scenarios.py`): which moments, at what minutes, so 2 minutes of video show goals, Roy explaining, and a viewer question.
-- Demo video under 2 minutes (#26), submission package with the repo made public (#27).
-- Done: the live app `your-call` keeps `--min-replicas 1`, so judges never hit a cold start.
-- Optional if time allows: Fact-Checker (#17), Storyteller (#30), Hebrew commentary (#23), xG trained on synthetic data with SHAP (#11), a fuller Producer (#16), tracing agent runs to Application Insights.
+Optional if time allows: tracing agent runs to Application Insights (#51), a director panel showing the producer's decisions (#50), Hebrew commentary (#23), xG trained on synthetic data with SHAP (#11), a fuller Producer (#16).

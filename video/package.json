@@ -1,0 +1,9 @@
+{
+  "name": "your-call-video",
+  "private": true,
+  "type": "module",
+  "description": "Builds the Your Call demo video from the live site, our own animated scenes and the narration",
+  "devDependencies": {
+    "playwright": "^1.48.2"
+  }
+}

@@ -4,7 +4,10 @@
 
 Built for the Microsoft × Premier League [Inside the Game](https://github.com/microsoft/insidethegamehackathon) hackathon.
 
-**Live demo:** https://your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io
+- **Live demo:** https://your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io
+- **Demo video (under 2 minutes):** VIDEO_LINK
+
+<p align="center"><img src="docs/images/your-call.jpg" alt="Your Call mid-match: a viewer asks Roy how the chances built up; his answer is on the pitch and the expected-goals chart is in the commentary" width="900"></p>
 
 ## Try it in a minute
 
@@ -12,6 +15,11 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 2. Switch the level (**Beginner / Fan / Analyst**) at any time: the next line follows it.
 3. Ask a question: type it, press the mic, or tap a suggestion. The match keeps going while Roy answers. Questions stay open after full time too.
 4. To jump to the drama, add `?start=85` to the link (the winner comes at 88'). Other matches: `?source=synthetic:red_card`, `?source=synthetic:late_equaliser`.
+
+Shortcuts to the best moments:
+- **The equaliser and a chart answer**, as an analyst: [your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io/?level=analyst&start=62&speed=3](https://your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io/?level=analyst&start=62&speed=3). After the 64' goal, ask *"Show me how the chances have built up in this match"* or *"Does Dunmore score late, and how is he on penalties?"*
+- **As a fan of a club**: add `&team=Westvale%20United` and the page takes its colours.
+- **In Spanish, as a beginner**: [your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io/?lang=es&level=beginner&start=72&speed=3](https://your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io/?lang=es&level=beginner&start=72&speed=3) (a penalty at 74': ask *"¿Por qué fue penal?"*).
 
 ## What it does
 
@@ -36,8 +44,8 @@ Built for the Microsoft × Premier League [Inside the Game](https://github.com/m
 2. **Stats engine (code).** Score, xG, possession, momentum, tempo, pass progression, and tactical patterns from event locations and timing: always exact, and exposed to the agents as tools.
 3. **Moment ranker (code).** Scores each event with a reason ("late go-ahead goal, against the run of play"), so most of the match is rightly left alone.
 4. **Producer (code).** Decides who speaks and when: Davis on live moments, Roy in the quiet after, the Q&A agent when a viewer asks. Every model call has a deadline and a fallback, so the broadcast never waits.
-5. **AI agents** on Microsoft Foundry (`gpt-4.1-mini`) with the Microsoft Agent Framework: the **Storyteller** (the match story and recaps, in the background), the **Caller**, the **Analyst** (code hands it the facts for the moment, grouped by team) and **Q&A** (tools for match events, rules, tactics and the match picture). Both are checked before they speak.
-6. **Voice.** Azure AI Speech turns each line into speech (Davis with built-in excited and shouting styles, Roy calm), mixed over the crowd in the browser.
+5. **AI agents** on Microsoft Foundry (`gpt-4.1-mini`) with the Microsoft Agent Framework: the **Storyteller** (the match story and recaps, in the background), the **Caller**, the **Analyst** (code hands it the facts for the moment, grouped by team) and **Q&A** (tools for match events, rules, tactics, the league, the match picture and charts). Roy's lines and answers are checked in code before they're spoken.
+6. **Voice.** Azure AI Speech turns each line into speech (Davis with built-in excited and shouting styles, Roy calm; Spanish voices for Spanish), mixed over the crowd in the browser.
 
 Design notes: [docs/agents.md](docs/agents.md), [docs/architecture.md](docs/architecture.md), and the lessons we learned building the agents in [AGENTS.md](AGENTS.md).
 
@@ -86,7 +94,7 @@ Open http://localhost:5173 and press **Kick off**. URL options: `?source=synthet
 
 ```bash
 cd backend && .venv/bin/ruff check . && .venv/bin/pytest          # no Azure needed
-cd frontend && npm run lint && npm run build
+cd frontend && npm run lint && npm test && npm run build
 cd backend && .venv/bin/python -m scripts.stress_test             # 3 full matches at once, real agents
 ```
 
@@ -99,6 +107,10 @@ All match data in the demo is **synthetic**, with fictional teams and players: [
 ```bash
 cd backend && .venv/bin/python -m scripts.generate_match comeback --seed 7
 ```
+
+## How the demo video was made
+
+The demo video is the real app, recorded by code. [`video/`](video/) drives the live site with Playwright the way a viewer would (picking a club, switching levels and language, asking Roy questions), records the screen and every sound the page plays (Davis, Roy, the crowd), and ffmpeg cuts it together with our own animated scenes ([`video/scenes/`](video/scenes/)) and Maayan's narration, placed so it never talks over the commentators.
 
 ## Repo layout
 
@@ -114,6 +126,7 @@ cd backend && .venv/bin/python -m scripts.generate_match comeback --seed 7
 | `docs/` | Design and schema docs |
 | `spikes/` | How each agent was built, step by step |
 | `scripts/deploy.sh` | Deploy to Azure Container Apps ([docs/deploy.md](docs/deploy.md)) |
+| `video/` | How the demo video was recorded and edited, by code |
 
 ## Credits
 
