@@ -132,6 +132,7 @@ export interface CommentaryLine {
   source: 'model' | 'template'
   level: string // the viewer level it was written for
   reply_to?: string | null // the viewer question it answers
+  language?: string // "en" | "es": the language of the text
 }
 
 export interface ViewerQuestion {

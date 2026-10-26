@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 import { ClockIcon } from './Icons'
 import type { Level } from './LevelPicker'
+import { useT } from '../i18n'
 
 interface AnalystQATableProps {
   questions: ViewerQuestion[]
@@ -41,6 +42,7 @@ export function AnalystQATable({
   onAsk,
   canAsk = true,
 }: AnalystQATableProps) {
+  const t = useT()
   const [search, setSearch] = useState('')
 
   // Map reply_to -> CommentaryLine (Roy's answer)
@@ -79,21 +81,21 @@ export function AnalystQATable({
   const suggestions = LEVEL_DEFAULT_SUGGESTIONS[level] ?? LEVEL_DEFAULT_SUGGESTIONS.analyst
 
   return (
-    <section className="card qa-table-card" aria-label="Questions Table">
+    <section className="card qa-table-card" aria-label={t('Questions Table')}>
       <div className="qa-header">
         <div className="qa-title-group">
           <div className="qa-badge-icon" aria-hidden="true">💬</div>
           <div>
-            <h2>Questions</h2>
+            <h2>{t('Questions')}</h2>
             <p className="qa-subtitle">
-              Your questions and Roy's real-time personalized analysis ({level} mode)
+              {t("Your questions and Roy's real-time personalized analysis")} ({level})
             </p>
           </div>
         </div>
 
         <div className="qa-stats-chips">
           <span className="qa-stat-pill total">
-            <strong>{qaItems.length}</strong> {qaItems.length === 1 ? 'Question' : 'Questions'}
+            <strong>{qaItems.length}</strong> {t(qaItems.length === 1 ? 'Question' : 'Questions')}
           </span>
         </div>
       </div>
@@ -105,15 +107,15 @@ export function AnalystQATable({
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search questions..."
-              aria-label="Search questions"
+              placeholder={t('Search questions...')}
+              aria-label={t('Search questions')}
             />
             {search && (
               <button
                 type="button"
                 className="qa-search-clear"
                 onClick={() => setSearch('')}
-                title="Clear search"
+                title={t('Clear search')}
               >
                 ✕
               </button>
@@ -125,23 +127,23 @@ export function AnalystQATable({
       {qaItems.length === 0 ? (
         <div className="qa-empty-state">
           <div className="qa-empty-icon" aria-hidden="true">🎙️</div>
-          <h3>No questions asked yet</h3>
+          <h3>{t('No questions asked yet')}</h3>
           <p>
-            Ask Roy about fouls, tactics, key moments, or rules using the question box or microphone.
-            His answers will appear here in real time!
+            {t('Ask Roy about fouls, tactics, key moments, or rules using the question box or microphone.')}{' '}
+            {t('His answers will appear here in real time!')}
           </p>
           {onAsk && canAsk && (
             <div className="qa-empty-suggestions">
-              <span className="qa-suggestions-label">Try asking ({level} level):</span>
+              <span className="qa-suggestions-label">{t('Try asking:')} ({level})</span>
               <div className="qa-suggestions-list">
                 {suggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
                     className="chip qa-suggestion-chip"
-                    onClick={() => onAsk(s)}
+                    onClick={() => onAsk(t(s))}
                   >
-                    + {s}
+                    + {t(s)}
                   </button>
                 ))}
               </div>
@@ -150,9 +152,9 @@ export function AnalystQATable({
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="qa-empty-filter">
-          <p>No questions match "{search}".</p>
+          <p>{t('No questions match your current search or filter.')}</p>
           <button type="button" className="chip" onClick={() => setSearch('')}>
-            Clear search
+            {t('Clear search')}
           </button>
         </div>
       ) : (
@@ -160,9 +162,9 @@ export function AnalystQATable({
           <table className="qa-table">
             <thead>
               <tr>
-                <th className="col-clock">Time</th>
-                <th className="col-question">Question (You)</th>
-                <th className="col-answer">Roy's Analysis</th>
+                <th className="col-clock">{t('Time')}</th>
+                <th className="col-question">{t('Question (You)')}</th>
+                <th className="col-answer">{t("Roy's Analysis")}</th>
               </tr>
             </thead>
             <tbody>
@@ -176,7 +178,7 @@ export function AnalystQATable({
                   >
                     {/* Time / Clock Column */}
                     <td className="col-clock">
-                      <span className="qa-clock-badge" title={`Asked at ${question.clock}`}>
+                      <span className="qa-clock-badge" title={`${t('Time')}: ${question.clock}`}>
                         <ClockIcon size={13} />
                         <span>{question.clock}</span>
                       </span>
@@ -185,7 +187,7 @@ export function AnalystQATable({
                     {/* Question Column */}
                     <td className="col-question">
                       <div className="qa-question-content">
-                        <span className="qa-avatar you" aria-hidden="true">You</span>
+                        <span className="qa-avatar you" aria-hidden="true">{t('You')}</span>
                         <div className="qa-question-text">
                           <p>{question.text}</p>
                         </div>
@@ -199,7 +201,7 @@ export function AnalystQATable({
                           <span className="qa-avatar roy" aria-hidden="true">R</span>
                           <div className="qa-answer-body">
                             <div className="qa-answer-meta">
-                              <span className="qa-speaker-name">Roy (Analyst)</span>
+                              <span className="qa-speaker-name">{t('Roy (Analyst)')}</span>
                               {answer.level && <span className="level-tag">{answer.level}</span>}
                               {isSpeaking && (
                                 <span className="on-air qa-on-air-badge">
@@ -213,7 +215,7 @@ export function AnalystQATable({
                       ) : (
                         <div className="qa-thinking-indicator">
                           <span className="qa-spinner" aria-hidden="true" />
-                          <span className="qa-thinking-text">Roy is analyzing match data...</span>
+                          <span className="qa-thinking-text">{t('Roy is analyzing match data...')}</span>
                         </div>
                       )}
                     </td>

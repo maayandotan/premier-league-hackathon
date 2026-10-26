@@ -1,6 +1,7 @@
 import { type FormEvent, useRef, useState } from 'react'
 import { MicIcon } from './Icons'
 import type { Level } from './LevelPicker'
+import { useT } from '../i18n'
 
 const LEVEL_SUGGESTIONS: Record<Level, string[]> = {
   beginner: [
@@ -59,6 +60,7 @@ export function QuestionBox({
   onAsk: (q: string) => void
   onListening: (on: boolean) => void
 }) {
+  const t = useT()
   const [text, setText] = useState('')
   const [mic, setMic] = useState<MicState>('idle')
   const [micError, setMicError] = useState('')
@@ -89,19 +91,19 @@ export function QuestionBox({
     onListening(true)
     try {
       const { listenOnce } = await import('../audio/speechInput')
-      const heard = await listenOnce(setText, controller.signal)
+      const heard = await listenOnce(setText, controller.signal, t.lang === 'es' ? 'es-MX' : 'en-US')
       if (heard.trim()) onAsk(heard.trim())
-      else if (!controller.signal.aborted) setMicError("Didn't catch that. Try again?")
+      else if (!controller.signal.aborted) setMicError(t("Didn't catch that. Try again?"))
       setText('')
       setMic('idle')
     } catch (error) {
       setMic('error')
       setMicError(
         error instanceof Error && /permission|denied|NotAllowed/i.test(error.message)
-          ? 'Microphone blocked. Allow it in the browser to ask by voice.'
+          ? t('Microphone blocked. Allow it in the browser to ask by voice.')
           : error instanceof Error
             ? error.message
-            : 'The microphone did not work.',
+            : t('The microphone did not work.'),
       )
     } finally {
       stopListening.current = null
@@ -111,7 +113,7 @@ export function QuestionBox({
 
   const listening = mic === 'listening'
   return (
-    <form className="ask" onSubmit={submit} aria-label="Ask the analyst">
+    <form className="ask" onSubmit={submit} aria-label={t('Ask the analyst')}>
       <div className="ask-row">
         <button
           type="button"
@@ -119,8 +121,8 @@ export function QuestionBox({
           onClick={toggleMic}
           disabled={!open}
           aria-pressed={listening}
-          aria-label={listening ? 'Stop and send' : 'Ask by voice'}
-          title={listening ? 'Stop and send' : 'Ask by voice'}
+          aria-label={t(listening ? 'Stop and send' : 'Ask by voice')}
+          title={t(listening ? 'Stop and send' : 'Ask by voice')}
         >
           {listening ? <span className="mic-dot" /> : <MicIcon />}
         </button>
@@ -131,17 +133,17 @@ export function QuestionBox({
           disabled={!open}
           placeholder={
             listening
-              ? 'Listening… press the mic again to send'
+              ? t('Listening… press the mic again to send')
               : fullTime
-                ? `Full time: ask Roy (${level} mode)…`
+                ? `${t('Full time: ask Roy about the match…')} (${level})`
                 : open
-                  ? `Ask Roy (${level} mode)…`
-                  : 'Kick off to ask questions'
+                  ? `${t('Ask Roy about the match…')} (${level})`
+                  : t('Kick off to ask questions')
           }
-          aria-label="Your question"
+          aria-label={t('Your question')}
         />
         <button type="submit" disabled={!open || !text.trim()}>
-          Ask
+          {t('Ask')}
         </button>
       </div>
       {open && (
@@ -151,9 +153,9 @@ export function QuestionBox({
               {micError}
             </span>
           ) : listening ? (
-            <span className="thinking">Listening… press the mic again when you're done</span>
+            <span className="thinking">{t("Listening… press the mic again when you're done")}</span>
           ) : waiting ? (
-            <span className="thinking">Roy is thinking… the match goes on</span>
+            <span className="thinking">{t('Roy is thinking… the match goes on')}</span>
           ) : (
             suggestions.map((s) => (
               <button
@@ -161,10 +163,10 @@ export function QuestionBox({
                 type="button"
                 className="chip ask-level-chip"
                 data-level={level}
-                onClick={() => onAsk(s)}
-                title={`Ask: "${s}"`}
+                onClick={() => onAsk(t(s))}
+                title={`Ask: "${t(s)}"`}
               >
-                {s}
+                {t(s)}
               </button>
             ))
           )}

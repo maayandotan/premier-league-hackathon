@@ -14,6 +14,9 @@ lands after the Caller, so the audio queue plays them in the right order.
 The match story (#30, story.py): every ranked event goes into a match log. When a tactical pattern
 first appears, the Analyst flags it at the next stoppage; when a goal pays it off, he gets the line
 he really said. At the end of each half he reads the Storyteller's recap.
+
+Languages (language.py): Davis writes Spanish himself; Roy's lines and answers are checked in
+English and then translated.
 """
 from collections.abc import Coroutine
 
@@ -22,12 +25,14 @@ from pydantic import BaseModel
 from app.agents.analyst import Analyst
 from app.agents.caller import Caller
 from app.agents.client import agents_enabled
+from app.agents.language import Translator
 from app.agents.qa import QuestionAnswerer
 from app.agents.story import Entry, MatchLog, Storyteller
 from app.agents.viewer import ViewerProfile
 from app.events.models import MatchEvent
 from app.stats.engine import StatsEngine
 from app.stats.ranker import Moment, rank
+from app.synthetic.squads import SQUADS
 
 CALL_THRESHOLD = 3
 ANALYSIS_THRESHOLD = 5
@@ -45,6 +50,7 @@ class CommentaryLine(BaseModel):
     source: str = "template"  # "model" (an agent wrote it) or "template" (code fallback)
     level: str = "fan"  # the viewer level it was written for
     reply_to: str | None = None  # the viewer's question this line answers (Q&A)
+    language: str = "en"  # the language of the text, which picks the voice ("en" or "es")
 
 
 class CommentaryPipeline:
@@ -62,6 +68,9 @@ class CommentaryPipeline:
         self.storyteller = Storyteller(self.match_log, use_model=agents_enabled() and analyst is not None)
         self._new_pattern: Entry | None = None  # appeared, not yet flagged on air
         self._flags: dict[str, str] = {}  # event id -> the pattern the Analyst flags there
+        names = [stats.home, stats.away] + [p.name.split(". ")[-1] for team in (stats.home, stats.away)
+                                            for p in SQUADS.get(team, [])]
+        self.translator = Translator(use_model=agents_enabled() and analyst is not None, names=names)
 
     def rank(self, event: MatchEvent) -> Moment:
         """Update the stats with the event and score it. Instant: no model involved."""
@@ -141,11 +150,18 @@ class CommentaryPipeline:
             return text
         return f"We flagged that {what} at {said.minute}'. {text}"
 
+    async def _in_language(self, text: str) -> tuple[str, str]:
+        """Roy's checked English line in the viewer's language: (text, language). If the
+        translation fails its check, the English line it came from."""
+        if self.viewer.language == "es" and (spanish := await self.translator.to_spanish(text)):
+            return spanish, "es"
+        return text, "en"
+
     async def call(self, event: MatchEvent, moment: Moment) -> CommentaryLine:
-        level = self.viewer.level  # the level when the moment happened
+        level, language = self.viewer.level, self.viewer.language  # as they were when the moment happened
         text, excitement, source = await self.caller.call(event, moment, self.stats, self.viewer)
         return CommentaryLine(id=f"{event.id}-caller", speaker="caller", excitement=excitement, text=text,
-                              event_id=event.id, source=source, level=level)
+                              event_id=event.id, source=source, level=level, language=language)
 
     async def analyse(self, event: MatchEvent, moment: Moment) -> CommentaryLine | None:
         level = self.viewer.level
@@ -161,9 +177,10 @@ class CommentaryPipeline:
             text = self._with_callback(event, text) if text else text
         if not text:
             return None
-        self.match_log.said(event.minute, text)
+        self.match_log.said(event.minute, text)  # the English line: callbacks search it in English
+        text, language = await self._in_language(text)
         return CommentaryLine(id=f"{event.id}-analyst", speaker="analyst", excitement=0, text=text,
-                              event_id=event.id, source="model", level=level)
+                              event_id=event.id, source="model", level=level, language=language)
 
     def _recap_facts(self) -> dict[str, str]:
         stats, possession = self.stats, self.stats.possession()
@@ -179,5 +196,7 @@ class CommentaryPipeline:
             source = "model" if self.qa.agent else "template"
         else:
             text, source = "Sorry, I can't take questions right now. Keep watching!", "template"
+        text, language = await self._in_language(text)
         return CommentaryLine(id=f"{question_id}-answer", speaker="analyst", excitement=0, text=text,
-                              event_id="", source=source, level=level, reply_to=question_id)
+                              event_id="", source=source, level=level, reply_to=question_id,
+                              language=language)
