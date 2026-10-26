@@ -78,6 +78,9 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   moment", "the turning point" or "the best chance", call get_key_moments.
 - The question was asked at ASKED_AT (match clock). If it refers to "that", "this" or "just now",
   call get_events_before to see what happened right before, and pick the moment that fits.
+- For a goal or who scored ("who scored?", "their goal", "the equaliser", "the winner"), call
+  get_key_moments: it has every goal of the match, wherever it was. Say who scored only from a goal
+  it lists; a saved or missed shot is not a goal.
 - For a question about a rule or a football term, call get_rule and explain it in your own words,
   applied to this moment if there is one.
 - For a question about tactics or how a team is playing (counter-attacks, pressing, possession,
@@ -286,6 +289,22 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
     return [recorded(tool) for tool in tools]  # so the answer can be checked against what they said
 
 
+def _focus_kind(event: MatchEvent) -> str:
+    if event.is_goal:
+        return "goal"
+    if event.shot is not None:
+        return "shot"
+    if (event.foul and event.foul.card) or event.card:
+        return "card"
+    return "foul" if event.type == "Foul Committed" else "moment"
+
+
+def _kind_words(event: MatchEvent) -> tuple[str, ...]:
+    return {"goal": ("goal", "scored"), "shot": ("shot", "chance", "saved", "effort", "post"),
+            "card": ("card", "booked", "sent off"), "foul": ("foul", "penalty", "free kick"),
+            }.get(_focus_kind(event), ())
+
+
 class QuestionAnswerer:
     def __init__(self, stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Moment]],
                  events_by_id: dict[str, MatchEvent], use_model: bool,
@@ -298,6 +317,8 @@ class QuestionAnswerer:
             default_options={"temperature": 0.3, "max_tokens": 200},
         ) if use_model else None
         self.stats = stats
+        self.events_by_id = events_by_id
+        self.timeline = timeline
         self.history: deque[tuple[str, str]] = deque(maxlen=HISTORY)  # what the viewer heard, in order
         self.recent_player: str | None = None  # who "he" means: found by code, not guessed by the model
         self._players = [p.name for team in (stats.home, stats.away) for p in SQUADS.get(team, [])]
@@ -305,13 +326,15 @@ class QuestionAnswerer:
     async def answer(self, question: str, minute: int, second: int, viewer: ViewerProfile,
                      full_time: bool = False) -> str:
         """A spoken answer. Never None: the viewer asked, so they always hear something."""
-        return (await self.answer_with_chart(question, minute, second, viewer, full_time))[0]
+        return (await self.answer_with_extras(question, minute, second, viewer, full_time))[0]
 
-    async def answer_with_chart(self, question: str, minute: int, second: int, viewer: ViewerProfile,
-                                full_time: bool = False) -> tuple[str, dict | None]:
-        """The spoken answer and the chart it comes with, if the agent showed one (charts.py)."""
+    async def answer_with_extras(self, question: str, minute: int, second: int, viewer: ViewerProfile,
+                                 full_time: bool = False) -> tuple[str, dict]:
+        """The spoken answer and what the page shows with it: {"chart": the chart the agent showed
+        (charts.py) or None, "focus": the moment the answer is about, for the pitch, or None}."""
+        nothing = {"chart": None, "focus": None}
         if not self.agent:
-            return UNAVAILABLE, None
+            return UNAVAILABLE, nothing
         asked_at = "full time (the match is over)" if full_time else f"{minute}:{second:02d}"
         limit = WORD_LIMITS.get(viewer.level, WORD_LIMITS["fan"])
         prompt = (f"QUESTION: {question[:MAX_QUESTION_CHARS]}\nASKED_AT: {asked_at}\n"
@@ -332,13 +355,35 @@ class QuestionAnswerer:
                 answer = await asyncio.wait_for(self._write(prompt, viewer.level, limit, tool_results, said),
                                                 DEADLINE_SECONDS)
             if answer in (NOT_SURE, UNAVAILABLE):
-                return answer, None  # no chart without an answer that passed the check
+                return answer, nothing  # nothing on screen without an answer that passed the check
             self.history.append((question[:MAX_QUESTION_CHARS], answer))
             self.recent_player = self._last_player_named(question + " " + answer) or self.recent_player
-            return answer, made[-1] if made else None
+            return answer, {"chart": made[-1] if made else None, "focus": self.focus_of(answer, tool_results)}
         except Exception as error:
             log.warning("Q&A failed: %s", type(error).__name__)
-            return "Sorry, I couldn't work that one out in time. Ask me again in a moment!", None
+            return "Sorry, I couldn't work that one out in time. Ask me again in a moment!", nothing
+
+    def focus_of(self, answer: str, tool_results: list) -> dict | None:
+        """The moment an answer is about, for the pitch to point at: one of the events its tools
+        returned, matched by the player's name, the minute and the kind of event the answer mentions.
+        Code decides; with no clear match there's no focus rather than a guess."""
+        ids = [item.get("event_id") for result in tool_results
+               for item in (result if isinstance(result, list) else [result]) if isinstance(item, dict)]
+        text = answer.lower()
+        best, best_score = None, 1  # a focus needs at least two matching clues' worth
+        for event in (self.events_by_id.get(i) for i in dict.fromkeys(i for i in ids if i)):
+            if event is None or event.location is None:
+                continue
+            score = 3 if event.player and event.player.split(". ")[-1].lower() in text else 0
+            score += 2 if f"{ordinal(event.minute)} minute" in text or f"{event.minute}'" in text else 0
+            score += any(word in text for word in _kind_words(event))
+            later = best is not None and event.match_seconds > best.match_seconds
+            if score > best_score or (score == best_score and later):
+                best, best_score = event, score
+        if best is None:
+            return None
+        return {"event_id": best.id, "minute": best.minute, "team": best.team,
+                "location": list(best.location[:2]), "kind": _focus_kind(best)}
 
     def _last_player_named(self, text: str) -> str | None:
         """The player named last in a text ("M. Ferro" or just "Ferro"), from the two squads playing.
@@ -354,11 +399,13 @@ class QuestionAnswerer:
         """Draft, check against what the tools returned, one retry if wrong, then an honest fallback
         (the viewer asked, so silence isn't an option; a wrong number is worse than "ask again")."""
         text = await self._draft(prompt, level, limit)
-        if problems := check_answer(text, tool_results, self.stats, said):
+        scorers = {e.player.split(". ")[-1] for e, _ in self.timeline
+                   if e.is_goal and e.player and e.period < 5}  # who has really scored in this match
+        if problems := check_answer(text, tool_results, self.stats, said, scorers):
             text = await self._draft(f"{prompt}\nYOUR LAST ANSWER: {text}\nWRONG: {'; '.join(problems)}.\n"
                                      "Answer again, with only numbers your tools gave, each with its team.",
                                      level, limit)
-            if problems := check_answer(text, tool_results, self.stats, said):
+            if problems := check_answer(text, tool_results, self.stats, said, scorers):
                 log.warning("Q&A answer failed the check twice: %s", "; ".join(problems))
                 return NOT_SURE
         return text

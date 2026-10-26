@@ -165,8 +165,17 @@ def _walk(value: Any, teams: set[str], found: set[str], by_team: dict[str, set[s
             _walk(item, teams, found, by_team)
 
 
-def check_answer(text: str, tool_results: list, stats: StatsEngine, also_allowed: set[str]) -> list[str]:
-    """What's wrong with a Q&A answer, in words the model can act on."""
+# "scored by Ferro", "a goal from M. Ferro", "Ferro scored", "Ferro headed in": a claim about who scored.
+SCORER_CLAIMS = (
+    r"\b(?:scored by|goal (?:by|from)|winner from|equali[sz]er from) (?:[A-Z]\.\s?)?([A-Z][\w'-]+)",
+    r"\b([A-Z][\w'-]+) (?:scored|has scored|headed (?:it )?in|fired (?:it )?in|found the net)\b(?!\s+\d)",
+)
+
+
+def check_answer(text: str, tool_results: list, stats: StatsEngine, also_allowed: set[str],
+                 scorers: set[str] | None = None) -> list[str]:
+    """What's wrong with a Q&A answer, in words the model can act on. `scorers`: the surnames of this
+    match's goal scorers so far (None skips that check)."""
     teams = {team.split()[0]: team for team in (stats.home, stats.away)}
     allowed, by_team = {"10"} | also_allowed, {}
     _walk(tool_results, set(teams.values()), allowed, by_team)
@@ -196,6 +205,17 @@ def check_answer(text: str, tool_results: list, stats: StatsEngine, also_allowed
                 period = "in the last 10 minutes" if recent else "in the whole match"
                 problems.append(f'"{named} ... {phrase}" is wrong {period}: '
                                 + ", ".join(f"{team} {value}" for team, value in values.items()))
+    # Who scored in this match: only someone who did. Season and league goals are a different claim.
+    if scorers is not None:
+        # (an initial, as in "L. Pirozzi", doesn't end a sentence)
+        for sentence in re.split(r"(?<=[.!?])(?<!\b[A-Z]\.)\s+", text):
+            if re.search(r"season|league|career|this year", sentence, re.I):
+                continue
+            for pattern in SCORER_CLAIMS:
+                for name in re.findall(pattern, sentence):
+                    if name not in scorers and name not in {"He", "She", "They", "Nobody", "No"}:
+                        who = ", ".join(sorted(scorers)) or "nobody yet"
+                        problems.append(f"{name} hasn't scored in this match (scorers so far: {who})")
     if guess := re.search(r"\b(likely|probably|must have|surely)\b", text, re.I):
         problems.append(f'"{guess.group(1)}" is a guess: say only what the tools show')
     # How good a chance was: only from get_shot_quality, and matching its label.
