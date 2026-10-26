@@ -160,12 +160,28 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
 }
 .pitch-legend .home { color: #93c5fd; }
 .pitch-legend .away { color: #fda4af; }
-.pitch { width: 100%; display: block; border-radius: 8px; overflow: visible; }
-.pitch .stripe-light { fill: #2f7d40; }
-.pitch .stripe-dark { fill: #2a7239; }
-.pitch .line { fill: none; stroke: rgba(255, 255, 255, 0.8); stroke-width: 0.4; }
+/* The pitch as a TV camera sees it: tilted a little, as from the stands, under floodlights. */
+.pitch-wrap { perspective: 1200px; }
+.pitch {
+  /* capped in height so the Ask Roy dock below stays on screen */
+  width: 100%; max-height: 40vh; display: block; margin: 0 auto; overflow: visible;
+  transform: rotateX(16deg); transform-origin: 50% 100%;
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.45));
+}
+.pitch .apron { fill: #0d2a18; }
+.pitch .boards { fill: #08111f; stroke: rgba(255, 255, 255, 0.08); stroke-width: 0.2; }
+.pitch .boards-text {
+  font-family: var(--font-display); font-weight: 800; font-size: 2.2px; letter-spacing: 0.35px;
+  fill: var(--accent, var(--grass));
+}
+.pitch .stripe-light { fill: #2e8a43; }
+.pitch .stripe-dark { fill: #287a3b; }
+.pitch .line { fill: none; stroke: rgba(255, 255, 255, 0.82); stroke-width: 0.35; }
 .pitch .spot { fill: rgba(255, 255, 255, 0.85); }
-.pitch .goal { fill: rgba(255, 255, 255, 0.95); }
+.pitch .goal { stroke: rgba(255, 255, 255, 0.95); stroke-width: 0.3; }
+.pitch .ball-shadow { fill: rgba(0, 0, 0, 0.35); }
+.pitch .ball-halo { fill: rgba(255, 255, 255, 0.55); }
+@media (prefers-reduced-motion: reduce) { .pitch { transform: none; } }
 .pitch .trail { stroke-width: 0.7; stroke-linecap: round; }
 .pitch .trail.home { stroke: #bfdbfe; }
 .pitch .trail.away { stroke: #fecdd3; }
@@ -181,7 +197,7 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
 }
 .pitch .player text.recipient { font-weight: 600; opacity: 0.85; }
 .pitch .ball { transition: transform 0.55s ease-out; }
-.pitch .ball circle { fill: #fff; stroke: #111; stroke-width: 0.35; }
+.pitch .ball > circle:last-child { fill: #fff; stroke: #111; stroke-width: 0.35; }
 .pitch .goal-flash { fill: var(--gold); animation: goal-flash 0.4s ease-in-out 6 alternate; }
 @keyframes goal-flash { from { opacity: 0.15; } to { opacity: 1; } }
 

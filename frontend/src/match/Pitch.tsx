@@ -55,12 +55,33 @@ function toMove(e: MatchEvent, homeTeam: string): Move | null {
   return { id: e.id, home, kind: 'touch', from, to: null, complete: true, goal: false, player: e.player }
 }
 
+const BOARDS = 'YOUR CALL · MERIDIAN LEAGUE · '
+
+/** The stadium as a TV camera sees it: the apron and the LED boards, mown grass under floodlights,
+ * every marking a real pitch has (arcs, corners, nets). */
 function PitchMarkings() {
   return (
     <g className="markings">
-      {[0, 1, 2, 3, 4, 5].map((i) => (
-        <rect key={i} x={i * 20} y={0} width={20} height={80} className={i % 2 ? 'stripe-dark' : 'stripe-light'} />
+      <defs>
+        <radialGradient id="floodlight" cx="50%" cy="45%" r="65%">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.12" />
+          <stop offset="60%" stopColor="#fff" stopOpacity="0" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.35" />
+        </radialGradient>
+        <pattern id="net" width="0.8" height="0.8" patternUnits="userSpaceOnUse">
+          <path d="M0 0 L0.8 0.8 M0.8 0 L0 0.8" stroke="rgba(255,255,255,0.55)" strokeWidth="0.12" />
+        </pattern>
+        <filter id="ball-glow" x="-2" y="-2" width="5" height="5">
+          <feGaussianBlur stdDeviation="0.8" />
+        </filter>
+      </defs>
+      <rect x={-7} y={-12} width={134} height={98} rx={2} className="apron" />
+      <rect x={2} y={-10.5} width={116} height={3.4} rx={0.6} className="boards" />
+      <text x={60} y={-8} className="boards-text" textAnchor="middle">{BOARDS.repeat(4)}</text>
+      {Array.from({ length: 12 }, (_, i) => (
+        <rect key={i} x={i * 10} y={0} width={10} height={80} className={i % 2 ? 'stripe-dark' : 'stripe-light'} />
       ))}
+      <rect x={0} y={0} width={120} height={80} fill="url(#floodlight)" />
       <rect x={0} y={0} width={120} height={80} className="line" />
       <line x1={60} y1={0} x2={60} y2={80} className="line" />
       <circle cx={60} cy={40} r={10} className="line" />
@@ -75,10 +96,15 @@ function PitchMarkings() {
             {box(18, 18)}
             {box(6, 30)}
             <circle cx={mirror(12)} cy={40} r={0.5} className="spot" />
-            <rect x={side ? 120 : -2} y={36} width={2} height={8} className="goal" />
+            {/* the penalty arc ("the D"): 10 yards from the spot, outside the box */}
+            <path d={side ? 'M102 32 A10 10 0 0 0 102 48' : 'M18 32 A10 10 0 0 1 18 48'} className="line" />
+            <rect x={side ? 120 : -2.4} y={36} width={2.4} height={8} fill="url(#net)" className="goal" />
           </g>
         )
       })}
+      {/* corner arcs */}
+      <path d="M0 1 A1 1 0 0 0 1 0 M119 0 A1 1 0 0 0 120 1 M120 79 A1 1 0 0 0 119 80 M1 80 A1 1 0 0 0 0 79"
+        className="line" />
     </g>
   )
 }
@@ -104,7 +130,7 @@ export function Pitch({ events, homeTeam, awayTeam }: { events: RankedEvent[]; h
         <span className="team home">{homeTeam} →</span>
         <span className="team away">← {awayTeam}</span>
       </div>
-      <svg viewBox="-4 -4 128 88" className="pitch" role="img" aria-label="Live pitch: where the ball is">
+      <svg viewBox="-7 -12 134 98" className="pitch" role="img" aria-label="Live pitch: where the ball is">
         <PitchMarkings />
 
         {moves.map((m, i) => {
@@ -132,6 +158,8 @@ export function Pitch({ events, homeTeam, awayTeam }: { events: RankedEvent[]; h
         )}
 
         <g className="ball" style={{ transform: `translate(${ball[0]}px, ${ball[1]}px)` }}>
+          <ellipse cx={0.5} cy={1.1} rx={1.4} ry={0.6} className="ball-shadow" />
+          <circle r={2.2} className="ball-halo" filter="url(#ball-glow)" />
           <circle r={1.3} />
         </g>
       </svg>
