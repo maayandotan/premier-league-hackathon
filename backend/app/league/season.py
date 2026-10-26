@@ -12,6 +12,7 @@ import zlib
 from app.config import REPO_ROOT
 from app.events.models import Match
 from app.league.clubs import CLUB_BY_CODE, CLUB_BY_NAME, CLUBS, LEAGUE_NAME
+from app.stats.xg import shot_xg
 from app.synthetic.scenarios import Scenario, Style
 from app.synthetic.simulator import generate_match
 
@@ -56,9 +57,10 @@ def play(round_no: int, home: str, away: str) -> Match:
 
 
 def summarize(match: Match, round_no: int) -> dict:
-    """What the league keeps of a match: the score, who scored and assisted, the cards."""
+    """What the league keeps of a match: the score, who scored and assisted, the cards, and every
+    shot (for "does he score late?" kinds of questions)."""
     home, away = match.info.home.name, match.info.away.name
-    goals, cards, last_pass = [], [], {}
+    goals, cards, shots, last_pass = [], [], [], {}
     for event in match.events:
         if event.pass_ is not None and event.pass_.outcome == "Complete":
             last_pass[event.team] = event
@@ -67,12 +69,17 @@ def summarize(match: Match, round_no: int) -> dict:
             assister = assist.player if assist and assist.pass_.goal_assist else None
             goals.append({"minute": event.minute, "team": event.team, "scorer": event.player,
                           "assister": assister, "penalty": event.shot.type == "Penalty"})
+        if event.shot is not None and event.period < 5:
+            shots.append({"minute": event.minute, "team": event.team, "player": event.player,
+                          "goal": event.is_goal, "penalty": event.shot.type == "Penalty",
+                          "xg": round(shot_xg(event) or 0, 3)})
         card = event.foul.card if event.foul else event.card
         if card:
             cards.append({"minute": event.minute, "team": event.team, "player": event.player, "card": card})
     return {"id": match_id(round_no, home, away), "round": round_no, "home": home, "away": away,
             "home_goals": sum(g["team"] == home for g in goals),
-            "away_goals": sum(g["team"] == away for g in goals), "goals": goals, "cards": cards}
+            "away_goals": sum(g["team"] == away for g in goals), "goals": goals, "cards": cards,
+            "shots": shots}
 
 
 def build_season() -> dict:

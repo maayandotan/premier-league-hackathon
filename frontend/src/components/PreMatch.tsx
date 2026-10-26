@@ -1,5 +1,5 @@
 import type { Club, LeagueFixture, MatchInfo, Player } from '../match/types'
-import { PlayIcon, SpeakerIcon } from './Icons'
+import { MicIcon, PlayIcon, SpeakerIcon } from './Icons'
 import type { Level } from './LevelPicker'
 import { Crest } from './Scorebug'
 import { useT } from '../i18n'
@@ -92,8 +92,15 @@ export function PreMatch({ info, level, onLevel, onKickOff, fixtures, matchday, 
       </div>
       <p className="pm-voices">
         {t('Your commentators:')} <strong>{t.voice('Davis')}</strong> {t('calls the action,')} <strong>{t.voice('Roy')}</strong>{' '}
-        {t('explains why it matters.')} {t('Ask them anything while the match goes on.')}
+        {t('explains why it matters.')}
       </p>
+      <div className="pm-ask">
+        <span className="pm-ask-mic" aria-hidden="true"><MicIcon size={22} /></span>
+        <div>
+          <strong>{t('Ask {name} anything, any time', { name: t.voice('Roy') })}</strong>
+          <span>{t('“Why was that a foul?” “Who has been better?” Ask by voice or text: the match keeps playing while he answers, at your level.')}</span>
+        </div>
+      </div>
       {clubs && clubs.length > 0 && (
         <fieldset className="pm-club">
           <legend>{t('Your club')} <span>{t('(optional)')}</span></legend>

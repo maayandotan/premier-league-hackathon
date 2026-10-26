@@ -6,6 +6,7 @@ import { type Level, LevelPicker } from './components/LevelPicker'
 import { MatchTimeline } from './components/MatchTimeline'
 import { GoalBanner, LowerThird } from './components/PitchOverlays'
 import { QuestionBox } from './components/QuestionBox'
+import { AnswerCard } from './components/AnswerCard'
 import { Scorebug } from './components/Scorebug'
 import { MomentumBar, StatBars } from './components/StatBars'
 import { BeginnerGuide } from './components/BeginnerGuide'
@@ -198,9 +199,13 @@ export default function App() {
                   <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} />
                   <GoalBanner events={events} score={scoreText} />
                   <LowerThird lines={lines} speakingId={speakingId} />
+                  <AnswerCard questions={questions} lines={lines} speakingId={speakingId}
+                    colors={{ [info.home.name]: info.home.color ?? '#3b82f6', [info.away.name]: info.away.color ?? '#f43f5e' }} />
                 </div>
                 {stats && <MomentumBar stats={stats} />}
               </section>
+              <QuestionBox open={canAsk} fullTime={status === 'ended'} waiting={waiting}
+                level={level as Level} onAsk={ask} onListening={setListening} />
             </>
           ) : preInfo ? (
             <PreMatch info={preInfo} level={level as Level} onLevel={setLevel} onKickOff={start}
@@ -221,8 +226,6 @@ export default function App() {
 
         <aside className="side">
           <CommentaryFeed lines={lines} questions={questions} speakingId={speakingId} />
-          <QuestionBox open={canAsk} fullTime={status === 'ended'} waiting={waiting}
-            level={level as Level} onAsk={ask} onListening={setListening} />
         </aside>
 
         <div className="lower">

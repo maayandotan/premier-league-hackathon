@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 import { useT } from '../i18n'
+import { AnswerChart } from './AnswerChart'
 
 const VOICES = {
   caller: { name: 'Davis', role: 'Play-by-play' },
@@ -98,6 +99,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
                             {isSpeaking && <span className="qa-on-air-pill">{t('On Air')}</span>}
                           </div>
                           <p>{answer.text}</p>
+                          {answer.chart && <AnswerChart chart={answer.chart} />}
                         </div>
                       </div>
                     ) : (

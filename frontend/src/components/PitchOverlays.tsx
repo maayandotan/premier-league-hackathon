@@ -27,7 +27,7 @@ const VOICE_NAMES: Record<string, [string, string]> = { caller: ['Davis', 'Play-
 export function LowerThird({ lines, speakingId }: { lines: CommentaryLine[]; speakingId: string | null }) {
   const t = useT()
   const line = speakingId ? lines.find((l) => l.id === speakingId) : undefined
-  if (!line) return null
+  if (!line || line.reply_to) return null // an answer shows in the answer card instead
   return (
     <div key={line.id} className={`lower-third ${line.speaker}`} aria-hidden="true">
       <span className="lt-name">{line.reply_to ? `${t.voice('Roy')} · ${t('Answering you')}`

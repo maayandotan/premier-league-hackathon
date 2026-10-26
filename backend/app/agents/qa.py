@@ -19,6 +19,7 @@ from typing import Annotated
 
 from agent_framework import Agent
 
+from app.agents import charts
 from app.agents.analyst import build_tools as stats_tools
 from app.agents.analyst import fit_to_words
 from app.agents.checker import check_answer, recorded, recording
@@ -108,6 +109,14 @@ INSTRUCTIONS = """You answer a viewer's question during a live football broadcas
   "He" or "him" is MOST_RECENT_PLAYER when it's given.
 - For anything about a player (who he is, his goals and assists, his position, his match so far),
   call get_player.
+- CHARTS. When the viewer asks to see something, or asks about a pattern across the season or over
+  the match, call the show_ tool that fits; the chart appears next to your answer:
+  what happens when a team scores N goals -> show_team_results_by_goals;
+  when a player scores, late goals, scoring under pressure, his penalties -> show_player_scoring_by_time;
+  how the chances built up in this match, who has created more -> show_xg_race.
+  Say in one sentence what the chart shows, with its numbers, and how many matches or shots it's
+  based on: one season so far is a small sample, so never call it a trend or a proven habit. If none
+  fits, answer without a chart.
 - If VIEWER_SUPPORTS is given, the viewer is a fan of that club: "we", "us", "my team" and "our"
   mean that club (call get_club_season for it). Stay fair and accurate about both teams.
 - If the question isn't about this match or football, say kindly that you can only talk about the match.
@@ -249,8 +258,30 @@ def build_qa_tools(stats: StatsEngine, timeline: Sequence[tuple[MatchEvent, Mome
         patterns, what was said on air), with minutes. For catching up and anything about earlier."""
         return story() if story else {"story": "(no story yet)"}
 
+    def show_team_results_by_goals(team: Annotated[str, "A club's full name, e.g. Northbridge FC"]) -> dict:
+        """Shows the viewer a CHART of a club's league results this season grouped by how many goals it
+        scored (0, 1, 2, 3 or more): won, drawn, lost. For "what happens when they score two or more?"."""
+        if team not in CLUB_BY_NAME:
+            return {"error": f"no club called {team!r}", "clubs": list(CLUB_BY_NAME)}
+        return charts.team_results_by_goals(team)
+
+    def show_player_scoring_by_time(name: Annotated[str, "A player's name or surname, e.g. Ferro"]) -> dict:
+        """Shows the viewer a CHART of a player's league shots and goals this season by match time
+        (15-minute windows), with his penalties and their minutes. For "does he score late?", "is he
+        good under pressure?", "how is he on penalties?"."""
+        found = find_player(name, preferred=(stats.home, stats.away))
+        if found is None:
+            return {"error": f"no player called {name!r} in the league"}
+        return charts.player_scoring_by_time(found[1].name)
+
+    def show_xg_race() -> dict:
+        """Shows the viewer a CHART of this match: each team's expected goals adding up minute by minute,
+        with the goals marked. For "who has created more?", "show me how the chances built up"."""
+        return charts.xg_race(timeline, stats.home, stats.away)
+
     tools = [get_events_before, get_key_moments, get_rule, get_tactic, get_patterns, get_match_story,
              get_league_table, get_club_season, get_player, get_match_picture,
+             show_team_results_by_goals, show_player_scoring_by_time, show_xg_race,
              momentum["get_shot_quality"], momentum["get_pass_rarity"]]
     return [recorded(tool) for tool in tools]  # so the answer can be checked against what they said
 
@@ -274,8 +305,13 @@ class QuestionAnswerer:
     async def answer(self, question: str, minute: int, second: int, viewer: ViewerProfile,
                      full_time: bool = False) -> str:
         """A spoken answer. Never None: the viewer asked, so they always hear something."""
+        return (await self.answer_with_chart(question, minute, second, viewer, full_time))[0]
+
+    async def answer_with_chart(self, question: str, minute: int, second: int, viewer: ViewerProfile,
+                                full_time: bool = False) -> tuple[str, dict | None]:
+        """The spoken answer and the chart it comes with, if the agent showed one (charts.py)."""
         if not self.agent:
-            return UNAVAILABLE
+            return UNAVAILABLE, None
         asked_at = "full time (the match is over)" if full_time else f"{minute}:{second:02d}"
         limit = WORD_LIMITS.get(viewer.level, WORD_LIMITS["fan"])
         prompt = (f"QUESTION: {question[:MAX_QUESTION_CHARS]}\nASKED_AT: {asked_at}\n"
@@ -292,16 +328,17 @@ class QuestionAnswerer:
                 f"Viewer: {q}\nRoy: {a}" for q, a in self.history)
         said = {*re.findall(r"\b\d+(?:\.\d+)?\b", question), str(minute), str(second)}
         try:
-            with recording() as tool_results:
+            with recording() as tool_results, charts.charting() as made:
                 answer = await asyncio.wait_for(self._write(prompt, viewer.level, limit, tool_results, said),
                                                 DEADLINE_SECONDS)
-            if answer not in (NOT_SURE, UNAVAILABLE):
-                self.history.append((question[:MAX_QUESTION_CHARS], answer))
-                self.recent_player = self._last_player_named(question + " " + answer) or self.recent_player
-            return answer
+            if answer in (NOT_SURE, UNAVAILABLE):
+                return answer, None  # no chart without an answer that passed the check
+            self.history.append((question[:MAX_QUESTION_CHARS], answer))
+            self.recent_player = self._last_player_named(question + " " + answer) or self.recent_player
+            return answer, made[-1] if made else None
         except Exception as error:
             log.warning("Q&A failed: %s", type(error).__name__)
-            return "Sorry, I couldn't work that one out in time. Ask me again in a moment!"
+            return "Sorry, I couldn't work that one out in time. Ask me again in a moment!", None
 
     def _last_player_named(self, text: str) -> str | None:
         """The player named last in a text ("M. Ferro" or just "Ferro"), from the two squads playing.
