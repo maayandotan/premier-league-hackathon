@@ -15,9 +15,10 @@ const LEVEL_SUGGESTIONS: Record<Level, string[]> = {
     'How does this affect the table?',
   ],
   analyst: [
-    'Analyze our pressing structure',
+    // questions our data can answer, two of them with a chart
+    'Show me how the chances built up',
     'What is the xG difference?',
-    'How are half-spaces exploited?',
+    'What happens when the home team scores twice?',
   ],
 }
 
