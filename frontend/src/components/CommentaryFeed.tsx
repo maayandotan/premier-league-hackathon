@@ -13,10 +13,11 @@ const VOICES = {
  * Viewer questions show as "You" bubbles until Roy answers; his answer quotes the question.
  * Also provides a toggle to view only Questions & Answers right in the sidebar.
  */
-export function CommentaryFeed({ lines, questions, speakingId }: {
+export function CommentaryFeed({ lines, questions, speakingId, colors }: {
   lines: CommentaryLine[]
   questions: ViewerQuestion[]
   speakingId: string | null
+  colors?: Record<string, string> // team name -> colour, for charts about this match
 }) {
   const t = useT()
   const [tab, setTab] = useState<'feed' | 'qa'>('feed')
@@ -99,7 +100,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
                             {isSpeaking && <span className="qa-on-air-pill">{t('On Air')}</span>}
                           </div>
                           <p>{answer.text}</p>
-                          {answer.chart && <AnswerChart chart={answer.chart} />}
+                          {answer.chart && <AnswerChart chart={answer.chart} colors={colors} />}
                         </div>
                       </div>
                     ) : (
@@ -138,6 +139,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
                   </div>
                   {question && <blockquote>“{question.text}” <span>· {question.clock}</span></blockquote>}
                   <p>{line.text}</p>
+                  {line.chart && <AnswerChart chart={line.chart} colors={colors} />}
                 </div>
               </li>
             )

@@ -1853,3 +1853,5 @@ html.themed body::before {
   .pitch .camera, .pitch .ball, .pitch .shirt-pos { transition: none; }
   .pitch .trail.fresh, .pitch .ball-body.lofted, .pitch .net-bulge, .pitch .lane-flow, .pitch .focus-ring { animation: none; }
 }
+.answer-chart-hint { display: inline-block; margin-top: 6px; font-size: 0.78rem; font-weight: 700; color: var(--accent, var(--grass)); }
+.feed .line .answer-chart { background: var(--well); border-radius: 10px; padding: 10px 10px 8px; }
