@@ -77,7 +77,7 @@ const ES: Record<string, string> = {
   'Your question': 'Tu pregunta', Ask: 'Preguntar',
   '{team}: results by goals scored': '{team}: resultados según los goles marcados',
   '{n} league matches this season': '{n} partidos de liga esta temporada', 'Scored {n}': 'Marcó {n}',
-  'The match, while you scroll': 'El partido, mientras bajas', 'big chance': 'ocasión clara', 'half chance': 'media ocasión', 'hard chance': 'ocasión difícil',
+  'The match, while you scroll': 'El partido, mientras bajas', 'Chart in the commentary': 'Gráfico en los comentarios', 'big chance': 'ocasión clara', 'half chance': 'media ocasión', 'hard chance': 'ocasión difícil',
   won: 'ganados', drawn: 'empatados', lost: 'perdidos', 'no matches': 'sin partidos',
   '{player}: shots and goals by match time': '{player}: tiros y goles según el minuto',
   '{shots} shots, {goals} goals this season': '{shots} tiros, {goals} goles esta temporada',

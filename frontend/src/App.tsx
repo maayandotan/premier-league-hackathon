@@ -210,8 +210,7 @@ export default function App() {
                     level={level} focus={lastAnswer?.focus} focusId={lastAnswer?.id} />
                   <GoalBanner events={events} score={scoreText} />
                   <LowerThird lines={lines} speakingId={speakingId} />
-                  <AnswerCard questions={questions} lines={lines} speakingId={speakingId}
-                    colors={{ [info.home.name]: info.home.color ?? '#3b82f6', [info.away.name]: info.away.color ?? '#f43f5e' }} />
+                  <AnswerCard questions={questions} lines={lines} speakingId={speakingId} />
                 </div>
                 {stats && <MomentumBar stats={stats} />}
               </section>
@@ -236,7 +235,8 @@ export default function App() {
         </div>
 
         <aside className="side">
-          <CommentaryFeed lines={lines} questions={questions} speakingId={speakingId} />
+          <CommentaryFeed lines={lines} questions={questions} speakingId={speakingId}
+            colors={info ? { [info.home.name]: info.home.color ?? '#3b82f6', [info.away.name]: info.away.color ?? '#f43f5e' } : undefined} />
         </aside>
 
         <div className="lower">
