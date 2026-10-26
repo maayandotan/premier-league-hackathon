@@ -1,4 +1,7 @@
-import type { MatchEvent, MatchInfo, RankedEvent } from './types'
+import { useEffect, useState } from 'react'
+import { Logo } from '../components/Logo'
+import { useT } from '../i18n'
+import type { AnswerFocus, MatchEvent, MatchInfo, MatchStats, RankedEvent } from './types'
 
 /**
  * A live "match centre" pitch (#22): the ball moving from event to event, the player on the
@@ -68,6 +71,9 @@ function PitchMarkings() {
           <stop offset="60%" stopColor="#fff" stopOpacity="0" />
           <stop offset="100%" stopColor="#000" stopOpacity="0.35" />
         </radialGradient>
+        <pattern id="grass" width="2" height="2" patternUnits="userSpaceOnUse" patternTransform="rotate(25)">
+          <path d="M0 0.5 H0.7 M1 1.5 H1.6" stroke="rgba(255,255,255,0.05)" strokeWidth="0.25" />
+        </pattern>
         <pattern id="net" width="0.8" height="0.8" patternUnits="userSpaceOnUse">
           <path d="M0 0 L0.8 0.8 M0.8 0 L0 0.8" stroke="rgba(255,255,255,0.55)" strokeWidth="0.12" />
         </pattern>
@@ -81,7 +87,9 @@ function PitchMarkings() {
       {Array.from({ length: 12 }, (_, i) => (
         <rect key={i} x={i * 10} y={0} width={10} height={80} className={i % 2 ? 'stripe-dark' : 'stripe-light'} />
       ))}
+      <rect x={0} y={0} width={120} height={80} fill="url(#grass)" />
       <rect x={0} y={0} width={120} height={80} fill="url(#floodlight)" />
+      <g className="centre-logo" transform="translate(54.5 34.5)"><Logo size={11} /></g>
       <rect x={0} y={0} width={120} height={80} className="line" />
       <line x1={60} y1={0} x2={60} y2={80} className="line" />
       <circle cx={60} cy={40} r={10} className="line" />
@@ -119,12 +127,57 @@ function inkOn(hex: string): string {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? '#0b1220' : '#ffffff'
 }
 
-export function Pitch({ events, homeTeam, awayTeam, info }: {
+const FOCUS_MS = 20000 // how long the pitch points at what Roy's answer is about
+const SHOT_MINUTES = 3 // the latest shot's circle stays this long (match minutes)
+const LANES: Record<string, [number, number]> = { left: [0, 80 / 3], centre: [80 / 3, 160 / 3], right: [160 / 3, 80] }
+const LANE_PATTERN = /^(\d+) of (\d+) final-third entries down the (left|centre|right)/
+
+/** The lane a team keeps attacking down (from the pattern detector), lit in its attacking third. */
+function Lanes({ stats, homeTeam, awayTeam, colors }: {
+  stats?: MatchStats | null; homeTeam: string; awayTeam: string; colors: Record<string, string>
+}) {
+  return (
+    <g className="lanes">
+      {[homeTeam, awayTeam].map((team) => {
+        const line = stats?.patterns?.[team]?.last_15_minutes.find((l) => LANE_PATTERN.test(l))
+        const m = line?.match(LANE_PATTERN)
+        if (!m) return null
+        const home = team === homeTeam
+        const [y0, y1] = LANES[m[3]]
+        const top = home ? y0 : 80 - y1 // the away team attacks left, so its left is our bottom
+        return (
+          <g key={team}>
+            <rect x={home ? 80 : 0} y={top} width={40} height={y1 - y0} className="lane"
+              style={{ fill: `url(#lane-${home ? 'home' : 'away'})`, color: colors[team] }} />
+            <text x={home ? 100 : 20} y={top + (y1 - y0) / 2 + 1.5} className="lane-label">{m[1]}/{m[2]}</text>
+          </g>
+        )
+      })}
+    </g>
+  )
+}
+
+export function Pitch({ events, homeTeam, awayTeam, info, stats, level = 'fan', focus, focusId }: {
   events: RankedEvent[]
   homeTeam: string
   awayTeam: string
   info?: MatchInfo // shirt numbers and club colours
+  stats?: MatchStats | null // the live patterns, for the lit lanes
+  level?: string
+  focus?: AnswerFocus | null // what Roy's latest answer is about
+  focusId?: string // that answer's id: a new answer shows its focus again
 }) {
+  const t = useT()
+  const [focusDone, setFocusDone] = useState<string | null>(null)
+  useEffect(() => {
+    if (!focusId) return
+    const timer = setTimeout(() => setFocusDone(focusId), FOCUS_MS)
+    return () => clearTimeout(timer)
+  }, [focusId])
+  const colors: Record<string, string> = {
+    [homeTeam]: info?.home.color ?? '#3b82f6', [awayTeam]: info?.away.color ?? '#f43f5e',
+  }
+  const drawn = (team: string, [x, y]: number[]): Point => (team === homeTeam ? [x, y] : [120 - x, 80 - y])
   // events arrive newest first; collect the latest moves, oldest first for drawing
   const moves: Move[] = []
   for (const { event } of events) {
@@ -133,6 +186,10 @@ export function Pitch({ events, homeTeam, awayTeam, info }: {
     if (moves.length === TRAIL) break
   }
   const latest = moves[moves.length - 1]
+  // The latest shot, for a few match minutes: a circle sized by its chance of going in.
+  const now = events[0]?.event.minute ?? 0
+  const shot = events.find(({ event }) => event.shot && event.location && event.period < 5)
+  const showShot = shot && now - shot.event.minute <= SHOT_MINUTES ? shot : undefined
   // A goal is followed by the keeper's event in the same second: keep the flash while the goal is
   // in the trail, and keep the ball in the net while it's one of the last two moves.
   const goal = [...moves].reverse().find((m) => m.goal)
@@ -153,6 +210,28 @@ export function Pitch({ events, homeTeam, awayTeam, info }: {
       </div>
       <svg viewBox="-7 -12 134 98" className="pitch" role="img" aria-label="Live pitch: where the ball is">
         <PitchMarkings />
+        <defs>
+          {(['home', 'away'] as const).map((side) => (
+            <linearGradient key={side} id={`lane-${side}`} x1={side === 'home' ? 0 : 1} x2={side === 'home' ? 1 : 0}>
+              <stop offset="0%" stopColor="currentColor" stopOpacity="0" />
+              <stop offset="100%" stopColor="currentColor" stopOpacity="0.55" />
+            </linearGradient>
+          ))}
+        </defs>
+        <Lanes stats={stats} homeTeam={homeTeam} awayTeam={awayTeam} colors={colors} />
+        {showShot && (() => {
+          const shot = showShot
+          const [x, y] = drawn(shot.event.team, shot.event.location!)
+          const xg = shot.moment.xg ?? 0
+          const label = level === 'analyst' ? `xG ${xg.toFixed(2)}`
+            : t(xg >= 0.3 ? 'big chance' : xg >= 0.1 ? 'half chance' : 'hard chance')
+          return (
+            <g key={shot.event.id} className="shot-quality" style={{ color: colors[shot.event.team] }}>
+              <circle cx={x} cy={y} r={1.5 + 9 * Math.sqrt(xg)} />
+              <text x={x} y={y + 2.4 + 9 * Math.sqrt(xg) + 1.5} className="shot-label">{label}</text>
+            </g>
+          )
+        })()}
 
         {moves.map((m, i) => {
           if (!m.to) return null
@@ -182,6 +261,18 @@ export function Pitch({ events, homeTeam, awayTeam, info }: {
             )}
           </g>
         )}
+
+        {focus && focusId && focusDone !== focusId && (() => {
+          const [x, y] = drawn(focus.team, focus.location)
+          return (
+            <g key={focusId} className="focus">
+              <circle cx={x} cy={y} r={3} className="focus-ring" />
+              <circle cx={x} cy={y} r={3} className="focus-ring late" />
+              <circle cx={x} cy={y} r={0.9} className="focus-dot" />
+              <text x={x} y={y - 5} className="focus-label">{t.voice('Roy')} · {focus.minute}'</text>
+            </g>
+          )
+        })()}
 
         <g className="ball" style={{ transform: `translate(${ball[0]}px, ${ball[1]}px)` }}>
           <ellipse cx={0.5} cy={1.1} rx={1.4} ry={0.6} className="ball-shadow" />

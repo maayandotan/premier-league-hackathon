@@ -182,6 +182,25 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
 .pitch .ball-shadow { fill: rgba(0, 0, 0, 0.35); }
 .pitch .ball-halo { fill: rgba(255, 255, 255, 0.55); }
 @media (prefers-reduced-motion: reduce) { .pitch { transform: none; } }
+/* What the analysis is about, drawn on the pitch: the lane a team keeps attacking down, the latest
+   shot's chance of going in, and the moment Roy's answer is about. */
+.pitch .lane { animation: lane-in 0.6s ease-out; }
+.pitch .lane-label { font-family: var(--font-display); font-weight: 800; font-size: 3px; fill: #fff; text-anchor: middle; opacity: 0.85; }
+@keyframes lane-in { from { opacity: 0; } }
+.pitch .shot-quality circle { fill: currentColor; fill-opacity: 0.22; stroke: currentColor; stroke-width: 0.45; animation: pop-in 0.4s ease-out; }
+.pitch .shot-label {
+  font-family: var(--font-display); font-weight: 700; font-size: 2.6px; fill: #fff; text-anchor: middle; text-transform: uppercase;
+  letter-spacing: 0.1px; paint-order: stroke; stroke: rgba(0, 0, 0, 0.6); stroke-width: 0.6px;
+}
+@keyframes pop-in { from { transform-box: fill-box; transform-origin: center; transform: scale(0.2); opacity: 0; } }
+.pitch .focus-ring { fill: none; stroke: var(--gold); stroke-width: 0.6; transform-box: fill-box; transform-origin: center; animation: focus-ring 1.6s ease-out infinite; }
+.pitch .focus-ring.late { animation-delay: 0.8s; }
+.pitch .focus-dot { fill: var(--gold); }
+.pitch .focus-label {
+  font-family: var(--font-display); font-weight: 800; font-size: 3px; fill: var(--gold); text-anchor: middle; text-transform: uppercase;
+  paint-order: stroke; stroke: rgba(0, 0, 0, 0.7); stroke-width: 0.7px;
+}
+@keyframes focus-ring { from { transform: scale(0.4); opacity: 1; } to { transform: scale(2.6); opacity: 0; } }
 .pitch .trail { stroke-width: 0.7; stroke-linecap: round; }
 .pitch .trail.home { stroke: #bfdbfe; }
 .pitch .trail.away { stroke: #fecdd3; }
@@ -1776,3 +1795,31 @@ html.themed body::before {
    instead of widening the whole page. */
 .lower > * { min-width: 0; }
 .pi-table-wrapper { overflow-x: auto; max-width: 100%; }
+.pitch .centre-logo { opacity: 0.16; color: #fff; --logo-accent: #fff; }
+
+/* ---------- The match stays on screen: a mini pitch while the viewer scrolls ---------- */
+.mini-pitch {
+  position: fixed; right: 18px; bottom: 18px; z-index: 40; width: 380px; padding: 8px 10px 6px;
+  background: color-mix(in srgb, var(--panel) 94%, transparent); backdrop-filter: blur(8px);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--grass)) 45%, var(--line)); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.55); animation: mini-in 0.25s ease-out;
+}
+@keyframes mini-in { from { opacity: 0; transform: translateY(12px) scale(0.97); } }
+.mini-head { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.mini-head .crest { width: 22px; height: 26px; }
+.mini-score { font-family: var(--font-display); font-size: 1.25rem; font-weight: 800; letter-spacing: 0.04em; }
+.mini-clock { font-family: var(--font-display); font-weight: 700; color: var(--muted); }
+.mini-ask {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 999px;
+  padding: 6px 12px; font-weight: 700; font-size: 0.82rem; background: var(--accent, var(--grass));
+  color: var(--accent-ink, #04210f);
+}
+.mini-pitch .pitch-legend { display: none; }
+.mini-pitch .pitch { max-height: none; transform: rotateX(10deg); filter: none; }
+@media (max-width: 960px) {
+  /* on a phone the Ask dock is already at the bottom: the match pins to the top instead */
+  .mini-pitch { top: 0; left: 0; right: 0; bottom: auto; width: auto; border-radius: 0 0 14px 14px; padding: 6px 10px 4px; }
+  .mini-pitch .pitch { max-height: 24vh; margin: 0 auto; }
+  .mini-ask { display: none; }
+}
+.crest.designed .crest-code { font-size: 6.2px; letter-spacing: 0.08em; }

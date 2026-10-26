@@ -23,6 +23,16 @@ export interface Moment {
   kind: string
   quiet: boolean
   beats_questions?: boolean // heard before a viewer's answer (goal, red card, penalty, big chance, close free kick)
+  xg?: number | null // for a shot: its chance of going in
+}
+
+/** The moment a Q&A answer is about, for the pitch to point at (location in that team's own view). */
+export interface AnswerFocus {
+  event_id: string
+  minute: number
+  team: string
+  location: [number, number]
+  kind: 'goal' | 'shot' | 'card' | 'foul' | 'moment'
 }
 
 export interface RankedEvent {
@@ -134,6 +144,7 @@ export interface CommentaryLine {
   reply_to?: string | null // the viewer question it answers
   language?: string // "en" | "es": the language of the text
   chart?: AnswerChartSpec | null // a chart that comes with a Q&A answer (built by code, backend charts.py)
+  focus?: AnswerFocus | null // the moment a Q&A answer is about
 }
 
 /** Charts that come with an answer: data only; the page writes the labels in the viewer's language. */

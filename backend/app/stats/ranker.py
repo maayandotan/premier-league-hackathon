@@ -37,6 +37,7 @@ class Moment(BaseModel):
     kind: Kind
     quiet: bool  # play has stopped: a window for the Analyst
     beats_questions: bool = False  # important enough to be heard before a viewer's answer
+    xg: float | None = None  # for a shot: its chance of going in (the pitch draws it)
 
 
 def _goal(event: MatchEvent, stats: StatsEngine, momentum_before: float | None) -> Moment:
@@ -57,21 +58,21 @@ def _goal(event: MatchEvent, stats: StatsEngine, momentum_before: float | None) 
         team_sign = 1 if team == stats.home else -1
         if momentum_before * team_sign <= -0.3:
             reason += ", against the run of play"
-    return Moment(score=10, reason=reason, kind="goal", quiet=True)
+    return Moment(score=10, reason=reason, kind="goal", quiet=True, xg=round(shot_xg(event) or 0, 3))
 
 
 def _shot(event: MatchEvent) -> Moment:
     outcome = OUTCOME_WORDS.get(event.shot.outcome, event.shot.outcome.lower())
     if event.period == 5:
         return Moment(score=8, reason=f"shootout penalty {outcome}", kind="chance", quiet=True)
+    xg = round(shot_xg(event) or 0, 3)
     if event.shot.outcome == "Post":
-        return Moment(score=7, reason="hits the post", kind="chance", quiet=False)
-    xg = shot_xg(event) or 0
+        return Moment(score=7, reason="hits the post", kind="chance", quiet=False, xg=xg)
     if xg >= BIG_CHANCE_XG:
-        return Moment(score=7, reason=f"big chance, {outcome}", kind="chance", quiet=False)
+        return Moment(score=7, reason=f"big chance, {outcome}", kind="chance", quiet=False, xg=xg)
     if xg >= 0.1:
-        return Moment(score=5, reason=f"half chance, {outcome}", kind="chance", quiet=False)
-    return Moment(score=3, reason="speculative effort", kind="chance", quiet=False)
+        return Moment(score=5, reason=f"half chance, {outcome}", kind="chance", quiet=False, xg=xg)
+    return Moment(score=3, reason="speculative effort", kind="chance", quiet=False, xg=xg)
 
 
 def _base(event: MatchEvent, stats: StatsEngine, momentum_before: float | None) -> Moment:

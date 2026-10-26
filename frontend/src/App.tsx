@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { CommentaryFeed } from './components/CommentaryFeed'
 import { EventTicker } from './components/EventTicker'
 import { PlayIcon, RestartIcon, SpeakerIcon } from './components/Icons'
@@ -7,6 +7,8 @@ import { MatchTimeline } from './components/MatchTimeline'
 import { GoalBanner, LowerThird } from './components/PitchOverlays'
 import { QuestionBox } from './components/QuestionBox'
 import { AnswerCard } from './components/AnswerCard'
+import { MiniPitch } from './components/MiniPitch'
+import { useScrolledPast } from './match/useScrolledPast'
 import { Scorebug } from './components/Scorebug'
 import { MomentumBar, StatBars } from './components/StatBars'
 import { BeginnerGuide } from './components/BeginnerGuide'
@@ -143,6 +145,14 @@ export default function App() {
     }
   }, [club])
   const answered = new Set(lines.map((l) => l.reply_to))
+  const lastAnswer = lines.find((l) => l.reply_to) // lines are newest first
+  const pitchCard = useRef<HTMLElement | null>(null)
+  const showMini = useScrolledPast(pitchCard, !!info && status !== 'idle')
+  const backToAsk = () => {
+    const dock = document.querySelector<HTMLElement>('.ask.dock')
+    dock?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    dock?.querySelector('input')?.focus({ preventScroll: true })
+  }
   const waiting = questions.some((q) => !answered.has(q.id))
   const live = status === 'live'
   const canAsk = connected && (live || status === 'ended') // questions stay open after full time
@@ -194,9 +204,10 @@ export default function App() {
             <>
               <Scorebug info={info} stats={stats} status={status} period={period} />
               {stats && <MatchTimeline events={events} homeTeam={info.home.name} minute={stats.minute} />}
-              <section className="card pitch-card">
+              <section className="card pitch-card" ref={pitchCard}>
                 <div className="pitch-stage">
-                  <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} info={info} />
+                  <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} info={info} stats={stats}
+                    level={level} focus={lastAnswer?.focus} focusId={lastAnswer?.id} />
                   <GoalBanner events={events} score={scoreText} />
                   <LowerThird lines={lines} speakingId={speakingId} />
                   <AnswerCard questions={questions} lines={lines} speakingId={speakingId}
@@ -248,6 +259,11 @@ export default function App() {
             teams={[(info ?? preInfo)?.home.name, (info ?? preInfo)?.away.name].filter((t): t is string => !!t)} />}
         </div>
       </main>
+
+      {showMini && info && (
+        <MiniPitch info={info} stats={stats} events={events} level={level} focus={lastAnswer?.focus}
+          focusId={lastAnswer?.id} onAsk={backToAsk} />
+      )}
 
       <footer className="footer">
         <span>{t('Fictional teams and players · Crowd audio: “Free Crowd Cheering Sounds” by Gregor Quendel, CC BY 4.0')}</span>

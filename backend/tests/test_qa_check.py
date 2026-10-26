@@ -136,3 +136,22 @@ def test_time_words_belong_to_the_nearest_comparison():
     answer = ("Northbridge FC is winning 2-1. Even though Westvale United has had more shots recently, "
               "Northbridge has had better chances overall and more possession in the last 10 minutes.")
     assert check_answer(answer, [PICTURE], stats(), {"2", "1"}) == []
+
+
+@pytest.mark.parametrize("answer, problem", [
+    # Asked "who scored that goal?" a moment before the first goal: a header was called a goal.
+    ("The goal was scored by L. Pirozzi of Westvale United, a header inside the box.",
+     "Pirozzi hasn't scored"),
+    ("Pirozzi scored with a header.", "Pirozzi hasn't scored"),
+])
+def test_only_this_matchs_scorers_can_have_scored(answer, problem):
+    assert problem in "; ".join(check_answer(answer, [], stats(), set(), scorers={"Dunmore"}))
+
+
+@pytest.mark.parametrize("answer", [
+    "Dunmore scored the opener from a counter-attack.",
+    "Ferro scored in the league last week; this season he has goals in three matches.",
+    "Nobody has scored yet: it's still level.",
+])
+def test_true_scorer_claims_pass(answer):
+    assert check_answer(answer, [], stats(), {"3"}, scorers={"Dunmore"}) == []

@@ -2,20 +2,39 @@ import type { FeedStatus } from '../match/useMatchFeed'
 import { teamCode } from '../match/teams'
 import type { MatchInfo, MatchStats } from '../match/types'
 import { useT } from '../i18n'
+import { CRESTS, SHAPES } from './crests'
 
-/** A plain shield with the team code: our own design, no real club badge. */
+/** A club's crest: its badge shape in its two colours, with the emblem from its name and its code
+ * (crests.ts). Our own designs, no real club badge. A club without a design gets a plain shield. */
 export function Crest({ name, side, code, color }: {
   name: string
   side: 'home' | 'away'
   code?: string // the club's own code and colour, when the match data has them
   color?: string
 }) {
+  const label = code ?? teamCode(name)
+  const design = CRESTS[label]
+  if (!design) {
+    return (
+      <svg className={`crest ${side}`} viewBox="0 0 40 46" aria-hidden="true">
+        <path d={SHAPES.shield.outer} className="crest-shield" />
+        <path d={SHAPES.shield.inner} className="crest-inner" style={color ? { fill: color } : undefined} />
+        <text x="20" y="27" textAnchor="middle">{label}</text>
+      </svg>
+    )
+  }
+  const shape = SHAPES[design.shape]
   return (
-    <svg className={`crest ${side}`} viewBox="0 0 40 46" aria-hidden="true">
-      <path d="M20 2 L37 8 V22 C37 33 29 40 20 44 C11 40 3 33 3 22 V8 Z" className="crest-shield" />
-      <path d="M20 6 L33 10.5 V22 C33 31 27 36.5 20 40 C13 36.5 7 31 7 22 V10.5 Z" className="crest-inner"
-        style={color ? { fill: color } : undefined} />
-      <text x="20" y="27" textAnchor="middle">{code ?? teamCode(name)}</text>
+    <svg className={`crest ${side} designed`} viewBox="0 0 40 46" aria-hidden="true">
+      <path d={shape.outer} style={{ fill: design.secondary }} />
+      <path d={shape.inner} className="crest-inner" style={color ? { fill: color } : undefined} />
+      <g transform={`translate(12 ${design.shape === 'round' ? 10 : 10.5})`} style={{ color: design.secondary }}>
+        {design.fill && <path d={design.fill} fill="currentColor" />}
+        {design.stroke && <path d={design.stroke} fill="none" stroke="currentColor" strokeWidth={1.5}
+          strokeLinecap="round" strokeLinejoin="round" />}
+      </g>
+      <text x="20" y={design.shape === 'round' ? 34.5 : 34} textAnchor="middle" className="crest-code"
+        style={{ fill: design.secondary }}>{label}</text>
     </svg>
   )
 }

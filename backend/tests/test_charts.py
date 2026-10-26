@@ -70,8 +70,9 @@ def test_the_answer_carries_the_chart_its_tool_showed():
 
     qa = QuestionAnswerer(StatsEngine(HOME, AWAY), [], {}, use_model=False)
     qa.agent = ShowsAChart()
-    text, chart = asyncio.run(qa.answer_with_chart("What happens when we score two?", 10, 0, ViewerProfile()))
+    text, extras = asyncio.run(qa.answer_with_extras("What happens when we score 2?", 10, 0, ViewerProfile()))
+    chart = extras["chart"]
     assert text.startswith("Here is how") and chart["type"] == "team_by_goals" and chart["team"] == HOME
 
     qa.agent = SimpleNamespace(run=lambda *a, **k: asyncio.sleep(0, SimpleNamespace(text="Level at 0-0.")))
-    assert asyncio.run(qa.answer_with_chart("Score?", 10, 0, ViewerProfile()))[1] is None  # no tool, no chart
+    assert asyncio.run(qa.answer_with_extras("Score?", 10, 0, ViewerProfile()))[1]["chart"] is None  # no tool
