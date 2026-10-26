@@ -105,7 +105,7 @@ CI (`.github/workflows/ci.yml`) runs the same on every PR. Add a test for every 
 
 ## Deploy
 
-Live: https://match-intelligence-live.purplesand-eefdeaf2.francecentral.azurecontainerapps.io
+Live: https://your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io (the old link, https://match-intelligence-live.purplesand-eefdeaf2.francecentral.azurecontainerapps.io, still works)
 
 ```bash
 scripts/deploy.sh   # builds the image locally (linux/amd64), pushes it to ACR, updates the Container App
@@ -151,5 +151,5 @@ Open issues: `gh issue list`. Current owners and priorities:
 - **Synthetic generator v1 (#9) is done**: see [docs/event-schema.md](docs/event-schema.md#the-synthetic-generator-9). Regenerate with `.venv/bin/python -m scripts.generate_match` after changing it.
 - **Dean: the demo match scenario (#25).** Pick or tune the scenario the video tells (`backend/app/synthetic/scenarios.py`): which moments, at what minutes, so 2 minutes of video show goals, Roy explaining, and a viewer question.
 - Demo video under 2 minutes (#26), submission package with the repo made public (#27).
-- Before 2026-10-27: set the live app to `--min-replicas 1` so judges never hit a cold start.
+- Done: the live app `your-call` keeps `--min-replicas 1`, so judges never hit a cold start.
 - Optional if time allows: Fact-Checker (#17), Storyteller (#30), Hebrew commentary (#23), xG trained on synthetic data with SHAP (#11), a fuller Producer (#16), tracing agent runs to Application Insights.

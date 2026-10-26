@@ -4,7 +4,7 @@
 
 Built for the Microsoft × Premier League [Inside the Game](https://github.com/microsoft/insidethegamehackathon) hackathon.
 
-**Live demo:** https://match-intelligence-live.purplesand-eefdeaf2.francecentral.azurecontainerapps.io
+**Live demo:** https://your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io
 
 ## Try it in a minute
 
