@@ -91,10 +91,10 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
 
                     {answer ? (
                       <div className="feed-qa-a" data-speaking={isSpeaking}>
-                        <span className="qa-avatar roy" aria-hidden="true">{t.name('Roy')[0]}</span>
+                        <span className="qa-avatar roy" aria-hidden="true">{t.voice('Roy')[0]}</span>
                         <div className="bubble">
                           <div className="who">
-                            {t.name('Roy')} <span className="role">· {t('Answering you')}</span>
+                            {t.voice('Roy')} <span className="role">· {t('Answering you')}</span>
                             {isSpeaking && <span className="qa-on-air-pill">{t('On Air')}</span>}
                           </div>
                           <p>{answer.text}</p>
@@ -132,7 +132,7 @@ export function CommentaryFeed({ lines, questions, speakingId }: {
                 data-speaking={line.id === speakingId}>
                 <div className="bubble">
                   <div className="who">
-                    {t.name(voice.name)} <span className="role">· {t(question ? 'Answering you' : voice.role)}</span>
+                    {t.voice(voice.name)} <span className="role">· {t(question ? 'Answering you' : voice.role)}</span>
                   </div>
                   {question && <blockquote>“{question.text}” <span>· {question.clock}</span></blockquote>}
                   <p>{line.text}</p>

@@ -156,7 +156,7 @@ export type T = ((text: string, vars?: Record<string, string | number>) => strin
   reason: (reason: string) => string
   pattern: (line: string) => string
   form: (result: string) => string // W/D/L -> G/E/P
-  name: (commentator: string) => string // Davis and Roy are Juan and Ricardo in Spanish
+  voice: (commentator: string) => string // Davis and Roy are Juan and Ricardo in Spanish
 }
 
 const NAMES_ES: Record<string, string> = { Davis: 'Juan', Roy: 'Ricardo' }
@@ -172,7 +172,7 @@ export function translator(lang: Lang): T {
   t.lang = lang
   t.reason = (reason) => (lang === 'es' ? reasonEs(reason) : reason)
   t.pattern = (line) => (lang === 'es' ? patternEs(line) : line)
-  t.name = (commentator) => (lang === 'es' ? NAMES_ES[commentator] ?? commentator : commentator)
+  t.voice = (commentator) => (lang === 'es' ? NAMES_ES[commentator] ?? commentator : commentator)
   t.form = (result) => (lang === 'es' ? FORM_ES[result] ?? result : result)
   return t
 }

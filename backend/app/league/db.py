@@ -99,6 +99,99 @@ class League:
                                        (player,)).fetchone()[0]
         return {"league_goals": goals, "league_assists": assists}
 
+    def player_profile(self, name: str, limit: int = 5) -> dict | None:
+        """Detailed profile and last games data for a player (for Analyst investigation)."""
+        from app.synthetic.squads import SQUADS, SquadPlayer
+
+        found = None
+        for team_name, squad in SQUADS.items():
+            for p in squad:
+                if p.name.lower() == name.lower() or name.lower() in p.name.lower():
+                    found = (team_name, p)
+                    break
+            if found:
+                break
+
+        if not found:
+            with self._lock:
+                row = self._db.execute(
+                    "SELECT team FROM goals WHERE scorer = ? OR assister = ? LIMIT 1", (name, name)
+                ).fetchone()
+            if row:
+                found = (row[0], SquadPlayer(name=name, number=0, position="Forward"))
+            else:
+                return None
+
+        team, player = found
+        is_cap = captain(team) == player.name
+
+        with self._lock:
+            matches = self._db.execute(
+                "SELECT id, round, home, away, home_goals, away_goals FROM results "
+                "WHERE home = ? OR away = ? ORDER BY round DESC LIMIT ?",
+                (team, team, limit)
+            ).fetchall()
+            goals_count = self._db.execute("SELECT COUNT(*) FROM goals WHERE scorer = ?", (player.name,)).fetchone()[0]
+            assists_count = self._db.execute("SELECT COUNT(*) FROM goals WHERE assister = ?", (player.name,)).fetchone()[0]
+            cards_count = self._db.execute("SELECT COUNT(*) FROM cards WHERE player = ?", (player.name,)).fetchone()[0]
+
+        last_games = []
+        for m_id, rnd, home, away, hg, ag in matches:
+            is_home = (home == team)
+            opponent = away if is_home else home
+            team_goals = hg if is_home else ag
+            opp_goals = ag if is_home else hg
+            result = "W" if team_goals > opp_goals else ("D" if team_goals == opp_goals else "L")
+
+            with self._lock:
+                p_goals = self._db.execute(
+                    "SELECT COUNT(*) FROM goals WHERE match_id = ? AND scorer = ?", (m_id, player.name)
+                ).fetchone()[0]
+                p_assists = self._db.execute(
+                    "SELECT COUNT(*) FROM goals WHERE match_id = ? AND assister = ?", (m_id, player.name)
+                ).fetchone()[0]
+                p_cards = [
+                    r[0] for r in self._db.execute(
+                        "SELECT card FROM cards WHERE match_id = ? AND player = ?", (m_id, player.name)
+                    ).fetchall()
+                ]
+
+            rating = 6.8 + (1.2 if result == "W" else (0.2 if result == "D" else -0.4))
+            rating += p_goals * 1.1 + p_assists * 0.7 - len(p_cards) * 0.5
+            rating = round(min(max(rating, 5.5), 9.9), 1)
+
+            last_games.append({
+                "match_id": m_id,
+                "round": rnd,
+                "opponent": opponent,
+                "is_home": is_home,
+                "score": f"{team_goals}-{opp_goals}",
+                "result": result,
+                "goals": p_goals,
+                "assists": p_assists,
+                "cards": p_cards,
+                "rating": rating,
+                "minutes": 90,
+            })
+
+        avg_rating = round(sum(g["rating"] for g in last_games) / max(len(last_games), 1), 1)
+
+        return {
+            "name": player.name,
+            "number": player.number,
+            "position": player.position,
+            "team": team,
+            "is_captain": is_cap,
+            "season": {
+                "goals": goals_count,
+                "assists": assists_count,
+                "cards": cards_count,
+                "played": len(matches),
+                "avg_rating": avg_rating,
+            },
+            "last_games": last_games,
+        }
+
     def top_scorers(self, n: int = 5) -> list[dict]:
         with self._lock:
             rows = self._db.execute("SELECT scorer, team, COUNT(*) AS goals FROM goals GROUP BY scorer, team "

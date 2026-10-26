@@ -37,6 +37,36 @@ export interface Player {
   starter?: boolean
 }
 
+export interface PlayerMatchHistory {
+  match_id: string
+  round: number
+  opponent: string
+  is_home: boolean
+  score: string
+  result: 'W' | 'D' | 'L'
+  goals: number
+  assists: number
+  cards: string[]
+  rating: number
+  minutes: number
+}
+
+export interface PlayerProfile {
+  name: string
+  number: number
+  position: string
+  team: string
+  is_captain: boolean
+  season: {
+    goals: number
+    assists: number
+    cards: number
+    played: number
+    avg_rating: number
+  }
+  last_games: PlayerMatchHistory[]
+}
+
 export interface MatchInfo {
   id: string
   source: string

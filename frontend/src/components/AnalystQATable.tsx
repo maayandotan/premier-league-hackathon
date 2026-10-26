@@ -1,27 +1,44 @@
 import { useState, useMemo } from 'react'
 import type { CommentaryLine, ViewerQuestion } from '../match/types'
 import { ClockIcon } from './Icons'
+import type { Level } from './LevelPicker'
 import { useT } from '../i18n'
 
 interface AnalystQATableProps {
   questions: ViewerQuestion[]
   lines: CommentaryLine[]
   speakingId: string | null
+  level?: Level
   onAsk?: (questionText: string) => void
   canAsk?: boolean
 }
 
-const DEFAULT_SUGGESTIONS = [
-  'Why was that a foul?',
-  'Who has been better so far?',
-  'What is offside?',
-  'What was the key tactical change?',
-]
+const LEVEL_DEFAULT_SUGGESTIONS: Record<Level, string[]> = {
+  beginner: [
+    'Why was that a foul?',
+    'Explain offside rule',
+    'What did I miss?',
+    'What do the yellow cards mean?',
+  ],
+  fan: [
+    'Who has been better so far?',
+    'Who should be substituted?',
+    'Was that a red card?',
+    'How does this affect the table?',
+  ],
+  analyst: [
+    'Analyze our pressing structure',
+    'What is the xG difference?',
+    'How are half-spaces exploited?',
+    'What was the key tactical change?',
+  ],
+}
 
 export function AnalystQATable({
   questions,
   lines,
   speakingId,
+  level = 'analyst',
   onAsk,
   canAsk = true,
 }: AnalystQATableProps) {
@@ -61,6 +78,8 @@ export function AnalystQATable({
     })
   }, [qaItems, search])
 
+  const suggestions = LEVEL_DEFAULT_SUGGESTIONS[level] ?? LEVEL_DEFAULT_SUGGESTIONS.analyst
+
   return (
     <section className="card qa-table-card" aria-label={t('Questions Table')}>
       <div className="qa-header">
@@ -69,7 +88,7 @@ export function AnalystQATable({
           <div>
             <h2>{t('Questions')}</h2>
             <p className="qa-subtitle">
-              {t("Your questions and Roy's real-time personalized analysis")}
+              {t("Your questions and Roy's real-time personalized analysis")} ({level})
             </p>
           </div>
         </div>
@@ -115,9 +134,9 @@ export function AnalystQATable({
           </p>
           {onAsk && canAsk && (
             <div className="qa-empty-suggestions">
-              <span className="qa-suggestions-label">{t('Try asking:')}</span>
+              <span className="qa-suggestions-label">{t('Try asking:')} ({level})</span>
               <div className="qa-suggestions-list">
-                {DEFAULT_SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button
                     key={s}
                     type="button"
@@ -133,7 +152,7 @@ export function AnalystQATable({
         </div>
       ) : filteredItems.length === 0 ? (
         <div className="qa-empty-filter">
-          <p>{t('No questions match "{q}".', { q: search })}</p>
+          <p>{t('No questions match your current search or filter.')}</p>
           <button type="button" className="chip" onClick={() => setSearch('')}>
             {t('Clear search')}
           </button>
@@ -159,7 +178,7 @@ export function AnalystQATable({
                   >
                     {/* Time / Clock Column */}
                     <td className="col-clock">
-                      <span className="qa-clock-badge" title={t('Asked at {clock}', { clock: question.clock })}>
+                      <span className="qa-clock-badge" title={`${t('Time')}: ${question.clock}`}>
                         <ClockIcon size={13} />
                         <span>{question.clock}</span>
                       </span>
@@ -183,10 +202,10 @@ export function AnalystQATable({
                           <div className="qa-answer-body">
                             <div className="qa-answer-meta">
                               <span className="qa-speaker-name">{t('Roy (Analyst)')}</span>
-                              {answer.level && <span className="level-tag">{t(answer.level)}</span>}
+                              {answer.level && <span className="level-tag">{answer.level}</span>}
                               {isSpeaking && (
                                 <span className="on-air qa-on-air-badge">
-                                  <span className="wave"><i /><i /><i /><i /></span> {t('On Air')}
+                                  <span className="wave"><i /><i /><i /><i /></span> On Air
                                 </span>
                               )}
                             </div>

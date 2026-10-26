@@ -58,6 +58,34 @@ def league_club(name: str) -> dict:
     return league().club(name)
 
 
+@app.get("/api/league/player")
+def league_player(name: str) -> dict:
+    """Detailed profile and last games data for a player (for Analyst investigation)."""
+    p = league().player_profile(name)
+    if not p:
+        raise HTTPException(404, f"no player found for {name!r}")
+    return p
+
+
+@app.get("/api/league/players")
+def league_players(team: str | None = None) -> list[dict]:
+    """List players in the league, optionally filtered by team."""
+    from app.synthetic.squads import SQUADS
+    out = []
+    for team_name, squad in SQUADS.items():
+        if team and team.lower() not in team_name.lower():
+            continue
+        for p in squad:
+            out.append({
+                "name": p.name,
+                "number": p.number,
+                "position": p.position,
+                "team": team_name,
+                "starter": p.starter,
+            })
+    return out
+
+
 @app.get("/api/match-info")
 def match_info(source: str = "demo") -> dict:
     """The teams and line-ups for the pre-match screen, before kick-off. No scenario description: it

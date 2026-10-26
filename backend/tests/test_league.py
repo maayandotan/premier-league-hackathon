@@ -135,3 +135,28 @@ def test_roy_and_qa_know_the_viewers_club():
     qa.agent = Recorder()
     asyncio.run(qa.answer("How are we doing?", 88, 0, viewer))
     assert "VIEWER_SUPPORTS: Northbridge FC" in qa.agent.inputs[0]
+
+
+def test_player_profile_and_investigation_api():
+    lg = League()
+    profile = lg.player_profile("M. Ferro")
+    assert profile is not None
+    assert profile["name"] == "M. Ferro"
+    assert profile["team"] == "Northbridge FC"
+    assert "season" in profile and "goals" in profile["season"]
+    assert len(profile["last_games"]) > 0
+    assert "rating" in profile["last_games"][0]
+    assert "opponent" in profile["last_games"][0]
+
+    # Test API endpoints
+    resp = client.get("/api/league/player?name=M. Ferro")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["name"] == "M. Ferro"
+    assert len(data["last_games"]) > 0
+
+    list_resp = client.get("/api/league/players?team=Northbridge FC")
+    assert list_resp.status_code == 200
+    players = list_resp.json()
+    assert any(p["name"] == "M. Ferro" for p in players)
+

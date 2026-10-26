@@ -11,6 +11,7 @@ import { MomentumBar, StatBars } from './components/StatBars'
 import { BeginnerGuide } from './components/BeginnerGuide'
 import { ClubPanel } from './components/ClubPanel'
 import { PatternsCard } from './components/PatternsCard'
+import { PlayerInvestigation } from './components/PlayerInvestigation'
 import { XgTimeline } from './components/XgTimeline'
 import { Crest } from './components/Scorebug'
 import { LeagueTable } from './components/LeagueTable'
@@ -220,8 +221,8 @@ export default function App() {
 
         <aside className="side">
           <CommentaryFeed lines={lines} questions={questions} speakingId={speakingId} />
-          <QuestionBox open={canAsk} fullTime={status === 'ended'} waiting={waiting} onAsk={ask}
-            onListening={setListening} />
+          <QuestionBox open={canAsk} fullTime={status === 'ended'} waiting={waiting}
+            level={level as Level} onAsk={ask} onListening={setListening} />
         </aside>
 
         <div className="lower">
@@ -230,6 +231,14 @@ export default function App() {
           {info && stats && <StatBars info={info} stats={stats} level={level} />}
           {info && stats && level === 'analyst' && <XgTimeline info={info} history={xgHistory} />}
           {info && stats && level === 'analyst' && <PatternsCard info={info} stats={stats} />}
+          {level === 'analyst' && (
+            <PlayerInvestigation
+              homeTeam={info?.home ?? preInfo?.home}
+              awayTeam={info?.away ?? preInfo?.away}
+              clubs={league?.clubs}
+              onAskRoy={ask}
+            />
+          )}
           {level === 'beginner' && <BeginnerGuide />}
           {info && stats && <EventTicker events={events} homeTeam={info.home.name} />}
           {league && <LeagueTable league={league} mine={team} simple={level === 'beginner'}
