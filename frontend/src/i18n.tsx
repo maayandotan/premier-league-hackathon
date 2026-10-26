@@ -53,7 +53,12 @@ const ES: Record<string, string> = {
   'Listening… press the mic again to send': 'Escuchando… pulsa el micrófono otra vez para enviar',
   'Full time: ask Roy about the match…': 'Final: pregúntale a Ricardo sobre el partido…',
   'Ask Roy about the match…': 'Pregúntale a Ricardo sobre el partido…', 'Kick off to ask questions': 'Comienza para hacer preguntas',
-  'Your question': 'Tu pregunta', Ask: 'Preguntar',
+  'Your question': 'Tu pregunta', Ask: 'Preguntar', 'Ask {name}': 'Pregúntale a {name}', Close: 'Cerrar',
+  'By voice or text. The match keeps playing while he answers.': 'Por voz o texto. El partido sigue mientras responde.',
+  '{name} is looking at the data… the match goes on': '{name} está mirando los datos… el partido sigue',
+  'Ask {name} anything, any time': 'Pregúntale a {name} lo que quieras, cuando quieras',
+  '“Why was that a foul?” “Who has been better?” Ask by voice or text: the match keeps playing while he answers, at your level.':
+    '“¿Por qué fue falta?” “¿Quién ha jugado mejor?” Pregunta por voz o texto: el partido sigue mientras responde, a tu nivel.',
   "Listening… press the mic again when you're done": 'Escuchando… pulsa el micrófono otra vez al terminar',
   'Roy is thinking… the match goes on': 'Ricardo está pensando… el partido sigue',
   // questions table

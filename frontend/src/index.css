@@ -1653,3 +1653,69 @@ html.themed body::before {
   transform: translateY(-1px);
 }
 
+
+/* ---------- Ask first: the dock under the pitch and the answer on the pitch ----------
+   Asking mid-match is what makes this broadcast yours, so the question box is the biggest control on
+   the page, right under the pitch, and the answer appears on the pitch itself. */
+.ask.dock { padding: 14px 16px; border-color: color-mix(in srgb, var(--accent, var(--grass)) 45%, var(--line)); }
+.ask-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.ask-title { font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; letter-spacing: 0.04em; text-transform: uppercase; }
+.ask-sub { color: var(--muted); font-size: 0.85rem; }
+.ask.dock .ask-row { align-items: center; gap: 12px; }
+.ask.dock .mic {
+  width: 60px; height: 60px; border: 0; background: var(--accent, var(--grass)); color: var(--accent-ink, #04210f);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--accent, var(--grass)) 18%, transparent);
+  transition: transform 0.15s, box-shadow 0.2s;
+}
+.ask.dock .mic:hover:not(:disabled) { transform: scale(1.05); }
+.ask.dock .mic.on { background: var(--away); animation: mic-ring 1.2s ease-out infinite; }
+.ask.dock .mic.on .mic-dot { background: #fff; }
+@keyframes mic-ring {
+  0% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.55); }
+  100% { box-shadow: 0 0 0 16px rgba(244, 63, 94, 0); }
+}
+.ask.dock input { padding: 14px 18px; font-size: 1rem; }
+.ask.dock button[type='submit'] { padding: 0 24px; align-self: stretch; }
+
+.answer-card {
+  position: absolute; top: 38px; right: 12px; width: min(440px, calc(100% - 24px)); display: grid; gap: 8px;
+  padding: 12px 14px; border-radius: 12px; background: rgba(7, 16, 31, 0.92); backdrop-filter: blur(6px);
+  border: 1px solid color-mix(in srgb, var(--accent, var(--grass)) 55%, transparent);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45); animation: lt-in 0.25s ease-out; z-index: 2;
+}
+.answer-q { position: relative; padding-right: 22px; }
+.answer-you, .answer-who { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #cbd5e1; }
+.answer-q p { margin: 2px 0 0; color: #e2e8f0; font-style: italic; }
+.answer-a { border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 8px; }
+.answer-a .answer-who { color: var(--accent, var(--grass)); }
+.answer-a p { margin: 3px 0 0; color: #fff; font-size: 1rem; line-height: 1.4; }
+.answer-a[data-speaking='true'] p { text-shadow: 0 0 18px rgba(255, 255, 255, 0.15); }
+.answer-close {
+  position: absolute; top: -4px; right: -6px; border: 0; background: none; color: #94a3b8; font-size: 1.2rem; line-height: 1;
+  padding: 4px 6px; cursor: pointer;
+}
+.answer-close:hover { color: #fff; }
+.answer-wait { display: flex; align-items: center; gap: 8px; color: #cbd5e1; font-size: 0.88rem; }
+.answer-dots { display: inline-flex; gap: 3px; }
+.answer-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent, var(--grass)); animation: pulse 1s ease-in-out infinite; }
+.answer-dots i:nth-child(2) { animation-delay: 0.15s; }
+.answer-dots i:nth-child(3) { animation-delay: 0.3s; }
+
+.pm-ask {
+  display: flex; gap: 12px; align-items: center; padding: 12px 14px; border-radius: 12px; margin: 4px 0 6px;
+  background: color-mix(in srgb, var(--accent, var(--grass)) 12%, var(--well));
+  border: 1px solid color-mix(in srgb, var(--accent, var(--grass)) 40%, var(--line));
+}
+.pm-ask-mic {
+  flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%;
+  background: var(--accent, var(--grass)); color: var(--accent-ink, #04210f);
+}
+.pm-ask strong { display: block; font-size: 1rem; }
+.pm-ask span:not(.pm-ask-mic) { color: var(--muted); font-size: 0.88rem; }
+
+@media (max-width: 560px) {
+  .answer-card { top: 30px; right: 6px; left: 6px; width: auto; padding: 9px 11px; }
+  .answer-a p { font-size: 0.88rem; }
+  .ask-sub { display: none; }
+  .ask.dock .mic { width: 50px; height: 50px; }
+}

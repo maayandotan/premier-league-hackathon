@@ -113,7 +113,11 @@ export function QuestionBox({
 
   const listening = mic === 'listening'
   return (
-    <form className="ask" onSubmit={submit} aria-label={t('Ask the analyst')}>
+    <form className="ask dock" onSubmit={submit} aria-label={t('Ask the analyst')}>
+      <div className="ask-head">
+        <span className="ask-title">{t('Ask {name}', { name: t.voice('Roy') })}</span>
+        <span className="ask-sub">{t('By voice or text. The match keeps playing while he answers.')}</span>
+      </div>
       <div className="ask-row">
         <button
           type="button"
@@ -124,7 +128,7 @@ export function QuestionBox({
           aria-label={t(listening ? 'Stop and send' : 'Ask by voice')}
           title={t(listening ? 'Stop and send' : 'Ask by voice')}
         >
-          {listening ? <span className="mic-dot" /> : <MicIcon />}
+          {listening ? <span className="mic-dot" /> : <MicIcon size={26} />}
         </button>
         <input
           value={text}
@@ -135,9 +139,9 @@ export function QuestionBox({
             listening
               ? t('Listening… press the mic again to send')
               : fullTime
-                ? `${t('Full time: ask Roy about the match…')} (${level})`
+                ? t('Full time: ask Roy about the match…')
                 : open
-                  ? `${t('Ask Roy about the match…')} (${level})`
+                  ? t('Ask Roy about the match…')
                   : t('Kick off to ask questions')
           }
           aria-label={t('Your question')}
