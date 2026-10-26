@@ -1,4 +1,4 @@
-import type { MatchEvent, RankedEvent } from './types'
+import type { MatchEvent, MatchInfo, RankedEvent } from './types'
 
 /**
  * A live "match centre" pitch (#22): the ball moving from event to event, the player on the
@@ -109,7 +109,22 @@ function PitchMarkings() {
   )
 }
 
-export function Pitch({ events, homeTeam, awayTeam }: { events: RankedEvent[]; homeTeam: string; awayTeam: string }) {
+// A shirt, about 6.5 x 6 pitch units, centred on the player's spot.
+const SHIRT = 'M-2 -2.6 L-0.8 -3 Q0 -2.2 0.8 -3 L2 -2.6 L3.2 -1.2 L2.3 -0.3 L1.8 -0.8 L1.8 2.8 L-1.8 2.8 ' +
+  'L-1.8 -0.8 L-2.3 -0.3 L-3.2 -1.2 Z'
+
+/** Text that reads on a shirt colour: dark on light shirts, white on dark ones. */
+function inkOn(hex: string): string {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.55 ? '#0b1220' : '#ffffff'
+}
+
+export function Pitch({ events, homeTeam, awayTeam, info }: {
+  events: RankedEvent[]
+  homeTeam: string
+  awayTeam: string
+  info?: MatchInfo // shirt numbers and club colours
+}) {
   // events arrive newest first; collect the latest moves, oldest first for drawing
   const moves: Move[] = []
   for (const { event } of events) {
@@ -123,6 +138,12 @@ export function Pitch({ events, homeTeam, awayTeam }: { events: RankedEvent[]; h
   const goal = [...moves].reverse().find((m) => m.goal)
   const ballInNet = goal && moves.indexOf(goal) >= moves.length - 2
   const ball = ballInNet ? goal.to! : latest ? latest.to ?? latest.from : ([60, 40] as Point)
+  // The player on the ball wears his club's shirt, with his number (the line-ups have both).
+  const side = latest?.home ? info?.home : info?.away
+  const shirt = {
+    color: side?.color ?? (latest?.home ? '#3b82f6' : '#f43f5e'),
+    number: side?.players?.find((p) => p.name === latest?.player)?.jersey_number,
+  }
 
   return (
     <div className="pitch-wrap">
@@ -149,8 +170,13 @@ export function Pitch({ events, homeTeam, awayTeam }: { events: RankedEvent[]; h
 
         {latest && (
           <g className={`player ${latest.home ? 'home' : 'away'}`}>
-            <circle cx={latest.from[0]} cy={latest.from[1]} r={2.2} />
-            <text x={latest.from[0]} y={latest.from[1] - 3.5}>{surname(latest.player)}</text>
+            <g transform={`translate(${latest.from[0]} ${latest.from[1]})`} className="shirt">
+              <path d={SHIRT} style={{ fill: shirt.color }} />
+              {shirt.number !== undefined && (
+                <text y={1.6} className="shirt-number" style={{ fill: inkOn(shirt.color) }}>{shirt.number}</text>
+              )}
+            </g>
+            <text x={latest.from[0]} y={latest.from[1] - 4.2}>{surname(latest.player)}</text>
             {latest.recipient && latest.to && (
               <text x={latest.to[0]} y={latest.to[1] + 6} className="recipient">{surname(latest.recipient)}</text>
             )}
