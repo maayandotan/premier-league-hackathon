@@ -8,7 +8,8 @@
 set -euo pipefail
 
 REGISTRY=acrplhackathon
-APP=match-intelligence-live
+APP=your-call
+OLD_APP=match-intelligence-live  # the app's first name: its link still works, so it gets every version too
 GROUP=rg-pl-hackathon
 TAG="v$(date +%Y%m%d-%H%M%S)"
 IMAGE="$REGISTRY.azurecr.io/match-intelligence:$TAG"
@@ -20,6 +21,7 @@ az acr login -n "$REGISTRY" >/dev/null
 docker buildx build --platform linux/amd64 -t "$IMAGE" --push .
 
 az containerapp update -n "$APP" -g "$GROUP" --image "$IMAGE" -o none
+az containerapp update -n "$OLD_APP" -g "$GROUP" --image "$IMAGE" -o none
 URL="https://$(az containerapp show -n "$APP" -g "$GROUP" --query properties.configuration.ingress.fqdn -o tsv)"
 echo "Deployed $TAG -> $URL"
 curl -fsS "$URL/health" && echo
