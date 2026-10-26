@@ -191,6 +191,8 @@ h1, h2 { font-family: var(--font-display); letter-spacing: 0.02em; margin: 0; }
 .pitch .player circle { stroke: #fff; stroke-width: 0.5; }
 .pitch .player.home circle { fill: var(--home); }
 .pitch .player.away circle { fill: var(--away); }
+.pitch .shirt path { stroke: #fff; stroke-width: 0.35; stroke-linejoin: round; filter: drop-shadow(0 0.4px 0.6px rgba(0, 0, 0, 0.6)); }
+.pitch .player text.shirt-number { font-size: 2.6px; stroke: none; }
 .pitch .player text {
   font-family: var(--font-display); font-size: 3.6px; font-weight: 700; fill: #fff; text-anchor: middle;
   paint-order: stroke; stroke: rgba(0, 0, 0, 0.6); stroke-width: 0.7px;

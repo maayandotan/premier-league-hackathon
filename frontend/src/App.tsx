@@ -196,7 +196,7 @@ export default function App() {
               {stats && <MatchTimeline events={events} homeTeam={info.home.name} minute={stats.minute} />}
               <section className="card pitch-card">
                 <div className="pitch-stage">
-                  <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} />
+                  <Pitch events={events} homeTeam={info.home.name} awayTeam={info.away.name} info={info} />
                   <GoalBanner events={events} score={scoreText} />
                   <LowerThird lines={lines} speakingId={speakingId} />
                   <AnswerCard questions={questions} lines={lines} speakingId={speakingId}
