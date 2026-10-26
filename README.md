@@ -5,7 +5,7 @@
 Built for the Microsoft × Premier League [Inside the Game](https://github.com/microsoft/insidethegamehackathon) hackathon.
 
 - **Live demo:** https://your-call.purplesand-eefdeaf2.francecentral.azurecontainerapps.io
-- **Demo video (under 2 minutes):** https://youtu.be/D7KAQErbTI0
+- **Demo video (under 2 minutes):** https://youtu.be/kmCoXTDyHb0
 
 <p align="center"><img src="docs/images/your-call.jpg" alt="Your Call mid-match: a viewer asks Roy how the chances built up; his answer is on the pitch and the expected-goals chart is in the commentary" width="900"></p>
 
